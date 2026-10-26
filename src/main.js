@@ -2,8 +2,8 @@ import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
 import { zoekTitels, testSleutel, posterUrl, SleutelFout } from './tmdb.js';
-import { alleTitels, titelToevoegen, vraagBlijvendeOpslag } from './db.js';
-import { titelSleutel } from './titels.js';
+import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
+import { titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst } from './titels.js';
 
 const app = document.getElementById('app');
 
@@ -14,13 +14,26 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Korte melding onderin.
-function melding(tekst) {
+// Korte melding onderin, eventueel met een knop (zoals 'Ongedaan maken').
+function melding(tekst, knop) {
   const el = document.getElementById('melding');
   el.textContent = tekst;
+  if (knop) {
+    const b = Object.assign(document.createElement('button'), { textContent: knop.tekst });
+    b.addEventListener('click', () => {
+      el.classList.remove('zichtbaar');
+      knop.actie();
+    });
+    el.append(b);
+  }
+  el.classList.toggle('met-knop', Boolean(knop));
   el.classList.add('zichtbaar');
   clearTimeout(melding.timer);
-  melding.timer = setTimeout(() => el.classList.remove('zichtbaar'), 2500);
+  melding.timer = setTimeout(() => el.classList.remove('zichtbaar'), knop ? 5000 : 2500);
+}
+
+function sterrenTekst(aantal) {
+  return aantal ? '★'.repeat(aantal) + '☆'.repeat(5 - aantal) : '';
 }
 
 const BRON = '<p class="bron">Gegevens en posters van TMDB. Deze app gebruikt de TMDB API, maar is niet door TMDB goedgekeurd of gecertificeerd.</p>';
@@ -66,14 +79,17 @@ async function toonLijst() {
     <ul class="lijst">${titels
       .map(
         (t) => `
-      <li class="titel">
+      <li><a class="titel" href="#/titel/${t.id}">
         ${posterHtml(t)}
         <div class="titel-tekst">
-          <span class="status">${veilig(t.status)}</span>
+          <span class="regel">
+            <span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>
+            ${t.sterren ? `<span class="sterren-klein" aria-label="${t.sterren} sterren">${sterrenTekst(t.sterren)}</span>` : ''}
+          </span>
           <strong>${veilig(t.titel)}</strong>
           <span>${soortJaar(t)}</span>
         </div>
-      </li>`
+      </a></li>`
       )
       .join('')}</ul>
   `;
@@ -190,6 +206,130 @@ function toonBevestigen(t, alOpLijst) {
   });
 }
 
+// --- Eén titel van je lijst ---
+
+async function toonTitel(id) {
+  const nr = schermNr;
+  const titel = await haalTitel(id);
+  if (nr !== schermNr) return;
+  if (!titel) {
+    location.hash = '#/';
+    return;
+  }
+  const bewaar = async (wijzigingen) => {
+    Object.assign(titel, wijzigingen);
+    await titelBijwerken(id, wijzigingen);
+  };
+
+  app.innerHTML = `
+    <header class="kop"><a class="terug" href="#/">‹ Mijn lijst</a></header>
+    <section class="bevestig">
+      ${posterHtml(titel, 'poster-groot')}
+      <h2>${veilig(titel.titel)}</h2>
+      <p>${soortJaar(titel)}${titel.origineel && titel.origineel !== titel.titel ? ` · ${veilig(titel.origineel)}` : ''}</p>
+      ${titel.beschrijving ? `<p class="beschrijving">${veilig(titel.beschrijving)}</p>` : ''}
+
+      <p class="label">Status</p>
+      <div class="keuzes" id="statussen">
+        ${STATUSSEN.map((s) => `<button class="keuze" data-s="${s}">${s}</button>`).join('')}
+      </div>
+
+      <p class="label">Mijn oordeel</p>
+      <div class="sterren" id="sterren" role="radiogroup" aria-label="Sterren"></div>
+
+      <p class="label">Gezien op</p>
+      <div class="datum-regel">
+        <input type="date" id="kijkdatum" value="${veilig(titel.kijkdatum)}" max="${vandaag()}" aria-label="Kijkdatum" />
+        <button class="link-knop" id="datum-weg"${titel.kijkdatum ? '' : ' hidden'}>Wissen</button>
+      </div>
+      <p class="zacht datum-tekst" id="datum-tekst">${titel.kijkdatum ? veilig(datumTekst(titel.kijkdatum)) : 'Nog niet ingevuld'}</p>
+
+      <p class="label">Notitie</p>
+      <textarea id="notitie" rows="4" placeholder="Bijvoorbeeld: tip van …, of wat je ervan vond">${veilig(titel.notitie)}</textarea>
+      <p class="opgeslagen" id="opgeslagen">&nbsp;</p>
+
+      <button class="verwijder" id="verwijder">Verwijder van mijn lijst</button>
+    </section>
+  `;
+
+  const tekenStatus = () =>
+    document.querySelectorAll('#statussen .keuze').forEach((k) => k.classList.toggle('actief', k.dataset.s === titel.status));
+  const tekenSterren = () => {
+    document.getElementById('sterren').innerHTML = [1, 2, 3, 4, 5]
+      .map(
+        (n) =>
+          `<button class="ster${titel.sterren >= n ? ' aan' : ''}" data-n="${n}" role="radio" aria-checked="${titel.sterren === n}" aria-label="${n} ${n === 1 ? 'ster' : 'sterren'}">★</button>`
+      )
+      .join('');
+  };
+  const tekenDatum = () => {
+    document.getElementById('kijkdatum').value = titel.kijkdatum;
+    document.getElementById('datum-weg').hidden = !titel.kijkdatum;
+    document.getElementById('datum-tekst').textContent = titel.kijkdatum ? datumTekst(titel.kijkdatum) : 'Nog niet ingevuld';
+  };
+  tekenStatus();
+  tekenSterren();
+
+  document.getElementById('statussen').addEventListener('click', async (e) => {
+    const knop = e.target.closest('.keuze');
+    if (!knop || knop.dataset.s === titel.status) return;
+    await bewaar(statusWijziging(titel, knop.dataset.s));
+    tekenStatus();
+    tekenDatum();
+  });
+
+  document.getElementById('sterren').addEventListener('click', async (e) => {
+    const knop = e.target.closest('.ster');
+    if (!knop) return;
+    const n = Number(knop.dataset.n);
+    // Nog een keer op dezelfde ster tikken haalt het oordeel weg.
+    await bewaar({ sterren: titel.sterren === n ? 0 : n });
+    tekenSterren();
+  });
+
+  document.getElementById('kijkdatum').addEventListener('change', async (e) => {
+    await bewaar({ kijkdatum: e.target.value });
+    tekenDatum();
+  });
+  document.getElementById('datum-weg').addEventListener('click', async () => {
+    await bewaar({ kijkdatum: '' });
+    tekenDatum();
+  });
+
+  // De notitie bewaart vanzelf, kort nadat je stopt met typen.
+  const notitie = document.getElementById('notitie');
+  const opgeslagen = document.getElementById('opgeslagen');
+  let timer;
+  const bewaarNotitie = async () => {
+    clearTimeout(timer);
+    if (notitie.value === titel.notitie) return;
+    await bewaar({ notitie: notitie.value });
+    opgeslagen.textContent = 'Opgeslagen';
+  };
+  notitie.addEventListener('input', () => {
+    opgeslagen.innerHTML = '&nbsp;';
+    clearTimeout(timer);
+    timer = setTimeout(bewaarNotitie, 800);
+  });
+  notitie.addEventListener('blur', bewaarNotitie);
+  toonTitel.bewaarOpenstaand = bewaarNotitie;
+
+  document.getElementById('verwijder').addEventListener('click', async () => {
+    await bewaarNotitie();
+    const kopie = { ...titel };
+    await titelVerwijderen(id);
+    toonTitel.bewaarOpenstaand = null;
+    location.hash = '#/';
+    melding(`"${kopie.titel}" verwijderd`, {
+      tekst: 'Ongedaan maken',
+      actie: async () => {
+        await titelTerugzetten(kopie);
+        if (location.hash === '#/' || location.hash === '') route();
+      },
+    });
+  });
+}
+
 // --- Instellingen ---
 
 function toonInstellingen() {
@@ -267,15 +407,29 @@ function toonInstellingen() {
 
 // --- Schermen ---
 
-function route() {
+async function route() {
   schermNr += 1;
+  // Een notitie die nog niet bewaard is, eerst opslaan.
+  if (toonTitel.bewaarOpenstaand) {
+    await toonTitel.bewaarOpenstaand();
+    toonTitel.bewaarOpenstaand = null;
+  }
   window.scrollTo(0, 0);
+  const titelId = location.hash.match(/^#\/titel\/(\d+)$/);
   const plek = { '#/zoek': 'zoek', '#/instellingen': 'instellingen' }[location.hash] || 'lijst';
   document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === plek));
   if (plek === 'instellingen') toonInstellingen();
   else if (plek === 'zoek') toonZoek();
+  else if (titelId) toonTitel(Number(titelId[1]));
   else toonLijst();
 }
+
+// Gaat de app naar de achtergrond, dan een half getypte notitie meteen bewaren.
+const bewaarNu = () => toonTitel.bewaarOpenstaand?.();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') bewaarNu();
+});
+window.addEventListener('pagehide', bewaarNu);
 
 vraagBlijvendeOpslag();
 

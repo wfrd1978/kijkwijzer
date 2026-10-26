@@ -123,6 +123,10 @@ a { color: var(--accent); }
 /* Statuslabel zoals in de boekenapp: klein, kapitaal. */
 .status, .op-lijst { font-size: 0.72rem !important; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .status { color: var(--zacht) !important; }
+.status-actief { color: var(--accent) !important; }
+.regel { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+.sterren-klein { color: var(--ster); letter-spacing: 1px; font-size: 0.8rem; }
+a.titel { text-decoration: none; }
 .op-lijst { color: var(--accent) !important; }
 .midden { text-align: center; margin-top: 24px !important; }
 .titel-tekst { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -138,6 +142,25 @@ a { color: var(--accent); }
 .bevestig > p { margin: 0; text-align: center; color: var(--zacht); }
 .bevestig .beschrijving { text-align: left; color: var(--tekst); margin-top: 18px; line-height: 1.5; }
 .bevestig .hoofdknop { margin-top: 24px; }
+.bevestig .label {
+  text-align: left; margin: 26px 0 8px; padding-top: 14px; border-top: 1px solid var(--lijn);
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tekst);
+}
+.keuzes { display: flex; flex-wrap: wrap; gap: 8px; }
+.keuze { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--lijn); background: none; cursor: pointer; }
+.keuze.actief { background: var(--accent); color: var(--accent-tekst); border-color: var(--accent); }
+.sterren { display: flex; gap: 4px; }
+.ster { border: 0; background: none; padding: 4px 6px; font-size: 2.1rem; line-height: 1; color: var(--lijn); cursor: pointer; }
+.ster.aan { color: var(--ster); }
+.datum-regel { display: flex; gap: 12px; align-items: center; }
+.datum-regel input, .bevestig textarea {
+  padding: 10px 12px; font-size: 16px; border: 1px solid var(--lijn); border-radius: 10px; background: var(--vlak);
+}
+.datum-regel .link-knop { padding: 8px 0; }
+.bevestig .datum-tekst { text-align: left; font-size: 0.85rem; margin-top: 6px; }
+.bevestig textarea { width: 100%; resize: vertical; min-height: 110px; font-family: var(--schreef); font-size: 17px; line-height: 1.5; }
+.bevestig .opgeslagen { text-align: right; font-size: 0.85rem; margin: 4px 0 0; }
+.verwijder { display: block; margin: 40px auto 0; background: none; border: 0; padding: 12px; color: var(--rood); font-size: 0.95rem; cursor: pointer; }
 .geen-poster { display: flex; align-items: center; justify-content: center; color: var(--zacht); font-family: var(--schreef); font-weight: 700; font-size: 1.4rem; }
 
 .leeg, .bezig { color: var(--zacht); text-align: center; margin: 48px 0; }
@@ -178,5 +201,7 @@ a { color: var(--accent); }
   transition: opacity 0.2s, transform 0.2s;
 }
 #melding.zichtbaar { opacity: 1; transform: translate(-50%, 0); }
+#melding.met-knop { pointer-events: auto; display: flex; align-items: center; gap: 14px; white-space: nowrap; }
+#melding button { border: 0; background: none; color: var(--bg); font-weight: 700; padding: 0; text-decoration: underline; }
 
 .versie { text-align: center; color: var(--zacht); font-size: 0.75rem; margin-top: 32px; }

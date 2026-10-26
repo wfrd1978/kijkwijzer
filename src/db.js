@@ -32,3 +32,20 @@ export async function titelToevoegen(t) {
   titel.id = await db.titels.add(titel);
   return { titel, nieuw: true };
 }
+
+export function haalTitel(id) {
+  return db.titels.get(id);
+}
+
+export function titelBijwerken(id, wijzigingen) {
+  return db.titels.update(id, wijzigingen);
+}
+
+export function titelVerwijderen(id) {
+  return db.titels.delete(id);
+}
+
+// Voor 'Ongedaan maken': de titel komt terug met hetzelfde nummer en alles wat je had ingevuld.
+export function titelTerugzetten(titel) {
+  return db.titels.put(titel);
+}
