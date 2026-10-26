@@ -1,5 +1,9 @@
 // Service worker: zorgt dat de app snel opent, ook met slecht of geen internet.
 const CACHE = 'kijkwijzer-v1';
+// Posters van TMDB apart bewaren, zodat je lijst ook zonder internet plaatjes heeft.
+const POSTERS = 'posters-v1';
+const POSTER_ADRES = 'image.tmdb.org';
+const MAX_POSTERS = 600;
 const WACHT_OP_NETWERK = 3000;
 // Bestanden in assets/ hebben een unieke naam per versie; de oudste ruimen we op.
 const MAX_BESTANDEN = 40;
@@ -10,7 +14,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== POSTERS).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -47,9 +51,37 @@ async function netwerkEerst(request) {
   return Promise.race([netwerk.then((a) => (a.ok ? a : bewaard)).catch(() => bewaard), teLaat]);
 }
 
+// Is er genoeg ruimte? Je lijst zelf gaat altijd voor: bij twijfel geen poster bewaren.
+async function ruimteVoorPosters(cache) {
+  try {
+    const { usage, quota } = await navigator.storage.estimate();
+    if (usage > quota * 0.5) return false;
+  } catch {
+    // Geen schatting mogelijk: dan alleen de grens op het aantal posters.
+  }
+  return (await cache.keys()).length < MAX_POSTERS;
+}
+
+async function posterEerst(request) {
+  const cache = await caches.open(POSTERS);
+  const bewaard = await cache.match(request);
+  if (bewaard) return bewaard;
+  const antwoord = await fetch(request);
+  // Plaatjes van een andere site zijn 'gesloten' (type opaque): wel te bewaren en te tonen.
+  if ((antwoord.ok || antwoord.type === 'opaque') && (await ruimteVoorPosters(cache))) {
+    cache.put(request, antwoord.clone()).catch(() => {});
+  }
+  return antwoord;
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (request.method !== 'GET') return;
+  if (request.destination === 'image' && url.hostname === POSTER_ADRES) {
+    event.respondWith(posterEerst(request));
+    return;
+  }
+  if (url.origin !== self.location.origin) return;
   event.respondWith(url.pathname.includes('/assets/') ? opslagEerst(request) : netwerkEerst(request));
 });

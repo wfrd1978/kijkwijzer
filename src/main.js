@@ -2,6 +2,8 @@ import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
 import { zoekTitels, testSleutel, posterUrl, SleutelFout } from './tmdb.js';
+import { alleTitels, titelToevoegen, vraagBlijvendeOpslag } from './db.js';
+import { titelSleutel } from './titels.js';
 
 const app = document.getElementById('app');
 
@@ -23,31 +25,73 @@ function melding(tekst) {
 
 const BRON = '<p class="bron">Gegevens en posters van TMDB. Deze app gebruikt de TMDB API, maar is niet door TMDB goedgekeurd of gecertificeerd.</p>';
 
-// --- Zoeken ---
+const WOORDMERK = '<header class="woordmerk"><h1>Kijk<span>wijzer</span></h1></header>';
 
-let laatsteZoekterm = '';
-let zoekNr = 0;
-
-function posterHtml(t) {
-  const url = veiligeUrl(posterUrl(t.poster));
+function posterHtml(t, klasse = 'poster-klein') {
+  const url = veiligeUrl(posterUrl(t.poster, klasse === 'poster-groot' ? 'w342' : 'w185'));
   return url
-    ? `<img class="poster-klein" src="${url}" alt="" loading="lazy" />`
-    : `<div class="poster-klein geen-poster" aria-hidden="true">${veilig(t.titel.slice(0, 1))}</div>`;
+    ? `<img class="${klasse}" src="${url}" alt="" loading="lazy" />`
+    : `<div class="${klasse} geen-poster" aria-hidden="true">${veilig(t.titel.slice(0, 1))}</div>`;
 }
 
-function toonZoek() {
-  if (!leesSleutel()) {
+function soortJaar(t) {
+  return `${t.soort === 'film' ? 'Film' : 'Serie'}${t.jaar ? ` · ${veilig(t.jaar)}` : ''}`;
+}
+
+// Als een scherm laadt terwijl je al verder tikt, mag het oude scherm niets meer tekenen.
+let schermNr = 0;
+
+// --- Mijn lijst ---
+
+async function toonLijst() {
+  const nr = schermNr;
+  const titels = await alleTitels();
+  if (nr !== schermNr) return;
+  if (!titels.length) {
     app.innerHTML = `
-      <header class="woordmerk"><h1>Kijk<span>wijzer</span></h1></header>
+      ${WOORDMERK}
       <section class="welkom">
         <p>Je films en series, rustig op één plek.</p>
-        <p class="zacht">Plak eerst één keer je TMDB-sleutel, dan kun je zoeken.</p>
-        <a class="hoofdknop" href="#/instellingen">Sleutel instellen</a>
+        ${
+          leesSleutel()
+            ? '<p class="zacht">Je lijst is nog leeg. Zoek een film of serie om te beginnen.</p><a class="hoofdknop" href="#/zoek">Zoek een titel</a>'
+            : '<p class="zacht">Plak eerst één keer je TMDB-sleutel, dan kun je zoeken.</p><a class="hoofdknop" href="#/instellingen">Sleutel instellen</a>'
+        }
       </section>`;
     return;
   }
   app.innerHTML = `
-    <header class="woordmerk"><h1>Kijk<span>wijzer</span></h1></header>
+    ${WOORDMERK}
+    <p class="aantal">${titels.length} ${titels.length === 1 ? 'titel' : 'titels'}</p>
+    <ul class="lijst">${titels
+      .map(
+        (t) => `
+      <li class="titel">
+        ${posterHtml(t)}
+        <div class="titel-tekst">
+          <span class="status">${veilig(t.status)}</span>
+          <strong>${veilig(t.titel)}</strong>
+          <span>${soortJaar(t)}</span>
+        </div>
+      </li>`
+      )
+      .join('')}</ul>
+  `;
+}
+
+// --- Zoeken ---
+
+let laatsteZoekterm = '';
+let laatsteResultaten = [];
+let zoekNr = 0;
+
+function toonZoek() {
+  if (!leesSleutel()) {
+    location.hash = '#/instellingen';
+    return;
+  }
+  app.innerHTML = `
+    ${WOORDMERK}
     <form class="zoekbalk" id="zoek-form" role="search">
       <input id="zoekveld" type="search" placeholder="Film of serie" autocomplete="off" enterkeyhint="search" value="${veilig(laatsteZoekterm)}" aria-label="Zoek een film of serie" />
       <button type="submit">Zoek</button>
@@ -67,7 +111,7 @@ function toonZoek() {
     veld.blur(); // toetsenbord weg, zodat je de resultaten ziet
     zoek(veld.value);
   });
-  if (laatsteZoekterm) zoek(laatsteZoekterm);
+  if (laatsteZoekterm) toonResultaten();
   else veld.focus();
 }
 
@@ -84,21 +128,8 @@ async function zoek(term) {
   try {
     const titels = await zoekTitels(laatsteZoekterm);
     if (nr !== zoekNr) return; // er is intussen verder getypt
-    vak.innerHTML = titels.length
-      ? `<ul class="lijst">${titels
-          .map(
-            (t) => `
-          <li class="titel">
-            ${posterHtml(t)}
-            <div class="titel-tekst">
-              <strong>${veilig(t.titel)}</strong>
-              <span>${t.soort === 'film' ? 'Film' : 'Serie'}${t.jaar ? ` · ${veilig(t.jaar)}` : ''}</span>
-              ${t.origineel && t.origineel !== t.titel ? `<span class="zacht">${veilig(t.origineel)}</span>` : ''}
-            </div>
-          </li>`
-          )
-          .join('')}</ul>${BRON}`
-      : '<p class="leeg">Niets gevonden. Probeer andere woorden.</p>';
+    laatsteResultaten = titels;
+    await toonResultaten();
   } catch (fout) {
     if (nr !== zoekNr) return;
     vak.innerHTML =
@@ -106,6 +137,57 @@ async function zoek(term) {
         ? '<p class="leeg">TMDB accepteert je sleutel niet. <a href="#/instellingen">Plak hem opnieuw</a>.</p>'
         : '<p class="leeg">Zoeken lukt nu niet. Heb je internet?</p>';
   }
+}
+
+async function toonResultaten() {
+  const vak = document.getElementById('resultaten');
+  if (!vak) return;
+  const opLijst = new Set((await alleTitels()).map(titelSleutel));
+  vak.innerHTML = laatsteResultaten.length
+    ? `<ul class="lijst">${laatsteResultaten
+        .map(
+          (t, i) => `
+        <li><button class="titel resultaat" data-i="${i}">
+          ${posterHtml(t)}
+          <div class="titel-tekst">
+            <strong>${veilig(t.titel)}</strong>
+            <span>${soortJaar(t)}</span>
+            ${t.origineel && t.origineel !== t.titel ? `<span class="zacht">${veilig(t.origineel)}</span>` : ''}
+            ${opLijst.has(titelSleutel(t)) ? '<span class="op-lijst">Staat op je lijst</span>' : ''}
+          </div>
+        </button></li>`
+        )
+        .join('')}</ul>${BRON}`
+    : '<p class="leeg">Niets gevonden. Probeer andere woorden.</p>';
+  vak.querySelectorAll('.resultaat').forEach((knop) =>
+    knop.addEventListener('click', () => toonBevestigen(laatsteResultaten[Number(knop.dataset.i)], opLijst.has(titelSleutel(laatsteResultaten[Number(knop.dataset.i)]))))
+  );
+}
+
+// Eén zoekresultaat groot, met de knop om hem op je lijst te zetten.
+function toonBevestigen(t, alOpLijst) {
+  window.scrollTo(0, 0);
+  app.innerHTML = `
+    <header class="kop"><button class="terug" id="terug">‹ Resultaten</button></header>
+    <section class="bevestig">
+      ${posterHtml(t, 'poster-groot')}
+      <h2>${veilig(t.titel)}</h2>
+      <p>${soortJaar(t)}${t.origineel && t.origineel !== t.titel ? ` · ${veilig(t.origineel)}` : ''}</p>
+      ${t.beschrijving ? `<p class="beschrijving">${veilig(t.beschrijving)}</p>` : ''}
+      ${
+        alOpLijst
+          ? '<p class="op-lijst midden">Staat al op je lijst</p>'
+          : '<button class="hoofdknop" id="toevoegen">Zet op mijn lijst</button>'
+      }
+    </section>
+  `;
+  document.getElementById('terug').addEventListener('click', toonZoek);
+  document.getElementById('toevoegen')?.addEventListener('click', async (e) => {
+    e.currentTarget.disabled = true;
+    const { nieuw } = await titelToevoegen(t);
+    melding(nieuw ? 'Op je lijst gezet' : 'Stond al op je lijst');
+    toonZoek();
+  });
 }
 
 // --- Instellingen ---
@@ -159,7 +241,7 @@ function toonInstellingen() {
       await testSleutel(tekst);
       bewaarSleutel(tekst);
       melding('Sleutel bewaard');
-      location.hash = '#/';
+      location.hash = '#/zoek';
     } catch (f) {
       toonFout(f instanceof SleutelFout ? 'TMDB accepteert deze sleutel niet. Controleer of je hem helemaal hebt gekopieerd.' : 'Controleren lukt nu niet. Heb je internet?');
       knop.disabled = false;
@@ -186,12 +268,16 @@ function toonInstellingen() {
 // --- Schermen ---
 
 function route() {
+  schermNr += 1;
   window.scrollTo(0, 0);
-  const plek = location.hash === '#/instellingen' ? 'instellingen' : 'zoek';
+  const plek = { '#/zoek': 'zoek', '#/instellingen': 'instellingen' }[location.hash] || 'lijst';
   document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === plek));
   if (plek === 'instellingen') toonInstellingen();
-  else toonZoek();
+  else if (plek === 'zoek') toonZoek();
+  else toonLijst();
 }
+
+vraagBlijvendeOpslag();
 
 window.addEventListener('hashchange', route);
 route();

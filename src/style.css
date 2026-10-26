@@ -114,11 +114,30 @@ a { color: var(--accent); }
 .link-knop { background: none; border: 0; padding: 16px 0; color: var(--accent); text-align: left; font-size: 1rem; }
 
 .lijst { list-style: none; margin: 0; padding: 0; }
-.titel { display: flex; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--lijn); }
+.titel {
+  display: flex; gap: 14px; align-items: center; width: 100%; padding: 12px 0;
+  border: 0; border-bottom: 1px solid var(--lijn); background: none; text-align: left; color: inherit;
+}
+.resultaat { cursor: pointer; }
+.aantal { color: var(--zacht); font-size: 0.9rem; margin: 14px 0 0; }
+/* Statuslabel zoals in de boekenapp: klein, kapitaal. */
+.status, .op-lijst { font-size: 0.72rem !important; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.status { color: var(--zacht) !important; }
+.op-lijst { color: var(--accent) !important; }
+.midden { text-align: center; margin-top: 24px !important; }
 .titel-tekst { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .titel-tekst strong { font-family: var(--schreef); font-weight: 700; font-size: 1.12rem; line-height: 1.25; }
 .titel-tekst > span { color: var(--zacht); font-size: 0.92rem; }
-.poster-klein { flex: none; width: 52px; height: 78px; border-radius: 2px; object-fit: cover; background: var(--poster-leeg); }
+.poster-klein, .poster-groot { flex: none; object-fit: cover; background: var(--poster-leeg); }
+.poster-klein { width: 52px; height: 78px; border-radius: 2px; }
+.poster-groot { width: 150px; height: 225px; display: block; margin: 0 auto 14px; border-radius: 3px; }
+.poster-groot.geen-poster { font-size: 3rem; }
+
+.terug { border: 0; background: none; padding: 0; color: var(--tekst); font-size: 1rem; cursor: pointer; }
+.bevestig h2 { margin: 0 0 4px; font-family: var(--schreef); font-weight: 700; font-size: 1.6rem; line-height: 1.2; text-align: center; }
+.bevestig > p { margin: 0; text-align: center; color: var(--zacht); }
+.bevestig .beschrijving { text-align: left; color: var(--tekst); margin-top: 18px; line-height: 1.5; }
+.bevestig .hoofdknop { margin-top: 24px; }
 .geen-poster { display: flex; align-items: center; justify-content: center; color: var(--zacht); font-family: var(--schreef); font-weight: 700; font-size: 1.4rem; }
 
 .leeg, .bezig { color: var(--zacht); text-align: center; margin: 48px 0; }
