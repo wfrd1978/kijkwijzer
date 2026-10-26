@@ -57,3 +57,24 @@ export async function zoekTitels(zoekterm) {
   const data = await vraag('/search/multi', { query: zoekterm, include_adult: 'false' });
   return (data.results ?? []).map(naarTitel).filter(Boolean);
 }
+
+// Waar kun je het kijken in Nederland? TMDB krijgt deze gegevens van JustWatch.
+// Gratis (met of zonder reclame, zoals NPO Start) komt apart van een betaald abonnement.
+export function naarDiensten(nl) {
+  if (!nl) return null;
+  const lijst = (...soorten) => {
+    const gezien = new Set();
+    return soorten
+      .flatMap((s) => nl[s] ?? [])
+      .sort((a, b) => (a.display_priority ?? 99) - (b.display_priority ?? 99))
+      .filter((d) => !gezien.has(d.provider_id) && gezien.add(d.provider_id))
+      .map((d) => ({ id: d.provider_id, naam: d.provider_name, logo: d.logo_path ?? '' }));
+  };
+  const diensten = { abonnement: lijst('flatrate'), gratis: lijst('free', 'ads'), huren: lijst('rent'), kopen: lijst('buy'), link: nl.link ?? '' };
+  return diensten.abonnement.length || diensten.gratis.length || diensten.huren.length || diensten.kopen.length ? diensten : null;
+}
+
+export async function haalDiensten(soort, tmdbId) {
+  const data = await vraag(`/${soort === 'film' ? 'movie' : 'tv'}/${tmdbId}/watch/providers`);
+  return naarDiensten(data.results?.NL);
+}

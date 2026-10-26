@@ -160,9 +160,23 @@ a.titel { text-decoration: none; }
 .bevestig .datum-tekst { text-align: left; font-size: 0.85rem; margin-top: 6px; }
 .bevestig textarea { width: 100%; resize: vertical; min-height: 110px; font-family: var(--schreef); font-size: 17px; line-height: 1.5; }
 .bevestig .opgeslagen { text-align: right; font-size: 0.85rem; margin: 4px 0 0; }
+.diensten { text-align: left; }
+.diensten p { margin: 0; }
+.dienst-rij { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.dienst-soort { color: var(--zacht); font-size: 0.85rem; }
+.dienst-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.dienst {
+  display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px;
+  border: 1px solid var(--lijn); border-radius: 999px; font-size: 0.92rem;
+}
+.dienst img { width: 28px; height: 28px; border-radius: 7px; }
+.bevestig .bijgewerkt { font-size: 0.8rem; margin-top: 4px; text-align: left; }
+.alle-opties { display: inline-block; margin-top: 8px; font-size: 0.92rem; }
+.diensten .bron { margin-top: 8px; }
 .verwijder { display: block; margin: 40px auto 0; background: none; border: 0; padding: 12px; color: var(--rood); font-size: 0.95rem; cursor: pointer; }
 .geen-poster { display: flex; align-items: center; justify-content: center; color: var(--zacht); font-family: var(--schreef); font-weight: 700; font-size: 1.4rem; }
 
+.zacht { color: var(--zacht); }
 .leeg, .bezig { color: var(--zacht); text-align: center; margin: 48px 0; }
 .fout { color: var(--rood); margin: 8px 0 0 !important; }
 .bron { color: var(--zacht); font-size: 0.8rem; margin-top: 24px; }

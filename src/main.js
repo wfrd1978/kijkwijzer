@@ -1,7 +1,7 @@
 import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
-import { zoekTitels, testSleutel, posterUrl, SleutelFout } from './tmdb.js';
+import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten } from './tmdb.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
 import { titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst } from './titels.js';
 
@@ -36,6 +36,7 @@ function sterrenTekst(aantal) {
   return aantal ? '★'.repeat(aantal) + '☆'.repeat(5 - aantal) : '';
 }
 
+const JUSTWATCH = '<p class="bron">Streaminginformatie van JustWatch.</p>';
 const BRON = '<p class="bron">Gegevens en posters van TMDB. Deze app gebruikt de TMDB API, maar is niet door TMDB goedgekeurd of gecertificeerd.</p>';
 
 const WOORDMERK = '<header class="woordmerk"><h1>Kijk<span>wijzer</span></h1></header>';
@@ -206,6 +207,56 @@ function toonBevestigen(t, alOpLijst) {
   });
 }
 
+// --- Waar kijken ---
+
+function dienstRij(naam, lijst) {
+  if (!lijst?.length) return '';
+  return `
+    <div class="dienst-rij">
+      <span class="dienst-soort">${naam}</span>
+      <ul class="dienst-lijst">${lijst
+        .map((d) => {
+          const logo = veiligeUrl(posterUrl(d.logo, 'w92'));
+          return `<li class="dienst">${logo ? `<img src="${logo}" alt="" loading="lazy" />` : ''}${veilig(d.naam)}</li>`;
+        })
+        .join('')}</ul>
+    </div>`;
+}
+
+// De bewaarde diensten van een titel; 'bezig' als er net nieuwe worden opgehaald.
+function dienstenHtml(titel, bezig = false) {
+  if (!titel.dienstenOp) return `<p class="zacht">${bezig ? 'Ophalen…' : 'Nog niet bekend. Open deze titel met internet om het op te halen.'}</p>`;
+  const d = titel.diensten;
+  const datum = `<p class="zacht bijgewerkt">Bijgewerkt op ${veilig(datumTekst(titel.dienstenOp))}${bezig ? ' · verversen…' : ''}</p>`;
+  if (!d) return `<p>Op dit moment niet te zien in Nederland.</p>${datum}${JUSTWATCH}`;
+  const link = veiligeUrl(d.link);
+  return `
+    ${dienstRij('Abonnement', d.abonnement)}
+    ${dienstRij('Gratis', d.gratis)}
+    ${dienstRij('Huren', d.huren)}
+    ${dienstRij('Kopen', d.kopen)}
+    ${datum}
+    ${link ? `<a class="alle-opties" href="${link}" target="_blank" rel="noopener">Alle opties en links ↗</a>` : ''}
+    ${JUSTWATCH}`;
+}
+
+// Elke keer dat je een titel opent, worden de diensten ververst (die veranderen geregeld).
+// Lukt dat niet, bijvoorbeeld zonder internet, dan blijft de laatst bekende informatie staan.
+async function verversDiensten(titel, bewaar, nr) {
+  const vak = () => (nr === schermNr ? document.getElementById('diensten') : null);
+  if (!leesSleutel()) {
+    if (vak()) vak().innerHTML = dienstenHtml(titel);
+    return;
+  }
+  try {
+    const diensten = await haalDiensten(titel.soort, titel.tmdbId);
+    await bewaar({ diensten, dienstenOp: vandaag() });
+  } catch {
+    // Geen verbinding of TMDB doet even niet mee: dan de bewaarde versie.
+  }
+  if (vak()) vak().innerHTML = dienstenHtml(titel);
+}
+
 // --- Eén titel van je lijst ---
 
 async function toonTitel(id) {
@@ -228,6 +279,9 @@ async function toonTitel(id) {
       <h2>${veilig(titel.titel)}</h2>
       <p>${soortJaar(titel)}${titel.origineel && titel.origineel !== titel.titel ? ` · ${veilig(titel.origineel)}` : ''}</p>
       ${titel.beschrijving ? `<p class="beschrijving">${veilig(titel.beschrijving)}</p>` : ''}
+
+      <p class="label">Waar kijken</p>
+      <div id="diensten" class="diensten">${dienstenHtml(titel, true)}</div>
 
       <p class="label">Status</p>
       <div class="keuzes" id="statussen">
@@ -269,6 +323,7 @@ async function toonTitel(id) {
   };
   tekenStatus();
   tekenSterren();
+  verversDiensten(titel, bewaar, nr);
 
   document.getElementById('statussen').addEventListener('click', async (e) => {
     const knop = e.target.closest('.keuze');
