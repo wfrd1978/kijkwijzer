@@ -43,7 +43,9 @@ Je kunt op je telefoon (vanaf het beginscherm) een film of serie zoeken en toevo
 
 ## Fase 2 — Verdieping (later uitwerken)
 
-Voortgang bij series (seizoen en aflevering), melding als een titel uit je lijst bij een van je diensten verschijnt, trailer en cast, en importeren uit Letterboxd, IMDb of Netflix-kijkgeschiedenis.
+Voortgang bij series (seizoen en aflevering), melding als een titel uit je lijst bij een van je diensten verschijnt, trailer, en importeren uit Letterboxd, IMDb of Netflix-kijkgeschiedenis.
+
+**Acteurs.** Bij elke film en serie de belangrijkste acteurs met foto en rol (TMDB). Uit te werken bij de start van fase 2: of je op een acteur kunt tikken om andere films en series met die acteur te zien, en of je in je lijst op acteur kunt zoeken.
 
 **Tv en sport.** Gewenst: (1) wedstrijden en races van een vaste selectie eigen sporten, met waar je ze kunt zien; (2) een melding of overzicht als een film of serie van je lijst op een gewone tv-zender komt. **Eerst onderzoek:** er is geen gratis officiële Nederlandse tv-gids voor een app zonder server, en sportschema's vermelden niet altijd de zender. Voor de start van fase 2 zoeken we uit welke bronnen gratis, betrouwbaar en toegestaan zijn, en kiezen we op basis daarvan wat we bouwen.
 
