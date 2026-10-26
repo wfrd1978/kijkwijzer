@@ -85,7 +85,7 @@ main {
 button, input, select, textarea { font: inherit; color: inherit; }
 a { color: var(--accent); }
 
-.kop { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 8px 0 18px; }
+.kop { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 8px 0 18px; }
 .kop h1 { margin: 0; font-family: var(--schreef); font-weight: 700; font-size: 1.8rem; letter-spacing: -0.01em; flex: 1 1 auto; }
 
 /* --- Welkom --- */
@@ -170,6 +170,19 @@ a.titel { text-decoration: none; }
 .poster-groot { width: 150px; height: 225px; display: block; margin: 0 auto 14px; border-radius: 3px; }
 .poster-groot.geen-poster { font-size: 3rem; }
 
+.kop .deel-knop { display: inline-flex; align-items: center; gap: 6px; padding: 0; color: var(--accent); font-weight: 600; cursor: pointer; }
+.deel-knop svg { width: 20px; height: 20px; fill: currentColor; }
+.samen { margin: -6px 0 22px; padding: 16px; border-radius: 12px; background: var(--accent-zacht); }
+.samen p { margin: 0 0 10px; }
+.samen-kop { font-family: var(--schreef); font-weight: 700; font-size: 1.2rem; }
+.samen-wanneer { display: flex; gap: 12px; flex-wrap: wrap; }
+.samen-wanneer label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 140px; color: var(--zacht); font-size: 0.85rem; }
+.samen-wanneer input { padding: 10px 12px; font-size: 16px; border: 1px solid var(--lijn); border-radius: 10px; background: var(--bg); min-height: 44px; }
+.samen-voorbeeld {
+  white-space: pre-wrap; margin-top: 14px !important; padding: 12px 14px; border-radius: 10px;
+  background: var(--bg); font-size: 0.88rem; line-height: 1.45; border: 1px solid var(--lijn);
+}
+.samen .hoofdknop { margin-top: 12px; }
 .terug { border: 0; background: none; padding: 0; color: var(--tekst); font-size: 1rem; cursor: pointer; }
 .bevestig h2 { margin: 0 0 4px; font-family: var(--schreef); font-weight: 700; font-size: 1.6rem; line-height: 1.2; text-align: center; }
 .bevestig > p { margin: 0; text-align: center; color: var(--zacht); }

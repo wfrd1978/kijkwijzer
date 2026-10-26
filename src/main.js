@@ -2,6 +2,7 @@ import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
 import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten } from './tmdb.js';
+import { uitnodigingTekst, deel } from './delen.js';
 import { KEUZES, leesKeuzes, zetKeuze, keuzeVan, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
 import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
@@ -389,7 +390,23 @@ async function toonTitel(id) {
   };
 
   app.innerHTML = `
-    <header class="kop"><a class="terug" href="#/">‹ Mijn lijst</a></header>
+    <header class="kop">
+      <a class="terug" href="#/">‹ Mijn lijst</a>
+      <button class="link-knop deel-knop" id="samen" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l4 4-1.4 1.4L13 6.8V15h-2V6.8L9.4 8.4 8 7zM5 11h3v2H7v6h10v-6h-1v-2h3v10H5z" /></svg>
+        Samen kijken
+      </button>
+    </header>
+    <section class="samen" id="samen-vak" hidden>
+      <p class="samen-kop">Nodig iemand uit</p>
+      <p class="zacht">Stel eventueel een dag en tijd voor. Je verstuurt het bericht zelf, via WhatsApp, Berichten of mail.</p>
+      <div class="samen-wanneer">
+        <label>Dag<input type="date" id="samen-datum" min="${vandaag()}" /></label>
+        <label>Tijd<input type="time" id="samen-tijd" step="300" /></label>
+      </div>
+      <p class="samen-voorbeeld" id="samen-voorbeeld"></p>
+      <button class="hoofdknop" id="samen-deel">Deel uitnodiging</button>
+    </section>
     <section class="bevestig">
       ${posterHtml(titel, 'poster-groot')}
       <h2>${veilig(titel.titel)}</h2>
@@ -484,6 +501,35 @@ async function toonTitel(id) {
   });
   notitie.addEventListener('blur', bewaarNotitie);
   toonTitel.bewaarOpenstaand = bewaarNotitie;
+
+  // Samen kijken: de uitnodiging met de diensten zoals je ze nu ziet (eigen abonnementen eerst).
+  const samenVak = document.getElementById('samen-vak');
+  const samenKnop = document.getElementById('samen');
+  const uitnodiging = () =>
+    uitnodigingTekst(titel, {
+      datum: document.getElementById('samen-datum').value,
+      tijd: document.getElementById('samen-tijd').value,
+      verdeeld: titel.diensten ? verdeelDiensten(titel.diensten, leesKeuzes()) : null,
+    });
+  const toonVoorbeeld = () => (document.getElementById('samen-voorbeeld').textContent = uitnodiging());
+  samenKnop.addEventListener('click', () => {
+    samenVak.hidden = !samenVak.hidden;
+    samenKnop.setAttribute('aria-expanded', String(!samenVak.hidden));
+    if (!samenVak.hidden) toonVoorbeeld();
+  });
+  samenVak.addEventListener('input', toonVoorbeeld);
+  document.getElementById('samen-deel').addEventListener('click', async () => {
+    try {
+      const uitkomst = await deel(uitnodiging());
+      if (uitkomst === 'gekopieerd') melding('Tekst gekopieerd. Plak hem waar je wilt.');
+      if (uitkomst === 'gedeeld') {
+        samenVak.hidden = true;
+        samenKnop.setAttribute('aria-expanded', 'false');
+      }
+    } catch {
+      melding('Delen lukt hier niet');
+    }
+  });
 
   document.getElementById('verwijder').addEventListener('click', async () => {
     await bewaarNotitie();
