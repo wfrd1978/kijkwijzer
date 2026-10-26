@@ -203,6 +203,19 @@ a.titel { text-decoration: none; }
   border: 1px solid var(--lijn); border-radius: 999px; font-size: 0.92rem;
 }
 .dienst img { width: 28px; height: 28px; border-radius: 7px; }
+.bij-jou { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.bij-jou .dienst-soort { color: var(--accent); font-weight: 700; }
+.dienst.eigen { border-color: var(--accent); background: var(--accent-zacht); color: var(--tekst); text-decoration: none; font-weight: 600; padding: 6px 14px 6px 6px; }
+.dienst.eigen img { width: 32px; height: 32px; }
+.niet-bij-jou { color: var(--zacht); font-size: 0.9rem; margin-bottom: 12px !important; }
+
+.diensten-lijst { list-style: none; margin: 8px 0 0; padding: 0; }
+.dienst-keuze { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--lijn); }
+.dienst-naam { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.dienst-naam img { width: 28px; height: 28px; border-radius: 7px; }
+.keuzes.klein .keuze { padding: 5px 12px; font-size: 0.88rem; }
+.meer-diensten { margin-top: 12px; }
+.meer-diensten summary { cursor: pointer; color: var(--accent); padding: 8px 0; }
 .bevestig .bijgewerkt { font-size: 0.8rem; margin-top: 4px; text-align: left; }
 .alle-opties { display: inline-block; margin-top: 8px; font-size: 0.92rem; }
 .diensten .bron { margin-top: 8px; }

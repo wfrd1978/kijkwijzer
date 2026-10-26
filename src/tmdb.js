@@ -78,3 +78,23 @@ export async function haalDiensten(soort, tmdbId) {
   const data = await vraag(`/${soort === 'film' ? 'movie' : 'tv'}/${tmdbId}/watch/providers`);
   return naarDiensten(data.results?.NL);
 }
+
+// Alle streamingdiensten die TMDB voor Nederland kent (films en series samen),
+// de bekendste eerst.
+export function naarDienstenLijst(...lijsten) {
+  const per = new Map();
+  for (const d of lijsten.flatMap((l) => l?.results ?? [])) {
+    const prio = d.display_priorities?.NL ?? d.display_priority ?? 999;
+    const bestaand = per.get(d.provider_id);
+    if (!bestaand || prio < bestaand.prio) per.set(d.provider_id, { id: d.provider_id, naam: d.provider_name, logo: d.logo_path ?? '', prio });
+  }
+  return [...per.values()].sort((a, b) => a.prio - b.prio || a.naam.localeCompare(b.naam));
+}
+
+export async function haalAlleDiensten() {
+  const [films, series] = await Promise.all([
+    vraag('/watch/providers/movie', { watch_region: 'NL' }),
+    vraag('/watch/providers/tv', { watch_region: 'NL' }),
+  ]);
+  return naarDienstenLijst(films, series);
+}

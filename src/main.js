@@ -1,7 +1,8 @@
 import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
-import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten } from './tmdb.js';
+import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten } from './tmdb.js';
+import { KEUZES, leesKeuzes, zetKeuze, keuzeVan, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
 import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
 import {
@@ -302,15 +303,32 @@ function toonBevestigen(t, alOpLijst) {
 
 // --- Waar kijken ---
 
+function logoHtml(d) {
+  const logo = veiligeUrl(posterUrl(d.logo, 'w92'));
+  return logo ? `<img src="${logo}" alt="" loading="lazy" />` : '';
+}
+
 function dienstRij(naam, lijst) {
   if (!lijst?.length) return '';
   return `
     <div class="dienst-rij">
       <span class="dienst-soort">${naam}</span>
+      <ul class="dienst-lijst">${lijst.map((d) => `<li class="dienst">${logoHtml(d)}${veilig(d.naam)}</li>`).join('')}</ul>
+    </div>`;
+}
+
+// Je eigen abonnementen: groot, met een knop om meteen door te klikken.
+function bijJouHtml(lijst, titel) {
+  if (!lijst.length) return '';
+  return `
+    <div class="bij-jou">
+      <span class="dienst-soort">Bij jou te zien</span>
       <ul class="dienst-lijst">${lijst
         .map((d) => {
-          const logo = veiligeUrl(posterUrl(d.logo, 'w92'));
-          return `<li class="dienst">${logo ? `<img src="${logo}" alt="" loading="lazy" />` : ''}${veilig(d.naam)}</li>`;
+          const link = veiligeUrl(doorklikLink(d, titel.titel));
+          return link
+            ? `<li><a class="dienst eigen" href="${link}" target="_blank" rel="noopener">${logoHtml(d)}Kijk op ${veilig(d.naam)} ↗</a></li>`
+            : `<li class="dienst eigen">${logoHtml(d)}${veilig(d.naam)}</li>`;
         })
         .join('')}</ul>
     </div>`;
@@ -323,11 +341,16 @@ function dienstenHtml(titel, bezig = false) {
   const datum = `<p class="zacht bijgewerkt">Bijgewerkt op ${veilig(datumTekst(titel.dienstenOp))}${bezig ? ' · verversen…' : ''}</p>`;
   if (!d) return `<p>Op dit moment niet te zien in Nederland.</p>${datum}${JUSTWATCH}`;
   const link = veiligeUrl(d.link);
+  const v = verdeelDiensten(d, leesKeuzes());
+  const rest = v.abonnement.length || v.gratis.length || v.huren.length || v.kopen.length;
   return `
-    ${dienstRij('Abonnement', d.abonnement)}
-    ${dienstRij('Gratis', d.gratis)}
-    ${dienstRij('Huren', d.huren)}
-    ${dienstRij('Kopen', d.kopen)}
+    ${bijJouHtml(v.bijJou, titel)}
+    ${v.bijJou.length ? '' : `<p class="niet-bij-jou">${Object.values(leesKeuzes()).includes('abonnement') ? 'Niet bij jouw abonnementen.' : 'Kies in Instellingen welke abonnementen je hebt, dan zie je hier wat bij jou te zien is.'}</p>`}
+    ${dienstRij('Abonnement', v.abonnement)}
+    ${dienstRij('Gratis', v.gratis)}
+    ${dienstRij('Huren', v.huren)}
+    ${dienstRij('Kopen', v.kopen)}
+    ${!rest && !v.bijJou.length && v.verborgen ? '<p class="zacht">Alleen te zien bij diensten die je hebt verborgen.</p>' : ''}
     ${datum}
     ${link ? `<a class="alle-opties" href="${link}" target="_blank" rel="noopener">Alle opties en links ↗</a>` : ''}
     ${JUSTWATCH}`;
@@ -480,6 +503,46 @@ async function toonTitel(id) {
 
 // --- Instellingen ---
 
+const MEER_NA = 15;
+
+async function toonDienstenKeuze(nr) {
+  const vak = () => (nr === schermNr ? document.getElementById('diensten-keuze') : null);
+  let alle;
+  try {
+    alle = await haalAlleDiensten();
+  } catch {
+    if (vak()) vak().innerHTML = '<p class="zacht">Diensten ophalen lukt nu niet. Heb je internet?</p>';
+    return;
+  }
+  if (!vak()) return;
+  const keuzes = leesKeuzes();
+  // Wat je al gekozen hebt staat altijd in beeld, ook als de dienst verder onderaan staat.
+  const gekozen = (d) => keuzeVan(keuzes, d.id) !== 'tonen';
+  const boven = alle.filter((d, i) => i < MEER_NA || gekozen(d));
+  const onder = alle.filter((d, i) => i >= MEER_NA && !gekozen(d));
+  const regel = (d) => `
+    <li class="dienst-keuze" data-id="${d.id}">
+      <span class="dienst-naam">${logoHtml(d)}${veilig(d.naam)}</span>
+      <span class="keuzes klein">${Object.entries(KEUZES)
+        .map(([k, naam]) => `<button class="keuze${keuzeVan(keuzes, d.id) === k ? ' actief' : ''}" data-keuze="${k}">${naam}</button>`)
+        .join('')}</span>
+    </li>`;
+  vak().innerHTML = `
+    <ul class="diensten-lijst">${boven.map(regel).join('')}</ul>
+    ${
+      onder.length
+        ? `<details class="meer-diensten"><summary>Nog ${onder.length} diensten</summary><ul class="diensten-lijst">${onder.map(regel).join('')}</ul></details>`
+        : ''
+    }`;
+  vak().addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-keuze]');
+    if (!knop) return;
+    const li = knop.closest('.dienst-keuze');
+    zetKeuze(Number(li.dataset.id), knop.dataset.keuze);
+    li.querySelectorAll('.keuze').forEach((k) => k.classList.toggle('actief', k === knop));
+  });
+}
+
 function backupTekst() {
   const laatste = laatsteBackup();
   if (!laatste) return 'Nog geen backup gemaakt.';
@@ -511,6 +574,12 @@ async function toonInstellingen() {
     </section>
 
     <section class="blok">
+      <h2>Mijn diensten</h2>
+      <p>Kies per streamingdienst: <b>Abonnement</b> als je hem hebt, <b>Tonen</b> om hem bij een titel te zien, of <b>Verbergen</b> als hij je niet interesseert.</p>
+      <div id="diensten-keuze">${sleutel ? '<p class="zacht">Diensten ophalen…</p>' : '<p class="zacht">Stel eerst hieronder je TMDB-sleutel in.</p>'}</div>
+    </section>
+
+    <section class="blok">
       <h2>TMDB-sleutel</h2>
       ${
         sleutel
@@ -534,6 +603,8 @@ async function toonInstellingen() {
       <p class="versie">Versie van ${__VERSIE__}</p>
     </section>
   `;
+
+  if (sleutel) toonDienstenKeuze(nr);
 
   // Eerst klaarmaken, dan bewaren: het deelmenu van de iPhone moet direct na een tik openen.
   const maakKnop = document.getElementById('backup-maken');

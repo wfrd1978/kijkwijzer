@@ -10,7 +10,7 @@ const LATER = 'backupLater';
 export const HERINNER_NA_DAGEN = 14;
 
 // Keuzes in de lijst en de weergave: klein, maar fijn om mee te verhuizen.
-const VOORKEUREN = ['tab', 'soort', 'sortering', 'weergave'];
+const VOORKEUREN = ['tab', 'soort', 'sortering', 'weergave', 'diensten'];
 
 function lees(sleutel) {
   try {
