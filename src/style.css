@@ -1,0 +1,82 @@
+/* Vormgeving gelijk aan de boekenapp: warm papierwit, zwart, dunne lijnen en titels in een
+   schreefletter. Eigen accent: bordeaux (bioscoopdoek) met een vleugje goud. */
+
+:root {
+  --bg: #fbf9f5;
+  --vlak: #f2eee6;
+  --tekst: #141414;
+  --zacht: #6b6862;
+  --lijn: #e5e0d6;
+  --accent: #6e2232;
+  --accent-tekst: #ffffff;
+  --accent-zacht: #f4e8ea;
+  --goud: #c99a2e;
+  --ster: #c99a2e;
+  --schreef: ui-serif, 'New York', Georgia, 'Times New Roman', serif;
+  --schreefloos: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  color-scheme: light dark;
+}
+
+/* Donker: vanzelf als de iPhone donker staat (tenzij in de app 'licht' gekozen is),
+   of als de app zelf donker kiest (data-thema="donker", bijvoorbeeld 's avonds). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-thema="licht"]) {
+    --bg: #121413;
+    --vlak: #1d201f;
+    --tekst: #f2f2f0;
+    --zacht: #9a9e9c;
+    --lijn: #2b2f2d;
+    --accent: #e3a0ac;
+    --accent-tekst: #2a0c13;
+    --accent-zacht: #2e1b1f;
+    --goud: #e0b955;
+    --ster: #e0b955;
+  }
+}
+:root[data-thema="donker"] {
+  --bg: #121413;
+  --vlak: #1d201f;
+  --tekst: #f2f2f0;
+  --zacht: #9a9e9c;
+  --lijn: #2b2f2d;
+  --accent: #e3a0ac;
+  --accent-tekst: #2a0c13;
+  --accent-zacht: #2e1b1f;
+  --goud: #e0b955;
+  --ster: #e0b955;
+  color-scheme: dark;
+}
+:root[data-thema="licht"] { color-scheme: light; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--tekst);
+  font-family: var(--schreefloos);
+  line-height: 1.4;
+  -webkit-tap-highlight-color: transparent;
+}
+
+main {
+  padding: calc(env(safe-area-inset-top) + 8px) 16px calc(env(safe-area-inset-bottom) + 110px);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* --- Koppen --- */
+
+.woordmerk { text-align: center; padding: 10px 0 12px; border-bottom: 1px solid var(--lijn); margin: 0 -16px; }
+.woordmerk h1 { margin: 0; font-family: var(--schreef); font-weight: 800; font-size: 2.1rem; letter-spacing: -0.02em; }
+.woordmerk h1 span { color: var(--accent); }
+
+/* --- Welkom (stap 0) --- */
+
+.welkom { text-align: center; padding: 48px 8px 24px; }
+.welkom p { margin: 0 0 12px; font-size: 1.05rem; }
+.welkom .zacht { color: var(--zacht); font-size: 0.95rem; }
+
+.versie { text-align: center; color: var(--zacht); font-size: 0.8rem; margin-top: 40px; }
