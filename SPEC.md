@@ -42,13 +42,17 @@ TMDB-nummer · film of serie · titel · jaar · poster · genres · status · s
 
 Je kunt op je telefoon (vanaf het beginscherm) een film of serie zoeken en toevoegen, krijgt een waarschuwing bij een dubbele titel, ziet per titel waar je die in Nederland kunt kijken (eerst bij je eigen abonnementen), kunt iemand uitnodigen om samen te kijken, vindt elke titel in je lijst binnen enkele seconden terug, krijgt tips op basis van wat je hoog waardeerde, en hebt een backupbestand in je Google Drive.
 
+## Werklijst — kleine verbeteringen
+
+- **Mijn diensten in één keer instellen.** In Instellingen knoppen om alle diensten in één tik te verbergen of te tonen (bijvoorbeeld "Verberg alles behalve mijn abonnementen"), zodat je niet elke dienst apart hoeft aan te tikken.
+
 ## Fase 2 — Verdieping (later uitwerken)
 
 Voortgang bij series (seizoen en aflevering), melding als een titel uit je lijst bij een van je diensten verschijnt, trailer, en importeren uit Letterboxd, IMDb of Netflix-kijkgeschiedenis.
 
 **Acteurs.** Bij elke film en serie de belangrijkste acteurs met foto en rol (TMDB). Uit te werken bij de start van fase 2: of je op een acteur kunt tikken om andere films en series met die acteur te zien, en of je in je lijst op acteur kunt zoeken.
 
-**Tv en sport.** Gewenst: (1) wedstrijden en races van een vaste selectie eigen sporten, met waar je ze kunt zien; (2) een melding of overzicht als een film of serie van je lijst op een gewone tv-zender komt. **Eerst onderzoek:** er is geen gratis officiële Nederlandse tv-gids voor een app zonder server, en sportschema's vermelden niet altijd de zender. Voor de start van fase 2 zoeken we uit welke bronnen gratis, betrouwbaar en toegestaan zijn, en kiezen we op basis daarvan wat we bouwen.
+**Tv en sport.** Gewenst: (1) wedstrijden en races van een vaste selectie eigen sporten, met waar je ze kunt zien, en daarbij rekening houden met sportzenders waarop je een abonnement hebt (bijvoorbeeld Ziggo Sport); (2) een melding of overzicht als een film of serie van je lijst op een gewone tv-zender komt. **Eerst onderzoek:** er is geen gratis officiële Nederlandse tv-gids voor een app zonder server, en sportschema's vermelden niet altijd de zender. Voor de start van fase 2 zoeken we uit welke bronnen gratis, betrouwbaar en toegestaan zijn, en kiezen we op basis daarvan wat we bouwen.
 
 ## Fase 3 — Delen (later uitwerken)
 
