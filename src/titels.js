@@ -45,3 +45,47 @@ export function datumTekst(iso) {
   if (!j || !m || !d) return '';
   return new Date(j, m - 1, d).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
 }
+
+// --- Zoeken, filteren en sorteren in je lijst ---
+
+// Kleine letters en zonder accenten, zodat 'Amelie' ook 'Amélie' vindt.
+export function kaal(tekst) {
+  return (tekst || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+export const TABS = ['Alles', ...STATUSSEN];
+export const SOORTEN = { alle: 'Films en series', film: 'Films', serie: 'Series' };
+export const SORTERINGEN = {
+  toegevoegd: 'Laatst toegevoegd',
+  gezien: 'Laatst gezien',
+  sterren: 'Sterren',
+  titel: 'Titel',
+};
+
+// Zoekt in titel, originele titel en notitie (zo vind je ook 'tip van …').
+export function filterTitels(titels, { tab = 'Alles', soort = 'alle', zoek = '' } = {}) {
+  const woorden = kaal(zoek).split(/\s+/).filter(Boolean);
+  return titels.filter((t) => {
+    if (tab !== 'Alles' && t.status !== tab) return false;
+    if (soort !== 'alle' && t.soort !== soort) return false;
+    const tekst = kaal(`${t.titel} ${t.origineel} ${t.notitie}`);
+    return woorden.every((w) => tekst.includes(w));
+  });
+}
+
+const opTitel = (a, b) => a.titel.localeCompare(b.titel, 'nl', { sensitivity: 'base' });
+
+export function sorteerTitels(titels, sortering = 'toegevoegd') {
+  const kopie = [...titels];
+  if (sortering === 'titel') return kopie.sort(opTitel);
+  // Bij gelijke sterren of zonder kijkdatum: op titel, zodat de volgorde vast blijft.
+  if (sortering === 'sterren') return kopie.sort((a, b) => (b.sterren || 0) - (a.sterren || 0) || opTitel(a, b));
+  if (sortering === 'gezien') return kopie.sort((a, b) => (b.kijkdatum || '').localeCompare(a.kijkdatum || '') || opTitel(a, b));
+  return kopie.sort((a, b) => b.toegevoegdOp.localeCompare(a.toegevoegdOp));
+}
+
+// De tekst van de dubbel-waarschuwing: 'Staat al op je lijst · Gezien op 26 oktober 2026'.
+export function dubbelTekst(t) {
+  if (t.status === 'Gezien' && t.kijkdatum) return `Staat al op je lijst · Gezien op ${datumTekst(t.kijkdatum)}`;
+  return `Staat al op je lijst · ${t.status}`;
+}

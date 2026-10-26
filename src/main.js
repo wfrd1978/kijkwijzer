@@ -3,7 +3,10 @@ import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
 import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten } from './tmdb.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
-import { titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst } from './titels.js';
+import {
+  titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst,
+  TABS, SOORTEN, SORTERINGEN, filterTitels, sorteerTitels, dubbelTekst,
+} from './titels.js';
 
 const app = document.getElementById('app');
 
@@ -57,6 +60,42 @@ let schermNr = 0;
 
 // --- Mijn lijst ---
 
+// Je keuzes in de lijst blijven bewaard, ook als je de app sluit.
+function onthoud(sleutel, standaard, toegestaan) {
+  try {
+    const waarde = localStorage.getItem(sleutel);
+    return toegestaan.includes(waarde) ? waarde : standaard;
+  } catch {
+    return standaard;
+  }
+}
+function bewaarKeuze(sleutel, waarde) {
+  try {
+    localStorage.setItem(sleutel, waarde);
+  } catch {
+    // Niet erg: dan geldt de keuze alleen nu.
+  }
+}
+let tab = onthoud('tab', 'Alles', TABS);
+let soort = onthoud('soort', 'alle', Object.keys(SOORTEN));
+let sortering = onthoud('sortering', 'toegevoegd', Object.keys(SORTERINGEN));
+let lijstZoek = '';
+
+function titelRegel(t) {
+  return `
+      <li><a class="titel" href="#/titel/${t.id}">
+        ${posterHtml(t)}
+        <div class="titel-tekst">
+          <span class="regel">
+            <span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>
+            ${t.sterren ? `<span class="sterren-klein" aria-label="${t.sterren} sterren">${sterrenTekst(t.sterren)}</span>` : ''}
+          </span>
+          <strong>${veilig(t.titel)}</strong>
+          <span>${soortJaar(t)}</span>
+        </div>
+      </a></li>`;
+}
+
 async function toonLijst() {
   const nr = schermNr;
   const titels = await alleTitels();
@@ -76,24 +115,56 @@ async function toonLijst() {
   }
   app.innerHTML = `
     ${WOORDMERK}
-    <p class="aantal">${titels.length} ${titels.length === 1 ? 'titel' : 'titels'}</p>
-    <ul class="lijst">${titels
-      .map(
-        (t) => `
-      <li><a class="titel" href="#/titel/${t.id}">
-        ${posterHtml(t)}
-        <div class="titel-tekst">
-          <span class="regel">
-            <span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>
-            ${t.sterren ? `<span class="sterren-klein" aria-label="${t.sterren} sterren">${sterrenTekst(t.sterren)}</span>` : ''}
-          </span>
-          <strong>${veilig(t.titel)}</strong>
-          <span>${soortJaar(t)}</span>
-        </div>
-      </a></li>`
-      )
-      .join('')}</ul>
+    <nav class="tabs" id="tabs">${TABS.map((t) => `<button class="tab${t === tab ? ' actief' : ''}" data-tab="${t}">${t}</button>`).join('')}</nav>
+    <div class="lijst-bediening">
+      <input id="lijst-zoek" type="search" placeholder="Zoek in je lijst" value="${veilig(lijstZoek)}" autocomplete="off" enterkeyhint="search" aria-label="Zoek in je lijst" />
+      <div class="lijst-regel">
+        <label class="sorteer">Toon
+          <select id="soort">${Object.entries(SOORTEN).map(([k, v]) => `<option value="${k}"${k === soort ? ' selected' : ''}>${v}</option>`).join('')}</select>
+        </label>
+        <label class="sorteer">Sorteer
+          <select id="sorteer">${Object.entries(SORTERINGEN).map(([k, v]) => `<option value="${k}"${k === sortering ? ' selected' : ''}>${v}</option>`).join('')}</select>
+        </label>
+        <span class="aantal" id="aantal"></span>
+      </div>
+    </div>
+    <ul class="lijst" id="lijst"></ul>
   `;
+
+  // Alleen de lijst zelf opnieuw tekenen, zodat het zoekveld en het toetsenbord blijven staan.
+  const teken = () => {
+    const zichtbaar = sorteerTitels(filterTitels(titels, { tab, soort, zoek: lijstZoek }), sortering);
+    document.getElementById('lijst').innerHTML = zichtbaar.length
+      ? zichtbaar.map(titelRegel).join('')
+      : `<li class="leeg">${
+          lijstZoek ? `Niets gevonden voor "${veilig(lijstZoek)}".` : tab === 'Alles' ? `Geen ${SOORTEN[soort].toLowerCase()} op je lijst.` : `Nog niets bij ${veilig(tab)}.`
+        }</li>`;
+    document.getElementById('aantal').textContent = zichtbaar.length === 1 ? '1 titel' : `${zichtbaar.length} titels`;
+  };
+  teken();
+
+  document.getElementById('tabs').addEventListener('click', (e) => {
+    const knop = e.target.closest('.tab');
+    if (!knop) return;
+    tab = knop.dataset.tab;
+    bewaarKeuze('tab', tab);
+    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('actief', t.dataset.tab === tab));
+    teken();
+  });
+  document.getElementById('lijst-zoek').addEventListener('input', (e) => {
+    lijstZoek = e.target.value;
+    teken();
+  });
+  document.getElementById('soort').addEventListener('change', (e) => {
+    soort = e.target.value;
+    bewaarKeuze('soort', soort);
+    teken();
+  });
+  document.getElementById('sorteer').addEventListener('change', (e) => {
+    sortering = e.target.value;
+    bewaarKeuze('sortering', sortering);
+    teken();
+  });
 }
 
 // --- Zoeken ---
@@ -159,7 +230,7 @@ async function zoek(term) {
 async function toonResultaten() {
   const vak = document.getElementById('resultaten');
   if (!vak) return;
-  const opLijst = new Set((await alleTitels()).map(titelSleutel));
+  const opLijst = new Map((await alleTitels()).map((t) => [titelSleutel(t), t]));
   vak.innerHTML = laatsteResultaten.length
     ? `<ul class="lijst">${laatsteResultaten
         .map(
@@ -170,18 +241,22 @@ async function toonResultaten() {
             <strong>${veilig(t.titel)}</strong>
             <span>${soortJaar(t)}</span>
             ${t.origineel && t.origineel !== t.titel ? `<span class="zacht">${veilig(t.origineel)}</span>` : ''}
-            ${opLijst.has(titelSleutel(t)) ? '<span class="op-lijst">Staat op je lijst</span>' : ''}
+            ${opLijst.has(titelSleutel(t)) ? `<span class="op-lijst">${veilig(dubbelTekst(opLijst.get(titelSleutel(t))))}</span>` : ''}
           </div>
         </button></li>`
         )
         .join('')}</ul>${BRON}`
     : '<p class="leeg">Niets gevonden. Probeer andere woorden.</p>';
   vak.querySelectorAll('.resultaat').forEach((knop) =>
-    knop.addEventListener('click', () => toonBevestigen(laatsteResultaten[Number(knop.dataset.i)], opLijst.has(titelSleutel(laatsteResultaten[Number(knop.dataset.i)]))))
+    knop.addEventListener('click', () => {
+      const t = laatsteResultaten[Number(knop.dataset.i)];
+      toonBevestigen(t, opLijst.get(titelSleutel(t)));
+    })
   );
 }
 
 // Eén zoekresultaat groot, met de knop om hem op je lijst te zetten.
+// Staat hij er al op, dan zie je dat (met wanneer je hem zag) en kun je hem openen.
 function toonBevestigen(t, alOpLijst) {
   window.scrollTo(0, 0);
   app.innerHTML = `
@@ -193,7 +268,7 @@ function toonBevestigen(t, alOpLijst) {
       ${t.beschrijving ? `<p class="beschrijving">${veilig(t.beschrijving)}</p>` : ''}
       ${
         alOpLijst
-          ? '<p class="op-lijst midden">Staat al op je lijst</p>'
+          ? `<div class="dubbel"><p>${veilig(dubbelTekst(alOpLijst))}</p><a class="tweede-knop" href="#/titel/${alOpLijst.id}">Open op mijn lijst</a></div>`
           : '<button class="hoofdknop" id="toevoegen">Zet op mijn lijst</button>'
       }
     </section>

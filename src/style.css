@@ -119,7 +119,37 @@ a { color: var(--accent); }
   border: 0; border-bottom: 1px solid var(--lijn); background: none; text-align: left; color: inherit;
 }
 .resultaat { cursor: pointer; }
-.aantal { color: var(--zacht); font-size: 0.9rem; margin: 14px 0 0; }
+.aantal { color: var(--zacht); font-size: 0.9rem; }
+
+/* --- Tabjes en bediening boven de lijst (gelijk aan de boekenapp) --- */
+
+.tabs {
+  display: flex; gap: 22px; overflow-x: auto; margin: 0 -16px 14px; padding: 0 16px;
+  border-bottom: 1px solid var(--lijn); scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: none; border: 0; background: none; padding: 12px 0 10px; font-size: 1rem; color: var(--zacht); cursor: pointer;
+  border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.tab.actief { color: var(--tekst); font-weight: 700; border-bottom-color: var(--accent); }
+.lijst-bediening { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.lijst-bediening input {
+  width: 100%; min-width: 0; padding: 11px 14px; font-size: 16px;
+  border: 1px solid var(--lijn); border-radius: 10px; background: var(--vlak);
+}
+.lijst-regel { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 18px; }
+.lijst-regel .aantal { margin-left: auto; }
+.sorteer { display: flex; align-items: center; gap: 8px; color: var(--zacht); font-size: 0.9rem; }
+.sorteer select {
+  font-size: 16px; color: var(--tekst); background: none; border: 0; padding: 4px 0;
+  -webkit-appearance: none; appearance: none; text-decoration: underline; text-underline-offset: 3px;
+}
+.lijst .leeg { list-style: none; }
+
+.dubbel { margin-top: 24px; padding: 14px 16px; border-radius: 10px; background: var(--accent-zacht); }
+.dubbel p { margin: 0; color: var(--accent); font-weight: 600; text-align: center; }
+.dubbel .tweede-knop { margin-top: 12px; background: var(--bg); }
 /* Statuslabel zoals in de boekenapp: klein, kapitaal. */
 .status, .op-lijst { font-size: 0.72rem !important; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .status { color: var(--zacht) !important; }
