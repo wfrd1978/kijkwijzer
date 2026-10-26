@@ -25,7 +25,7 @@ Een persoonlijke mobiele webapp waarmee je films en series bijhoudt die je wilt 
 | 1.4 | Waar kijken | Per titel: bij welke dienst in NL (abonnement, huren, kopen), met datum "bijgewerkt op" | TMDB, data van JustWatch |
 | 1.5 | Mijn lijst | Zoeken, filteren op status en film/serie, sorteren op datum, sterren, titel | In de app |
 | 1.6 | Dubbel-waarschuwing | "Staat al in je lijst (gezien op …)" vóór toevoegen | Vergelijk op TMDB-nummer |
-| 1.7 | Backup & terugzetten | Backupbestand via het deelmenu naar Google Drive; later terugzetten | JSON-bestand, Web Share |
+| 1.7 | Backup & terugzetten | Backupbestand via het deelmenu naar Google Drive; later terugzetten. Je TMDB-sleutel zit er bewust niet in | JSON-bestand, Web Share |
 | 1.8 | Mijn diensten | In Instellingen per streamingdienst kiezen: Abonnement, Tonen of Verbergen. Op de titelpagina eerst "Bij jou te zien", verborgen diensten niet tonen. Per dienst een knop die de dienst opent (met de titel als zoekterm waar de dienst dat toelaat) | TMDB-lijst van NL-diensten; keuze op de telefoon |
 | 1.9 | Samen kijken | Een titel delen via het deelmenu (WhatsApp, iMessage, mail) als uitnodiging om samen te kijken: titel, waar te zien, link en optioneel een voorstel voor dag en tijd | Web Share |
 | 1.10 | Ontdekken | Trending films en series; filter op "mijn diensten" | TMDB |

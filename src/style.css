@@ -12,6 +12,7 @@
   --accent-zacht: #f4e8ea;
   --poster-leeg: #ebe6dc;
   --rood: #c0392b;
+  --geel: #fbf3dc;
   --goud: #c99a2e;
   --ster: #c99a2e;
   --schreef: ui-serif, 'New York', Georgia, 'Times New Roman', serif;
@@ -33,6 +34,7 @@
     --accent-zacht: #2e1b1f;
     --poster-leeg: #262a28;
     --rood: #e0685a;
+    --geel: #2e2919;
     --goud: #e0b955;
     --ster: #e0b955;
   }
@@ -48,6 +50,7 @@
   --accent-zacht: #2e1b1f;
   --poster-leeg: #262a28;
   --rood: #e0685a;
+  --geel: #2e2919;
   --goud: #e0b955;
   --ster: #e0b955;
   color-scheme: dark;
@@ -216,6 +219,22 @@ a.titel { text-decoration: none; }
 .blok h2 { font-family: var(--schreef); font-size: 1.3rem; margin: 8px 0 6px; }
 .blok p { margin: 0 0 10px; }
 .blok + .blok { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--lijn); }
+.blok .klein { font-size: 0.85rem; margin-top: 14px; }
+.bestand-knop { display: block; text-align: center; margin-top: 12px; cursor: pointer; }
+.gevaar-knop {
+  width: 100%; padding: 13px; border: 0; border-radius: 10px;
+  background: var(--rood); color: #fff; font-weight: 600; font-size: 1rem; cursor: pointer;
+}
+.gevaar-knop:disabled { opacity: 0.6; }
+
+.herinnering, .waarschuwing { padding: 14px 16px; margin: 14px 0; border-radius: 10px; background: var(--geel); text-align: left; }
+.herinnering { display: flex; flex-direction: column; gap: 6px; }
+.herinnering p, .waarschuwing p { margin: 0; color: var(--tekst); }
+.waarschuwing p { margin-bottom: 12px; }
+.waarschuwing .link-knop { display: block; margin: 4px auto 0; padding: 10px 0 0; text-align: center; }
+.herinnering-knoppen { display: flex; gap: 20px; align-items: center; }
+.herinnering-knoppen a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.herinnering-knoppen .link-knop { padding: 0; color: var(--zacht); }
 .sleutel-kort { font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; }
 
 /* --- Zwevende balk onderin (gelijk aan de boekenapp) --- */

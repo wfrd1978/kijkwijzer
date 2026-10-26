@@ -3,6 +3,7 @@ import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
 import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten } from './tmdb.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
+import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
 import {
   titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst,
   TABS, SOORTEN, SORTERINGEN, filterTitels, sorteerTitels, dubbelTekst,
@@ -96,6 +97,18 @@ function titelRegel(t) {
       </a></li>`;
 }
 
+function herinneringHtml() {
+  const dagen = dagenSinds(laatsteBackup());
+  return `
+    <div class="herinnering">
+      <p>${dagen === null ? 'Je hebt nog geen backup van je lijst.' : `Je laatste backup is ${dagen} dagen oud.`}</p>
+      <div class="herinnering-knoppen">
+        <a href="#/instellingen">Backup maken</a>
+        <button class="link-knop" id="later">Later</button>
+      </div>
+    </div>`;
+}
+
 async function toonLijst() {
   const nr = schermNr;
   const titels = await alleTitels();
@@ -115,6 +128,7 @@ async function toonLijst() {
   }
   app.innerHTML = `
     ${WOORDMERK}
+    ${moetHerinneren(titels.length) ? herinneringHtml() : ''}
     <nav class="tabs" id="tabs">${TABS.map((t) => `<button class="tab${t === tab ? ' actief' : ''}" data-tab="${t}">${t}</button>`).join('')}</nav>
     <div class="lijst-bediening">
       <input id="lijst-zoek" type="search" placeholder="Zoek in je lijst" value="${veilig(lijstZoek)}" autocomplete="off" enterkeyhint="search" aria-label="Zoek in je lijst" />
@@ -143,6 +157,10 @@ async function toonLijst() {
   };
   teken();
 
+  document.getElementById('later')?.addEventListener('click', () => {
+    herinnerLater();
+    document.querySelector('.herinnering').remove();
+  });
   document.getElementById('tabs').addEventListener('click', (e) => {
     const knop = e.target.closest('.tab');
     if (!knop) return;
@@ -462,10 +480,35 @@ async function toonTitel(id) {
 
 // --- Instellingen ---
 
-function toonInstellingen() {
+function backupTekst() {
+  const laatste = laatsteBackup();
+  if (!laatste) return 'Nog geen backup gemaakt.';
+  const dagen = dagenSinds(laatste);
+  const wanneer = dagen === 0 ? 'vandaag' : dagen === 1 ? 'gisteren' : `${dagen} dagen geleden`;
+  return `Laatste backup: ${laatste.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })} (${wanneer}).`;
+}
+
+const aantalTekst = (n) => (n === 1 ? '1 titel' : `${n} titels`);
+
+async function toonInstellingen() {
+  const nr = schermNr;
   const sleutel = leesSleutel();
+  const aantal = (await alleTitels()).length;
+  if (nr !== schermNr) return;
   app.innerHTML = `
     <header class="kop"><h1>Instellingen</h1></header>
+
+    <section class="blok">
+      <h2>Backup</h2>
+      <p>Je lijst staat alleen op deze telefoon. Bewaar regelmatig een backup in je Google Drive: kies in het deelmenu de <b>Drive</b>-app, of <b>Bewaar in Bestanden</b> en dan Google Drive.</p>
+      <p class="zacht" id="backup-status">${backupTekst()}</p>
+      <button class="hoofdknop" id="backup-maken"${aantal ? '' : ' disabled'}>Backup maken</button>
+      <label class="tweede-knop bestand-knop">Backup terugzetten
+        <input type="file" id="backup-bestand" accept="application/json,.json" hidden />
+      </label>
+      <div id="terugzet-vak"></div>
+      <p class="zacht klein">Je TMDB-sleutel zit niet in de backup. Op een nieuwe telefoon plak je hem opnieuw.</p>
+    </section>
 
     <section class="blok">
       <h2>TMDB-sleutel</h2>
@@ -491,6 +534,89 @@ function toonInstellingen() {
       <p class="versie">Versie van ${__VERSIE__}</p>
     </section>
   `;
+
+  // Eerst klaarmaken, dan bewaren: het deelmenu van de iPhone moet direct na een tik openen.
+  const maakKnop = document.getElementById('backup-maken');
+  let bestand = null;
+  maakKnop.addEventListener('click', async () => {
+    if (!bestand) {
+      maakKnop.disabled = true;
+      maakKnop.textContent = 'Backup klaarmaken…';
+      try {
+        bestand = await maakBackupBestand();
+      } catch {
+        bestand = null;
+        maakKnop.disabled = false;
+        maakKnop.textContent = 'Backup maken';
+        melding('Backup klaarmaken lukte niet. Probeer het nog eens.');
+        return;
+      }
+      maakKnop.disabled = false;
+      maakKnop.textContent = `Bewaar backup (${aantalTekst(aantal)})`;
+      return;
+    }
+    try {
+      if (await bewaarBackup(bestand)) {
+        bestand = null; // volgende keer weer een verse backup
+        maakKnop.textContent = 'Backup maken';
+        document.getElementById('backup-status').textContent = backupTekst();
+        melding('Backup bewaard');
+      }
+    } catch {
+      melding('Bewaren lukte niet. Probeer het nog eens.');
+    }
+  });
+
+  document.getElementById('backup-bestand').addEventListener('change', async (e) => {
+    const gekozen = e.target.files?.[0];
+    e.target.value = '';
+    if (!gekozen) return;
+    const vak = document.getElementById('terugzet-vak');
+    let inhoud;
+    try {
+      inhoud = await leesBackup(gekozen);
+    } catch (fout) {
+      vak.innerHTML = `<div class="waarschuwing"><p>${veilig(fout.message)}</p></div>`;
+      return;
+    }
+    const gemaakt = new Date(inhoud.gemaakt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+    const kop = `<strong>Backup van ${veilig(gemaakt)} met ${aantalTekst(inhoud.titels.length)}</strong><br />`;
+    // Terugzetten vervangt alles. Staat er al een lijst, dan eerst nu een backup daarvan
+    // (in het afgelopen kwartier), zodat een verkeerd gekozen bestand nooit werk kost.
+    const laatste = laatsteBackup();
+    if (aantal > 0 && (!laatste || Date.now() - laatste > 15 * 60000)) {
+      vak.innerHTML = `
+        <div class="waarschuwing">
+          <p>${kop}Terugzetten vervangt je huidige lijst van ${aantalTekst(aantal)}. Maak daarom eerst hierboven een backup van je huidige lijst (Backup maken, dan Bewaar backup) en kies daarna dit bestand opnieuw.</p>
+          <button class="link-knop" id="annuleer">Sluiten</button>
+        </div>`;
+      document.getElementById('annuleer').addEventListener('click', () => (vak.innerHTML = ''));
+      return;
+    }
+    vak.innerHTML = `
+      <div class="waarschuwing">
+        <p>${kop}${aantal ? `Je huidige lijst van ${aantalTekst(aantal)} wordt hierdoor <b>vervangen</b>.` : 'Je lijst is nu leeg.'}</p>
+        <button class="gevaar-knop" id="terugzetten">${aantal ? 'Ja, vervang mijn lijst' : 'Terugzetten'}</button>
+        <button class="link-knop" id="annuleer">Annuleren</button>
+      </div>`;
+    document.getElementById('annuleer').addEventListener('click', () => (vak.innerHTML = ''));
+    document.getElementById('terugzetten').addEventListener('click', async (k) => {
+      k.currentTarget.disabled = true;
+      k.currentTarget.textContent = 'Bezig met terugzetten…';
+      try {
+        const n = await zetBackupTerug(inhoud);
+        // Keuzes uit de backup (tab, sortering) meteen gebruiken.
+        tab = onthoud('tab', 'Alles', TABS);
+        soort = onthoud('soort', 'alle', Object.keys(SOORTEN));
+        sortering = onthoud('sortering', 'toegevoegd', Object.keys(SORTERINGEN));
+        window.kijkThema?.toepassen();
+        location.hash = '#/';
+        melding(`${aantalTekst(n)} teruggezet`);
+      } catch {
+        vak.innerHTML = '<div class="waarschuwing"><p>Terugzetten is mislukt. Je lijst is niet veranderd.</p></div>';
+      }
+    });
+  });
 
   document.getElementById('sleutel-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -531,7 +657,7 @@ function toonInstellingen() {
   document.getElementById('sleutel-weg')?.addEventListener('click', () => {
     if (!confirm('Sleutel van deze telefoon verwijderen? Je kunt hem daarna opnieuw plakken.')) return;
     wisSleutel();
-    toonInstellingen();
+    route();
   });
 }
 

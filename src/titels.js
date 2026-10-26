@@ -89,3 +89,46 @@ export function dubbelTekst(t) {
   if (t.status === 'Gezien' && t.kijkdatum) return `Staat al op je lijst · Gezien op ${datumTekst(t.kijkdatum)}`;
   return `Staat al op je lijst · ${t.status}`;
 }
+
+// --- Controle van titels uit een backup ---
+
+const SOORT_TITEL = ['film', 'serie'];
+const DATUM = /^\d{4}-\d{2}-\d{2}$/;
+
+function schoneDiensten(d) {
+  if (!d || typeof d !== 'object') return null;
+  const lijst = (l) =>
+    Array.isArray(l)
+      ? l
+          .filter((x) => x && Number.isInteger(x.id) && typeof x.naam === 'string')
+          .map((x) => ({ id: x.id, naam: x.naam, logo: typeof x.logo === 'string' ? x.logo : '' }))
+      : [];
+  return { abonnement: lijst(d.abonnement), gratis: lijst(d.gratis), huren: lijst(d.huren), kopen: lijst(d.kopen), link: typeof d.link === 'string' ? d.link : '' };
+}
+
+// Controleert een titel uit een backup en zet hem in de vaste vorm. Onbekende velden vallen weg,
+// verkeerde gegevens worden leeg. Zonder titel, TMDB-nummer of soort: een fout.
+export function normaliseerTitel(t) {
+  if (!t || typeof t !== 'object') throw new Error('Ongeldige titel in de backup.');
+  const titel = typeof t.titel === 'string' ? t.titel.trim() : '';
+  if (!titel || !Number.isInteger(t.tmdbId) || !SOORT_TITEL.includes(t.soort)) {
+    throw new Error('Er staat een onvolledige titel in de backup.');
+  }
+  const tekst = (v) => (typeof v === 'string' ? v : '');
+  return {
+    ...(Number.isInteger(t.id) && t.id > 0 ? { id: t.id } : {}),
+    tmdbId: t.tmdbId,
+    soort: t.soort,
+    titel,
+    origineel: tekst(t.origineel),
+    jaar: /^\d{4}$/.test(t.jaar) ? t.jaar : '',
+    poster: /^\/[\w.-]+$/.test(t.poster ?? '') ? t.poster : '',
+    beschrijving: tekst(t.beschrijving),
+    status: STATUSSEN.includes(t.status) ? t.status : STATUSSEN[0],
+    sterren: Number.isInteger(t.sterren) && t.sterren >= 0 && t.sterren <= 5 ? t.sterren : 0,
+    kijkdatum: DATUM.test(t.kijkdatum ?? '') ? t.kijkdatum : '',
+    notitie: tekst(t.notitie),
+    toegevoegdOp: typeof t.toegevoegdOp === 'string' && !isNaN(Date.parse(t.toegevoegdOp)) ? t.toegevoegdOp : new Date().toISOString(),
+    ...(DATUM.test(t.dienstenOp ?? '') ? { dienstenOp: t.dienstenOp, diensten: schoneDiensten(t.diensten) } : {}),
+  };
+}
