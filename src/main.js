@@ -1,7 +1,7 @@
 import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
-import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten } from './tmdb.js';
+import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten } from './tmdb.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { KEUZES, leesKeuzes, zetKeuze, keuzeVan, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
@@ -305,10 +305,10 @@ async function toonResultaten() {
 
 // Eén zoekresultaat groot, met de knop om hem op je lijst te zetten.
 // Staat hij er al op, dan zie je dat (met wanneer je hem zag) en kun je hem openen.
-function toonBevestigen(t, alOpLijst) {
+function toonBevestigen(t, alOpLijst, terug = { naam: 'Resultaten', toon: toonZoek }) {
   window.scrollTo(0, 0);
   app.innerHTML = `
-    <header class="kop"><button class="terug" id="terug">‹ Resultaten</button></header>
+    <header class="kop"><button class="terug" id="terug">‹ ${terug.naam}</button></header>
     <section class="bevestig">
       ${posterHtml(t, 'poster-groot')}
       <h2>${veilig(t.titel)}</h2>
@@ -321,13 +321,139 @@ function toonBevestigen(t, alOpLijst) {
       }
     </section>
   `;
-  document.getElementById('terug').addEventListener('click', toonZoek);
+  document.getElementById('terug').addEventListener('click', terug.toon);
   document.getElementById('toevoegen')?.addEventListener('click', async (e) => {
     e.currentTarget.disabled = true;
     const { nieuw } = await titelToevoegen(t);
     melding(nieuw ? 'Op je lijst gezet' : 'Stond al op je lijst');
-    toonZoek();
+    terug.toon();
   });
+}
+
+// --- Ontdekken ---
+
+const ONTDEK_SOORTEN = { film: 'Films', serie: 'Series' };
+const ONTDEK_BRONNEN = { trending: 'Trending', diensten: 'Bij mijn diensten' };
+let ontdekSoort = onthoud('ontdekSoort', 'film', Object.keys(ONTDEK_SOORTEN));
+let ontdekBron = onthoud('ontdekBron', 'trending', Object.keys(ONTDEK_BRONNEN));
+// Wat al geladen is blijft bewaard, zodat 'terug' meteen werkt en je op dezelfde plek uitkomt.
+const ontdekGeladen = new Map();
+let ontdekScroll = 0;
+
+function eigenDiensten() {
+  const keuzes = leesKeuzes();
+  return Object.keys(keuzes).filter((id) => keuzes[id] === 'abonnement').map(Number);
+}
+
+async function toonOntdekken({ terugNaarPlek = false } = {}) {
+  if (!leesSleutel()) {
+    location.hash = '#/instellingen';
+    return;
+  }
+  const nr = schermNr;
+  const eigen = eigenDiensten();
+  const keuzeKnoppen = (id, opties, gekozen) =>
+    `<div class="keuzes" id="${id}">${Object.entries(opties)
+      .map(([k, naam]) => `<button class="keuze${k === gekozen ? ' actief' : ''}" data-k="${k}">${naam}</button>`)
+      .join('')}</div>`;
+  app.innerHTML = `
+    ${WOORDMERK}
+    <div class="ontdek-keuzes">
+      ${keuzeKnoppen('ontdek-soort', ONTDEK_SOORTEN, ontdekSoort)}
+      ${keuzeKnoppen('ontdek-bron', ONTDEK_BRONNEN, ontdekBron)}
+    </div>
+    <p class="zacht ontdek-uitleg">${
+      ontdekBron === 'trending'
+        ? `${ONTDEK_SOORTEN[ontdekSoort]} waar deze week veel over gepraat wordt.`
+        : `Populaire ${ONTDEK_SOORTEN[ontdekSoort].toLowerCase()} die je met je eigen abonnementen kunt kijken.`
+    }</p>
+    <div id="ontdek-vak"></div>
+  `;
+  const kies = (id, zet) =>
+    document.getElementById(id).addEventListener('click', (e) => {
+      const knop = e.target.closest('[data-k]');
+      if (!knop) return;
+      zet(knop.dataset.k);
+      schermNr += 1;
+      toonOntdekken();
+    });
+  kies('ontdek-soort', (k) => bewaarKeuze('ontdekSoort', (ontdekSoort = k)));
+  kies('ontdek-bron', (k) => bewaarKeuze('ontdekBron', (ontdekBron = k)));
+
+  const vak = document.getElementById('ontdek-vak');
+  if (ontdekBron === 'diensten' && !eigen.length) {
+    vak.innerHTML = '<p class="leeg">Kies eerst in <a href="#/instellingen">Instellingen</a> bij Mijn diensten welke abonnementen je hebt.</p>';
+    return;
+  }
+
+  const sleutel = `${ontdekSoort}|${ontdekBron}|${eigen.join(',')}`;
+  const laad = async (pagina) =>
+    ontdekBron === 'trending' ? haalTrending(ontdekSoort, pagina) : haalOpDiensten(ontdekSoort, eigen, pagina);
+
+  let stand = ontdekGeladen.get(sleutel);
+  if (!stand) {
+    vak.innerHTML = '<p class="bezig">Ophalen…</p>';
+    try {
+      stand = { titels: await laad(1), pagina: 1 };
+      ontdekGeladen.set(sleutel, stand);
+    } catch (fout) {
+      if (nr !== schermNr) return;
+      vak.innerHTML =
+        fout instanceof SleutelFout
+          ? '<p class="leeg">TMDB accepteert je sleutel niet. <a href="#/instellingen">Plak hem opnieuw</a>.</p>'
+          : '<p class="leeg">Ophalen lukt nu niet. Heb je internet?</p>';
+      return;
+    }
+  }
+  if (nr !== schermNr) return;
+
+  const opLijst = new Map((await alleTitels()).map((t) => [titelSleutel(t), t]));
+  if (nr !== schermNr) return;
+
+  const teken = () => {
+    vak.innerHTML = stand.titels.length
+      ? `<ul class="raster">${stand.titels
+          .map(
+            (t, i) => `
+          <li><button class="raster-titel" data-i="${i}">
+            ${posterHtml(t, 'poster-raster')}
+            ${opLijst.has(titelSleutel(t)) ? '<span class="raster-label">Op je lijst</span>' : ''}
+            <strong>${veilig(t.titel)}</strong>
+            <span>${t.jaar ? veilig(t.jaar) : '&nbsp;'}</span>
+          </button></li>`
+          )
+          .join('')}</ul>
+         ${stand.pagina < 5 ? '<button class="tweede-knop" id="meer">Meer laden</button>' : ''}
+         ${ontdekBron === 'diensten' ? JUSTWATCH : ''}${BRON}`
+      : '<p class="leeg">Niets gevonden.</p>';
+    vak.querySelectorAll('.raster-titel').forEach((knop) =>
+      knop.addEventListener('click', () => {
+        ontdekScroll = window.scrollY;
+        const t = stand.titels[Number(knop.dataset.i)];
+        toonBevestigen(t, opLijst.get(titelSleutel(t)), { naam: 'Ontdekken', toon: () => toonOntdekken({ terugNaarPlek: true }) });
+      })
+    );
+    document.getElementById('meer')?.addEventListener('click', async (e) => {
+      const knop = e.currentTarget;
+      knop.disabled = true;
+      knop.textContent = 'Ophalen…';
+      try {
+        const extra = await laad(stand.pagina + 1);
+        const al = new Set(stand.titels.map(titelSleutel));
+        stand.titels.push(...extra.filter((t) => !al.has(titelSleutel(t))));
+        stand.pagina += 1;
+        const plek = window.scrollY;
+        teken();
+        window.scrollTo(0, plek);
+      } catch {
+        knop.disabled = false;
+        knop.textContent = 'Meer laden';
+        melding('Ophalen lukt nu niet');
+      }
+    });
+  };
+  teken();
+  if (terugNaarPlek) window.scrollTo(0, ontdekScroll);
 }
 
 // --- Waar kijken ---
@@ -817,10 +943,11 @@ async function route() {
   }
   window.scrollTo(0, 0);
   const titelId = location.hash.match(/^#\/titel\/(\d+)$/);
-  const plek = { '#/zoek': 'zoek', '#/instellingen': 'instellingen' }[location.hash] || 'lijst';
+  const plek = { '#/zoek': 'zoek', '#/ontdekken': 'ontdekken', '#/instellingen': 'instellingen' }[location.hash] || 'lijst';
   document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === plek));
   if (plek === 'instellingen') toonInstellingen();
   else if (plek === 'zoek') toonZoek();
+  else if (plek === 'ontdekken') toonOntdekken();
   else if (titelId) toonTitel(Number(titelId[1]));
   else toonLijst();
 }

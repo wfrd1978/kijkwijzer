@@ -240,6 +240,25 @@ a.titel { text-decoration: none; }
 .fout { color: var(--rood); margin: 8px 0 0 !important; }
 .bron { color: var(--zacht); font-size: 0.8rem; margin-top: 24px; }
 
+/* --- Ontdekken --- */
+
+.ontdek-keuzes { display: flex; flex-direction: column; gap: 10px; margin: 16px 0 8px; }
+.ontdek-uitleg { font-size: 0.9rem; margin: 6px 0 14px; }
+.raster { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 18px 12px; }
+.raster-titel {
+  position: relative; display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 0;
+  border: 0; background: none; color: inherit; text-align: left; cursor: pointer;
+}
+.poster-raster { width: 100%; aspect-ratio: 2 / 3; height: auto; object-fit: cover; border-radius: 4px; background: var(--poster-leeg); margin-bottom: 4px; }
+.poster-raster.geen-poster { font-size: 2rem; }
+.raster-titel strong { font-family: var(--schreef); font-size: 0.95rem; line-height: 1.2; }
+.raster-titel span { color: var(--zacht); font-size: 0.8rem; }
+.raster-titel .raster-label {
+  position: absolute; top: 6px; left: 6px; padding: 2px 7px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-tekst); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+}
+#ontdek-vak .tweede-knop { margin-top: 22px; }
+
 /* --- Instellingen --- */
 
 .blok h2 { font-family: var(--schreef); font-size: 1.3rem; margin: 8px 0 6px; }

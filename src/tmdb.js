@@ -38,12 +38,14 @@ export function posterUrl(pad, breedte = 'w185') {
 }
 
 // Zet een zoekresultaat van TMDB om naar de vorm die de app gebruikt.
-// Personen en andere soorten resultaten vallen weg.
-export function naarTitel(r) {
-  if (r.media_type !== 'movie' && r.media_type !== 'tv') return null;
+// Personen en andere soorten resultaten vallen weg. Lijsten met maar één soort (zoals
+// 'populair bij Netflix') noemen de soort niet per titel; die geef je dan zelf mee.
+export function naarTitel(r, standaard) {
+  const soort = r.media_type ?? standaard;
+  if (soort !== 'movie' && soort !== 'tv') return null;
   return {
     tmdbId: r.id,
-    soort: r.media_type === 'movie' ? 'film' : 'serie',
+    soort: soort === 'movie' ? 'film' : 'serie',
     titel: r.title ?? r.name ?? 'Onbekende titel',
     origineel: r.original_title ?? r.original_name ?? '',
     jaar: (r.release_date ?? r.first_air_date ?? '').slice(0, 4),
@@ -97,4 +99,30 @@ export async function haalAlleDiensten() {
     vraag('/watch/providers/tv', { watch_region: 'NL' }),
   ]);
   return naarDienstenLijst(films, series);
+}
+
+const TMDB_SOORT = { film: 'movie', serie: 'tv' };
+
+// Wat deze week veel bekeken wordt.
+export async function haalTrending(soort, pagina = 1) {
+  const s = TMDB_SOORT[soort];
+  const data = await vraag(`/trending/${s}/week`, { page: pagina });
+  return (data.results ?? []).map((r) => naarTitel(r, s)).filter(Boolean);
+}
+
+// Populair bij jouw diensten in Nederland: met abonnement of gratis, niet huren of kopen.
+export function dienstenParams(ids, pagina = 1) {
+  return {
+    watch_region: 'NL',
+    with_watch_providers: ids.join('|'),
+    with_watch_monetization_types: 'flatrate|free|ads',
+    sort_by: 'popularity.desc',
+    page: pagina,
+  };
+}
+
+export async function haalOpDiensten(soort, ids, pagina = 1) {
+  const s = TMDB_SOORT[soort];
+  const data = await vraag(`/discover/${s}`, dienstenParams(ids, pagina));
+  return (data.results ?? []).map((r) => naarTitel(r, s)).filter(Boolean);
 }

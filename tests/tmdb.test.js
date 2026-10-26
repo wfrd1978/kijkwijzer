@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maakVerzoek, naarTitel, posterUrl, naarDiensten } from '../src/tmdb.js';
+import { maakVerzoek, naarTitel, posterUrl, naarDiensten, dienstenParams } from '../src/tmdb.js';
 
 describe('maakVerzoek', () => {
   it('zet de korte sleutel in het adres', () => {
@@ -61,5 +61,19 @@ describe('naarDiensten', () => {
   it('geeft niets als het in Nederland nergens te zien is', () => {
     expect(naarDiensten(undefined)).toBe(null);
     expect(naarDiensten({ link: 'x' })).toBe(null);
+  });
+});
+
+describe('ontdekken', () => {
+  it('gebruikt de meegegeven soort als TMDB die niet per titel noemt', () => {
+    expect(naarTitel({ id: 3, name: 'Thuis' }, 'tv')).toMatchObject({ soort: 'serie', titel: 'Thuis' });
+    expect(naarTitel({ id: 3, title: 'Dune' })).toBe(null);
+  });
+  it('vraagt alleen abonnement en gratis bij jouw diensten', () => {
+    expect(dienstenParams([8, 1867])).toMatchObject({
+      watch_region: 'NL',
+      with_watch_providers: '8|1867',
+      with_watch_monetization_types: 'flatrate|free|ads',
+    });
   });
 });
