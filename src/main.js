@@ -20,6 +20,34 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Nieuwe versie online? Dan een knop om te vernieuwen, zodat de app niet helemaal dicht hoeft.
+// De app vergelijkt het hoofdbestand van de site met het bestand dat nu draait.
+const HUIDIG_SCRIPT = document.querySelector('script[type="module"][src*="/assets/"]')?.getAttribute('src');
+
+async function kijkNaarNieuweVersie() {
+  if (!HUIDIG_SCRIPT || document.getElementById('nieuwe-versie')) return;
+  try {
+    const html = await (await fetch(import.meta.env.BASE_URL, { cache: 'no-store' })).text();
+    const online = html.match(/<script[^>]+type="module"[^>]+src="([^"]+\/assets\/[^"]+)"/)?.[1];
+    if (!online || online === HUIDIG_SCRIPT) return;
+  } catch {
+    return; // Geen internet: dan later nog eens.
+  }
+  const knop = Object.assign(document.createElement('button'), {
+    id: 'nieuwe-versie',
+    textContent: 'Nieuwe versie klaar · tik om te vernieuwen',
+  });
+  knop.addEventListener('click', async () => {
+    await toonTitel.bewaarOpenstaand?.();
+    location.reload();
+  });
+  document.body.append(knop);
+}
+if (HUIDIG_SCRIPT) {
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && kijkNaarNieuweVersie());
+  setInterval(kijkNaarNieuweVersie, 30 * 60000);
+}
+
 // Korte melding onderin, eventueel met een knop (zoals 'Ongedaan maken').
 function melding(tekst, knop) {
   const el = document.getElementById('melding');

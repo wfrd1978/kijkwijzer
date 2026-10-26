@@ -30,6 +30,7 @@ Een persoonlijke mobiele webapp waarmee je films en series bijhoudt die je wilt 
 | 1.9 | Samen kijken | Een titel delen via het deelmenu (WhatsApp, iMessage, mail) als uitnodiging om samen te kijken: titel, waar te zien, link en optioneel een voorstel voor dag en tijd | Web Share |
 | 1.10 | Ontdekken | Trending films en series; filter op "mijn diensten" | TMDB |
 | 1.11 | Tips voor mij | Aanbevelingen op basis van titels met 4–5 sterren; titels die al in je lijst staan vallen weg | TMDB-aanbevelingen, op basis van regels |
+| 1.12 | Nieuwe versie | Staat er een nieuwe versie online, dan verschijnt bovenin een knop om te vernieuwen (zoals in de boekenapp) | In de app |
 
 **Bewust beperkt:** de streaminginformatie komt van JustWatch via TMDB en loopt soms een paar dagen achter. Daarom staat bij elke titel wanneer die informatie is opgehaald. TMDB geeft geen directe link naar een titel bij een dienst; doorklikken opent de dienst (waar mogelijk met de titel als zoekterm) of de overzichtspagina met alle opties.
 
