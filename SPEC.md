@@ -1,6 +1,6 @@
 # SPEC — Kijkwijzer
 
-Versie 0.1 · 26 oktober 2026
+Versie 0.2 · 26 oktober 2026
 
 ## Doel
 
@@ -26,10 +26,12 @@ Een persoonlijke mobiele webapp waarmee je films en series bijhoudt die je wilt 
 | 1.5 | Mijn lijst | Zoeken, filteren op status en film/serie, sorteren op datum, sterren, titel | In de app |
 | 1.6 | Dubbel-waarschuwing | "Staat al in je lijst (gezien op …)" vóór toevoegen | Vergelijk op TMDB-nummer |
 | 1.7 | Backup & terugzetten | Backupbestand via het deelmenu naar Google Drive; later terugzetten | JSON-bestand, Web Share |
-| 1.8 | Ontdekken | Trending films en series; filter op "mijn diensten" (welke abonnementen je hebt) | TMDB |
-| 1.9 | Tips voor mij | Aanbevelingen op basis van titels met 4–5 sterren; titels die al in je lijst staan vallen weg | TMDB-aanbevelingen, op basis van regels |
+| 1.8 | Mijn diensten | In Instellingen per streamingdienst kiezen: Abonnement, Tonen of Verbergen. Op de titelpagina eerst "Bij jou te zien", verborgen diensten niet tonen. Per dienst een knop die de dienst opent (met de titel als zoekterm waar de dienst dat toelaat) | TMDB-lijst van NL-diensten; keuze op de telefoon |
+| 1.9 | Samen kijken | Een titel delen via het deelmenu (WhatsApp, iMessage, mail) als uitnodiging om samen te kijken: titel, waar te zien, link en optioneel een voorstel voor dag en tijd | Web Share |
+| 1.10 | Ontdekken | Trending films en series; filter op "mijn diensten" | TMDB |
+| 1.11 | Tips voor mij | Aanbevelingen op basis van titels met 4–5 sterren; titels die al in je lijst staan vallen weg | TMDB-aanbevelingen, op basis van regels |
 
-**Bewust beperkt:** de streaminginformatie komt van JustWatch via TMDB en loopt soms een paar dagen achter. Daarom staat bij elke titel wanneer die informatie is opgehaald.
+**Bewust beperkt:** de streaminginformatie komt van JustWatch via TMDB en loopt soms een paar dagen achter. Daarom staat bij elke titel wanneer die informatie is opgehaald. TMDB geeft geen directe link naar een titel bij een dienst; doorklikken opent de dienst (waar mogelijk met de titel als zoekterm) of de overzichtspagina met alle opties.
 
 ### Gegevens per titel
 
@@ -37,15 +39,17 @@ TMDB-nummer · film of serie · titel · jaar · poster · genres · status · s
 
 ### Klaar wanneer
 
-Je kunt op je telefoon (vanaf het beginscherm) een film of serie zoeken en toevoegen, krijgt een waarschuwing bij een dubbele titel, ziet per titel waar je die in Nederland kunt kijken, vindt elke titel in je lijst binnen enkele seconden terug, krijgt tips op basis van wat je hoog waardeerde, en hebt een backupbestand in je Google Drive.
+Je kunt op je telefoon (vanaf het beginscherm) een film of serie zoeken en toevoegen, krijgt een waarschuwing bij een dubbele titel, ziet per titel waar je die in Nederland kunt kijken (eerst bij je eigen abonnementen), kunt iemand uitnodigen om samen te kijken, vindt elke titel in je lijst binnen enkele seconden terug, krijgt tips op basis van wat je hoog waardeerde, en hebt een backupbestand in je Google Drive.
 
 ## Fase 2 — Verdieping (later uitwerken)
 
 Voortgang bij series (seizoen en aflevering), melding als een titel uit je lijst bij een van je diensten verschijnt, trailer en cast, en importeren uit Letterboxd, IMDb of Netflix-kijkgeschiedenis.
 
+**Tv en sport.** Gewenst: (1) wedstrijden en races van een vaste selectie eigen sporten, met waar je ze kunt zien; (2) een melding of overzicht als een film of serie van je lijst op een gewone tv-zender komt. **Eerst onderzoek:** er is geen gratis officiële Nederlandse tv-gids voor een app zonder server, en sportschema's vermelden niet altijd de zender. Voor de start van fase 2 zoeken we uit welke bronnen gratis, betrouwbaar en toegestaan zijn, en kiezen we op basis daarvan wat we bouwen.
+
 ## Fase 3 — Delen (later uitwerken)
 
-Lijsten of tips delen met anderen. **Open beslissing:** delen vraagt online opslag of een deelbare export. Dat kiezen we bij de start van fase 3, zodat fase 1 eenvoudig en gratis blijft. Mogelijke koppeling met de boekenapp (één leesprofiel en kijkprofiel) hoort hier ook.
+Lijsten of tips delen met anderen (één titel delen om samen te kijken zit al in fase 1). **Open beslissing:** delen vraagt online opslag of een deelbare export. Dat kiezen we bij de start van fase 3, zodat fase 1 eenvoudig en gratis blijft. Mogelijke koppeling met de boekenapp (één leesprofiel en kijkprofiel) hoort hier ook.
 
 ## Risico's en afspraken
 
