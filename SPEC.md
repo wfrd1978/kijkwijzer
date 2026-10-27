@@ -30,7 +30,7 @@ Een persoonlijke mobiele webapp waarmee je films en series bijhoudt die je wilt 
 | 1.9 | Samen kijken | Een titel delen via het deelmenu (WhatsApp, iMessage, mail) als uitnodiging om samen te kijken: titel, waar te zien, link en optioneel een voorstel voor dag en tijd | Web Share |
 | 1.10 | Ontdekken | Trending films en series; filter op "mijn diensten" | TMDB |
 | 1.11 | Tips voor mij | In Ontdekken: aanbevelingen op basis van titels met 4–5 sterren, met de reden erbij ("Omdat je … hoog waardeerde"); titels die al in je lijst staan vallen weg | TMDB-aanbevelingen, op basis van regels |
-| 1.12 | Nieuwe versie | Staat er een nieuwe versie online, dan verschijnt bovenin een knop om te vernieuwen (zoals in de boekenapp) | In de app |
+| 1.12 | Nieuwe versie | Staat er een nieuwe versie online, dan verschijnt bovenin een knop om te vernieuwen (zoals in de boekenapp). Gecontroleerd bij opstarten, bij terugkeren naar de app en elk half uur | In de app |
 | 1.13 | Weergave | In Instellingen kiezen: donker 's avonds, zoals de iPhone, altijd licht of altijd donker (zoals in de boekenapp) | In de app |
 
 **Bewust beperkt:** de streaminginformatie komt van JustWatch via TMDB en loopt soms een paar dagen achter. Daarom staat bij elke titel wanneer die informatie is opgehaald. TMDB geeft geen directe link naar een titel bij een dienst; doorklikken opent de dienst (waar mogelijk met de titel als zoekterm) of de overzichtspagina met alle opties.
@@ -66,6 +66,8 @@ Trailer en acteurs, melding als een titel uit je lijst bij een van je diensten v
 - *Voetbal:* wedstrijdschema's kunnen via football-data.org (gratis, maar een tweede sleutel nodig); de zender staat er niet bij. De dienst laat niet toe dat de app het rechtstreeks ophaalt (alleen vanaf een testomgeving). Wel mogelijk: GitHub haalt het schema dagelijks op met de sleutel als GitHub-geheim (niet in de code) en zet het klaar voor de app.
 
 **Keuze van de eigenaar:** Formule 1, wielrennen en voetbal volgen in een nieuw scherm **Sport**. Films en series op gewone tv: niet nodig (vervallen). Uitwerking in de stappen 16 (Formule 1), 17 (wielrennen) en 18 (voetbal).
+
+**Wensen voor voetbal (stap 18, verder te specificeren):** zelf kiezen welke clubs en wedstrijden je volgt; per dag en per week duidelijk zien welke wedstrijden er zijn en waar je ze kunt volgen, met nadruk op de zenders en diensten die je hebt. Jouw zenders: KPN-basispakket (waaronder ESPN 1), Viaplay en Ziggo Sport 1 t/m 6. Welke zender welke competitie uitzendt, wordt bij de start van stap 18 opgezocht en gecontroleerd. Die "mijn zenders" kunnen ook bij Formule 1 en wielrennen laten zien wat jij live kunt volgen.
 
 ## Fase 3 — Delen (later uitwerken)
 

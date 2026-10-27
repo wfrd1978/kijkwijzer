@@ -47,6 +47,10 @@ async function kijkNaarNieuweVersie() {
   document.body.append(knop);
 }
 if (HUIDIG_SCRIPT) {
+  // Controleren: kort na het opstarten (de bewaarde, oude versie kan als eerste openen),
+  // als de app terug in beeld komt, en verder elk half uur.
+  setTimeout(kijkNaarNieuweVersie, 4000);
+  window.addEventListener('pageshow', (e) => e.persisted && kijkNaarNieuweVersie());
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && kijkNaarNieuweVersie());
   setInterval(kijkNaarNieuweVersie, 30 * 60000);
 }
