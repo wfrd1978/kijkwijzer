@@ -45,7 +45,7 @@ Je kunt op je telefoon (vanaf het beginscherm) een film of serie zoeken en toevo
 
 ## Werklijst — kleine verbeteringen
 
-Nu leeg.
+- **Vormgeving.** Later kijken naar de opmaak van de Sport-pagina, en eigenlijk naar de vormgeving van de hele app. Eerst verder bouwen.
 
 ## Fase 2 — Verdieping
 
