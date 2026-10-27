@@ -59,7 +59,13 @@ Trailer en acteurs, melding als een titel uit je lijst bij een van je diensten v
 
 **Importeren (vervallen).** Uit Letterboxd, IMDb of de Netflix-kijkgeschiedenis. Vervallen omdat er geen kijkgeschiedenis is om te importeren.
 
-**Tv en sport.** Gewenst: (1) wedstrijden en races van een vaste selectie eigen sporten, met waar je ze kunt zien, en daarbij rekening houden met sportzenders waarop je een abonnement hebt (bijvoorbeeld Ziggo Sport); (2) een melding of overzicht als een film of serie van je lijst op een gewone tv-zender komt. **Eerst onderzoek:** er is geen gratis officiële Nederlandse tv-gids voor een app zonder server, en sportschema's vermelden niet altijd de zender. Voor de start van fase 2 zoeken we uit welke bronnen gratis, betrouwbaar en toegestaan zijn, en kiezen we op basis daarvan wat we bouwen.
+**Tv en sport.** Gewenst: (1) wedstrijden en races van een vaste selectie eigen sporten, met waar je ze kunt zien, en daarbij rekening houden met sportzenders waarop je een abonnement hebt (bijvoorbeeld Ziggo Sport); (2) een melding of overzicht als een film of serie van je lijst op een gewone tv-zender komt. **Uitkomst onderzoek (oktober 2026):**
+- *Tv-gids (films en series op gewone zenders):* er is geen officiële, gratis Nederlandse tv-gids om te gebruiken. Wat er is, haalt de gegevens van tvgids.nl af (scrapen), bijvoorbeeld met een GitHub Action die twee keer per dag een gidsbestand maakt. Of tvgids.nl dat toestaat is niet bekend; programmabeschrijvingen kunnen auteursrechtelijk beschermd zijn. Advies: niet scrapen. Wel kan: per titel een knop "Komt hij op tv?" die zoekt in tvgids.nl.
+- *Formule 1:* het raceschema komt gratis en zonder sleutel van Jolpica (opvolger van Ergast) en werkt direct in de app (getest). Een zender staat er niet bij; die is bekend: live bij Viaplay (rechten tot en met 2029), Ziggo Sport heeft samenvattingen en voorbeschouwingen, geen live races.
+- *Wielrennen:* er is geen gratis bron met een koerskalender én zender (ProCyclingStats heeft geen officiële API). Uitzendingen zijn verspreid over NOS, Sporza, Eurosport en HBO Max (sport add-on). Mogelijk: een eigen kalender van de grote koersen met zender, in de app meegeleverd en per seizoen bijgewerkt (zoals de lijsten in de boekenapp).
+- *Voetbal:* wedstrijdschema's kunnen via football-data.org (gratis, maar een tweede sleutel nodig); de zender staat er niet bij.
+
+Keuze van de eigenaar volgt; daarna wordt dit uitgewerkt tot stappen.
 
 ## Fase 3 — Delen (later uitwerken)
 
