@@ -336,6 +336,16 @@ a.titel { text-decoration: none; }
 .nieuw-melding li a { display: block; padding: 6px 0; color: var(--tekst); text-decoration: none; }
 .nieuw-melding p { margin: 4px 0 0; }
 .nieuw-melding .link-knop { padding: 8px 0 0; color: var(--zacht); font-size: 0.9rem; }
+.voortgang-kort { font-size: 0.72rem !important; font-weight: 700; letter-spacing: 0.04em; color: var(--accent) !important; }
+.voortgang-nu { text-align: left !important; color: var(--tekst) !important; font-size: 1.05rem; font-weight: 600; margin: 0 0 4px !important; }
+#voortgang .hoofdknop { margin-top: 12px; }
+#voortgang .klaar { margin-top: 12px; padding: 14px 16px; border-radius: 10px; background: var(--accent-zacht); }
+#voortgang .klaar p { margin: 0; text-align: left; color: var(--accent); font-weight: 600; }
+.voortgang-kies { display: flex; gap: 12px; margin-top: 14px; }
+.voortgang-kies label { display: flex; align-items: center; gap: 8px; color: var(--zacht); font-size: 0.9rem; }
+.voortgang-kies select, .voortgang-kies input {
+  padding: 8px 10px; font-size: 16px; border: 1px solid var(--lijn); border-radius: 10px; background: var(--vlak); color: var(--tekst); width: 72px;
+}
 .nieuw-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; background: var(--accent); color: var(--accent-tekst) !important; }
 .herinnering, .waarschuwing { padding: 14px 16px; margin: 14px 0; border-radius: 10px; background: var(--geel); text-align: left; }
 .herinnering { display: flex; flex-direction: column; gap: 6px; }

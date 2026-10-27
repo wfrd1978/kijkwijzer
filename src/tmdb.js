@@ -176,6 +176,14 @@ export function naarActeurs(credits) {
     }));
 }
 
+// Seizoenen van een serie, zonder 'specials' (seizoen 0) en zonder lege seizoenen.
+export function naarSeizoenen(seasons) {
+  return (seasons ?? [])
+    .filter((x) => Number.isInteger(x.season_number) && x.season_number > 0 && x.episode_count > 0)
+    .sort((a, b) => a.season_number - b.season_number)
+    .map((x) => ({ nr: x.season_number, afleveringen: x.episode_count }));
+}
+
 export async function haalTrailerEnActeurs(soort, tmdbId) {
   const s = TMDB_SOORT[soort];
   const data = await vraag(`/${s}/${tmdbId}`, {
@@ -187,6 +195,8 @@ export async function haalTrailerEnActeurs(soort, tmdbId) {
     acteurs: naarActeurs(s === 'tv' ? data.aggregate_credits : data.credits),
     // Een breed beeld uit de film of serie, als 'voorplaat' van de trailer.
     achtergrond: data.backdrop_path ?? '',
+    // Bij series: de seizoenen met hun aantal afleveringen, voor 'Waar ben je?'.
+    ...(s === 'tv' ? { seizoenen: naarSeizoenen(data.seasons) } : {}),
   };
 }
 

@@ -10,6 +10,7 @@ import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinne
 import {
   titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst,
   TABS, SOORTEN, SORTERINGEN, filterTitels, sorteerTitels, dubbelTekst, gevondenActeur,
+  beginVoortgang, volgendeAflevering, voortgangKort,
 } from './titels.js';
 
 const app = document.getElementById('app');
@@ -122,6 +123,7 @@ function titelRegel(t, zoek = '') {
           <span class="regel">
             <span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>
             ${t.sterren ? `<span class="sterren-klein" aria-label="${t.sterren} sterren">${sterrenTekst(t.sterren)}</span>` : ''}
+            ${t.soort === 'serie' && t.status === 'Bezig' && voortgangKort(t.voortgang) ? `<span class="voortgang-kort">${voortgangKort(t.voortgang)}</span>` : ''}
             ${t.nieuwBij?.length ? `<span class="nieuw-label">Nieuw bij ${veilig(t.nieuwBij.map((d) => d.naam).join(' en '))}</span>` : ''}
           </span>
           <strong>${veilig(t.titel)}</strong>
@@ -697,14 +699,17 @@ const EXTRA_VERVERS_DAGEN = 30;
 async function verversExtra(titel, bewaar, nr) {
   if (!leesSleutel()) return;
   // Titels van vóór de voorplaat (zonder 'achtergrond') worden één keer extra bijgewerkt.
-  if (titel.extraOp && 'achtergrond' in titel && dagenSinds(new Date(titel.extraOp)) < EXTRA_VERVERS_DAGEN) return;
+  // Series van vóór stap 15 (zonder seizoenen) ook.
+  const compleet = 'achtergrond' in titel && (titel.soort !== 'serie' || 'seizoenen' in titel);
+  if (titel.extraOp && compleet && dagenSinds(new Date(titel.extraOp)) < EXTRA_VERVERS_DAGEN) return;
   try {
-    const { trailer, acteurs, achtergrond } = await haalTrailerEnActeurs(titel.soort, titel.tmdbId);
-    await bewaar({ trailer, acteurs, achtergrond, extraOp: vandaag() });
+    await bewaar({ ...(await haalTrailerEnActeurs(titel.soort, titel.tmdbId)), extraOp: vandaag() });
   } catch {
     return; // Geen verbinding: dan de volgende keer.
   }
-  if (nr === schermNr) document.getElementById('extra').innerHTML = extraHtml(titel);
+  if (nr !== schermNr) return;
+  document.getElementById('extra').innerHTML = extraHtml(titel);
+  toonTitel.tekenVoortgang?.();
 }
 
 // --- Eén acteur ---
@@ -815,6 +820,7 @@ async function toonTitel(id) {
       <div class="keuzes" id="statussen">
         ${STATUSSEN.map((s) => `<button class="keuze" data-s="${s}">${s}</button>`).join('')}
       </div>
+      <div id="voortgang"></div>
 
       <p class="label">Mijn oordeel</p>
       <div class="sterren" id="sterren" role="radiogroup" aria-label="Sterren"></div>
@@ -862,10 +868,77 @@ async function toonTitel(id) {
   document.getElementById('statussen').addEventListener('click', async (e) => {
     const knop = e.target.closest('.keuze');
     if (!knop || knop.dataset.s === titel.status) return;
-    await bewaar(statusWijziging(titel, knop.dataset.s));
+    const wijziging = statusWijziging(titel, knop.dataset.s);
+    if (titel.soort === 'serie' && knop.dataset.s === 'Bezig' && !titel.voortgang) wijziging.voortgang = beginVoortgang();
+    await bewaar(wijziging);
     tekenStatus();
     tekenDatum();
+    tekenVoortgang();
   });
+
+  // Waar ben je? Alleen bij series die je aan het kijken bent.
+  const tekenVoortgang = () => {
+    const vak = document.getElementById('voortgang');
+    if (titel.soort !== 'serie' || titel.status !== 'Bezig') {
+      vak.innerHTML = '';
+      return;
+    }
+    const v = titel.voortgang ?? beginVoortgang();
+    const seizoenen = titel.seizoenen ?? [];
+    const dit = seizoenen.find((x) => x.nr === v.seizoen);
+    const volgende = volgendeAflevering(v, seizoenen);
+    const opties = (van, tot, gekozen) =>
+      Array.from({ length: tot - van + 1 }, (_, i) => van + i)
+        .map((n) => `<option value="${n}"${n === gekozen ? ' selected' : ''}>${n}</option>`)
+        .join('');
+    vak.innerHTML = `
+      <p class="label">Waar ben je?</p>
+      <p class="voortgang-nu">${
+        v.aflevering
+          ? `Seizoen ${v.seizoen} · aflevering ${v.aflevering}${dit ? ` van ${dit.afleveringen}` : ''}`
+          : `Seizoen ${v.seizoen} · nog niet begonnen`
+      }</p>
+      ${
+        volgende
+          ? `<button class="hoofdknop" id="volgende">✓ ${volgende.seizoen !== v.seizoen ? `Seizoen ${volgende.seizoen}, aflevering 1` : `Aflevering ${volgende.aflevering}`} gezien</button>`
+          : `<div class="klaar"><p>Je hebt alle afleveringen gezien.</p><button class="hoofdknop" id="naar-gezien">Zet op Gezien</button></div>`
+      }
+      <div class="voortgang-kies">
+        <label>Seizoen ${
+          seizoenen.length
+            ? `<select id="v-seizoen">${seizoenen.map((x) => `<option value="${x.nr}"${x.nr === v.seizoen ? ' selected' : ''}>${x.nr}</option>`).join('')}</select>`
+            : `<input id="v-seizoen" type="number" inputmode="numeric" min="1" value="${v.seizoen}" />`
+        }</label>
+        <label>Aflevering ${
+          dit
+            ? `<select id="v-aflevering">${opties(0, dit.afleveringen, v.aflevering)}</select>`
+            : `<input id="v-aflevering" type="number" inputmode="numeric" min="0" value="${v.aflevering}" />`
+        }</label>
+      </div>`;
+    document.getElementById('volgende')?.addEventListener('click', async () => {
+      await bewaar({ voortgang: volgende });
+      tekenVoortgang();
+    });
+    document.getElementById('naar-gezien')?.addEventListener('click', async () => {
+      await bewaar(statusWijziging(titel, 'Gezien'));
+      tekenStatus();
+      tekenDatum();
+      tekenVoortgang();
+      melding('Op Gezien gezet. Geef hem nog sterren?');
+    });
+    const kies = async () => {
+      const seizoen = Math.max(1, parseInt(document.getElementById('v-seizoen').value, 10) || 1);
+      const max = seizoenen.find((x) => x.nr === seizoen)?.afleveringen ?? Infinity;
+      // Ander seizoen gekozen: dan begin je daar bij aflevering 0.
+      const aflevering = seizoen !== v.seizoen ? 0 : Math.min(max, Math.max(0, parseInt(document.getElementById('v-aflevering').value, 10) || 0));
+      await bewaar({ voortgang: { seizoen, aflevering } });
+      tekenVoortgang();
+    };
+    document.getElementById('v-seizoen').addEventListener('change', kies);
+    document.getElementById('v-aflevering').addEventListener('change', kies);
+  };
+  tekenVoortgang();
+  toonTitel.tekenVoortgang = tekenVoortgang;
 
   document.getElementById('sterren').addEventListener('click', async (e) => {
     const knop = e.target.closest('.ster');
@@ -1306,8 +1379,7 @@ async function vulActeursAan() {
   const zonder = (await alleTitels()).filter((t) => !t.extraOp);
   for (const t of zonder.slice(0, 100)) {
     try {
-      const { trailer, acteurs, achtergrond } = await haalTrailerEnActeurs(t.soort, t.tmdbId);
-      await titelBijwerken(t.id, { trailer, acteurs, achtergrond, extraOp: vandaag() });
+      await titelBijwerken(t.id, { ...(await haalTrailerEnActeurs(t.soort, t.tmdbId)), extraOp: vandaag() });
     } catch {
       return; // Geen internet of sleutel geweigerd: de volgende keer verder.
     }

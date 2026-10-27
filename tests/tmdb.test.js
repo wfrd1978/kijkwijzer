@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maakVerzoek, naarTitel, posterUrl, naarDiensten, dienstenParams, kiesTrailer, naarActeurs, naarRollen, naarPersoon } from '../src/tmdb.js';
+import { maakVerzoek, naarTitel, posterUrl, naarDiensten, dienstenParams, kiesTrailer, naarActeurs, naarRollen, naarPersoon, naarSeizoenen } from '../src/tmdb.js';
 
 describe('maakVerzoek', () => {
   it('zet de korte sleutel in het adres', () => {
@@ -130,5 +130,12 @@ describe('naarPersoon', () => {
   it('laat regisseurs, films en series weg', () => {
     expect(naarPersoon({ media_type: 'person', id: 8, name: 'Villeneuve', known_for_department: 'Directing' })).toBe(null);
     expect(naarPersoon({ media_type: 'movie', id: 1, title: 'Dune' })).toBe(null);
+  });
+});
+
+describe('naarSeizoenen', () => {
+  it('zonder specials en lege seizoenen, op volgorde', () => {
+    expect(naarSeizoenen([{ season_number: 2, episode_count: 8 }, { season_number: 0, episode_count: 3 }, { season_number: 1, episode_count: 10 }, { season_number: 3, episode_count: 0 }]))
+      .toEqual([{ nr: 1, afleveringen: 10 }, { nr: 2, afleveringen: 8 }]);
   });
 });

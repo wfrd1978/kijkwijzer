@@ -119,6 +119,16 @@ function schoneDiensten(d) {
   return { abonnement: lijst(d.abonnement), gratis: lijst(d.gratis), huren: lijst(d.huren), kopen: lijst(d.kopen), link: typeof d.link === 'string' ? d.link : '' };
 }
 
+const geheel = (n, min, max) => Number.isInteger(n) && n >= min && n <= max;
+
+function schoneVoortgang(v) {
+  return v && geheel(v.seizoen, 1, 999) && geheel(v.aflevering, 0, 9999) ? { seizoen: v.seizoen, aflevering: v.aflevering } : null;
+}
+
+function schoneSeizoenen(l) {
+  return l.filter((x) => x && geheel(x.nr, 1, 999) && geheel(x.afleveringen, 1, 9999)).map((x) => ({ nr: x.nr, afleveringen: x.afleveringen }));
+}
+
 function schoneActeurs(l) {
   if (!Array.isArray(l)) return [];
   return l
@@ -151,6 +161,34 @@ export function normaliseerTitel(t) {
     notitie: tekst(t.notitie),
     toegevoegdOp: typeof t.toegevoegdOp === 'string' && !isNaN(Date.parse(t.toegevoegdOp)) ? t.toegevoegdOp : new Date().toISOString(),
     ...(DATUM.test(t.dienstenOp ?? '') ? { dienstenOp: t.dienstenOp, diensten: schoneDiensten(t.diensten) } : {}),
-    ...(DATUM.test(t.extraOp ?? '') ? { extraOp: t.extraOp, trailer: /^[\w-]{6,20}$/.test(t.trailer ?? '') ? t.trailer : '', acteurs: schoneActeurs(t.acteurs), achtergrond: /^\/[\w.-]+$/.test(t.achtergrond ?? '') ? t.achtergrond : '' } : {}),
+    ...(schoneVoortgang(t.voortgang) ? { voortgang: schoneVoortgang(t.voortgang) } : {}),
+    ...(DATUM.test(t.extraOp ?? '') ? { extraOp: t.extraOp, trailer: /^[\w-]{6,20}$/.test(t.trailer ?? '') ? t.trailer : '', acteurs: schoneActeurs(t.acteurs), ...(Array.isArray(t.seizoenen) ? { seizoenen: schoneSeizoenen(t.seizoenen) } : {}), achtergrond: /^\/[\w.-]+$/.test(t.achtergrond ?? '') ? t.achtergrond : '' } : {}),
   };
+}
+
+// --- Voortgang bij series ---
+// voortgang = { seizoen, aflevering }: de laatste aflevering die je zag (0 = nog niets in dat seizoen).
+
+export function beginVoortgang() {
+  return { seizoen: 1, aflevering: 0 };
+}
+
+// De volgende aflevering, ook over de grens van een seizoen heen. Null als je alles hebt gezien.
+// Zonder bekende seizoenen gaat het gewoon één aflevering verder.
+export function volgendeAflevering(v, seizoenen = []) {
+  const nu = v ?? beginVoortgang();
+  if (!seizoenen.length) return { seizoen: nu.seizoen, aflevering: nu.aflevering + 1 };
+  const plek = seizoenen.findIndex((x) => x.nr === nu.seizoen);
+  const dit = seizoenen[plek];
+  if (dit && nu.aflevering < dit.afleveringen) return { seizoen: nu.seizoen, aflevering: nu.aflevering + 1 };
+  const volgend = plek === -1 ? seizoenen.find((x) => x.nr > nu.seizoen) : seizoenen[plek + 1];
+  return volgend ? { seizoen: volgend.nr, aflevering: 1 } : null;
+}
+
+export function alleAfleveringenGezien(v, seizoenen = []) {
+  return Boolean(v && seizoenen.length && !volgendeAflevering(v, seizoenen));
+}
+
+export function voortgangKort(v) {
+  return v && v.aflevering > 0 ? `S${v.seizoen} · A${v.aflevering}` : '';
 }

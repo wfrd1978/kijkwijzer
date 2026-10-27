@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   nieuweTitel, titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst, filterTitels, sorteerTitels, dubbelTekst, gevondenActeur,
+  volgendeAflevering, alleAfleveringenGezien, voortgangKort, normaliseerTitel,
 } from '../src/titels.js';
 
 describe('nieuweTitel', () => {
@@ -114,5 +115,32 @@ describe('zoeken op acteur', () => {
     expect(gevondenActeur(dune, 'dune')).toBe('');
     expect(gevondenActeur(oud, 'chalamet')).toBe('');
     expect(gevondenActeur(dune, '')).toBe('');
+  });
+});
+
+describe('voortgang bij series', () => {
+  const seizoenen = [{ nr: 1, afleveringen: 3 }, { nr: 2, afleveringen: 2 }];
+  it('gaat een aflevering verder, en over de grens van een seizoen', () => {
+    expect(volgendeAflevering({ seizoen: 1, aflevering: 0 }, seizoenen)).toEqual({ seizoen: 1, aflevering: 1 });
+    expect(volgendeAflevering({ seizoen: 1, aflevering: 3 }, seizoenen)).toEqual({ seizoen: 2, aflevering: 1 });
+    expect(volgendeAflevering(undefined, seizoenen)).toEqual({ seizoen: 1, aflevering: 1 });
+  });
+  it('weet wanneer je alles hebt gezien', () => {
+    expect(volgendeAflevering({ seizoen: 2, aflevering: 2 }, seizoenen)).toBe(null);
+    expect(alleAfleveringenGezien({ seizoen: 2, aflevering: 2 }, seizoenen)).toBe(true);
+    expect(alleAfleveringenGezien({ seizoen: 2, aflevering: 1 }, seizoenen)).toBe(false);
+  });
+  it('werkt ook zonder bekende seizoenen', () => {
+    expect(volgendeAflevering({ seizoen: 4, aflevering: 7 })).toEqual({ seizoen: 4, aflevering: 8 });
+    expect(alleAfleveringenGezien({ seizoen: 4, aflevering: 7 })).toBe(false);
+  });
+  it('kort genoteerd voor in de lijst', () => {
+    expect(voortgangKort({ seizoen: 2, aflevering: 5 })).toBe('S2 · A5');
+    expect(voortgangKort({ seizoen: 1, aflevering: 0 })).toBe('');
+  });
+  it('gaat mee in de backup, rare waarden niet', () => {
+    const basis = { tmdbId: 1, soort: 'serie', titel: 'Borgen', extraOp: '2026-10-28', seizoenen: [{ nr: 1, afleveringen: 10 }, { nr: -1, afleveringen: 2 }] };
+    expect(normaliseerTitel({ ...basis, voortgang: { seizoen: 2, aflevering: 5 } })).toMatchObject({ voortgang: { seizoen: 2, aflevering: 5 }, seizoenen: [{ nr: 1, afleveringen: 10 }] });
+    expect(normaliseerTitel({ ...basis, voortgang: { seizoen: 'x' } }).voortgang).toBeUndefined();
   });
 });
