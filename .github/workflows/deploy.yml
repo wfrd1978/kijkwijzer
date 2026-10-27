@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Elke ochtend (rond 05:30 Nederlandse tijd) opnieuw, voor een vers voetbalschema.
+  schedule:
+    - cron: '17 4 * * *'
 
 permissions:
   contents: read
@@ -26,6 +29,13 @@ jobs:
       - run: npm ci
       # Eerst de tests: faalt er één, dan wordt er niets online gezet.
       - run: npm test
+      # Voetbalschema van football-data.org; de sleutel staat als geheim in GitHub, niet in de code.
+      # Lukt het niet, dan gaat het online zetten gewoon door (de app toont dan een melding).
+      - name: Voetbalschema ophalen
+        run: node scripts/voetbal.mjs
+        env:
+          FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
+        continue-on-error: true
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

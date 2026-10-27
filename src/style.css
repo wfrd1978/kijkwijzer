@@ -338,6 +338,21 @@ a.titel { text-decoration: none; }
 .koers-kijk.nee { color: var(--zacht); font-weight: 500; }
 .koers-noot { font-size: 0.8rem; }
 
+.oranje { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; margin-bottom: 14px; border-radius: 10px; background: var(--vlak); }
+.oranje strong { font-family: var(--schreef); font-size: 1.08rem; }
+.oranje .zacht { font-size: 0.88rem; }
+.week-keuze { margin: 4px 0 4px; }
+.wedstrijden { list-style: none; margin: 0; padding: 0; }
+.wedstrijd { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--lijn); }
+.aftrap { flex: none; width: 46px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent); }
+.wedstrijd-tekst { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.wedstrijd-tekst strong { font-weight: 600; }
+.wedstrijd-tekst .mijn-club { font-weight: 800; }
+.wedstrijd-tekst .zacht { font-size: 0.85rem; }
+.label.clubs-kop { margin: 12px 0 6px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--zacht); }
+#voetbal-alles .keuze { font-size: 0.88rem; padding: 6px 12px; }
+#clubs-uitklap { margin-top: 12px; }
+
 /* --- Acteur --- */
 
 .acteur-kop { text-align: center; margin-bottom: 6px; }

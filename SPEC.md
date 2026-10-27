@@ -71,6 +71,11 @@ Trailer en acteurs, melding als een titel uit je lijst bij een van je diensten v
 
 **Mijn sportzenders (sinds stap 17).** In Instellingen kies je zelf welke zenders en diensten je hebt (NOS, ESPN, Viaplay, Ziggo Sport, HBO Max). Sport laat daarmee zien wat jij live kunt volgen. De keuze staat op de telefoon en gaat mee in de backup; ze staat bewust niet in de code.
 
+**Voetbal (stap 18).** Bovenaan Sport: per dag, voor deze week en volgende week, de wedstrijden van je clubs (in elke competitie) en van de competities die je helemaal volgt, met aftrap in Nederlandse tijd, zender en of jij kunt kijken. Daarboven de eerstvolgende interland van Oranje. In Instellingen bij Mijn voetbal kies je clubs (uit de ploegen in het schema) en welke competities je helemaal wilt zien; dat staat op de telefoon en gaat mee in de backup.
+- Bronnen: football-data.org (Eredivisie, Champions League, Premier League, Bundesliga, LaLiga, Serie A; elke ochtend opgehaald door GitHub, sleutel als GitHub-geheim) en TheSportsDB voor Oranje (gratis, zonder sleutel, alleen de eerstvolgende interland).
+- Niet in de gratis bronnen: KNVB-beker, Europa League, Conference League, Keuken Kampioen Divisie.
+- Zenders per competitie met de hand gecontroleerd (VI, augustus 2026): Eredivisie ESPN; Europees clubvoetbal Ziggo Sport (Nederlandse clubs gratis via Ziggo Sport Free); Premier League en Bundesliga Viaplay, onder voorbehoud (mogelijk naar Videoland); LaLiga en Serie A Ziggo Sport; Oranje NOS, Nations League en EK-kwalificatie Ziggo Sport.
+
 **Wielrennen (stap 17).** De grote koersen van het seizoen (grote rondes, monumenten, belangrijkste klassiekers, WK) met datum en zender, meegeleverd in de app (`src/wielrennen.js`). Data uit de UCI WorldTour-kalender; zenders met de hand gecontroleerd, met "onder voorbehoud" waar het nog niet vaststaat. Elk seizoen bijwerken.
 
 ## Fase 3 — Delen (later uitwerken)

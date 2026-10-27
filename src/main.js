@@ -5,6 +5,10 @@ import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlle
 import { kiesFavorieten, combineerTips } from './tips.js';
 import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
 import { WIELRENNEN, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
+import {
+  COMPETITIES, VOETBAL_GECONTROLEERD, leesVoetbalKeuzes, zetVoetbalKeuzes, mijnWedstrijden, ploegenPerCompetitie,
+  perDag, weekStart, aftrap, dagNaam, haalOranje,
+} from './voetbal.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
@@ -869,12 +873,111 @@ function wielrennenHtml(mijn) {
     <p class="bron">Data: UCI WorldTour-kalender ${WIELRENNEN.seizoen}. Zenders gecontroleerd in ${veilig(WIELRENNEN.gecontroleerd)}; uitzendrechten kunnen nog veranderen.</p>`;
 }
 
+// Het voetbalschema dat GitHub dagelijks klaarzet. Null als het (nog) niet bestaat.
+async function haalVoetbal() {
+  try {
+    const antwoord = await fetch(`${import.meta.env.BASE_URL}voetbal.json`, { cache: 'no-cache' });
+    return antwoord.ok ? await antwoord.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+let voetbalWeek = 'deze';
+
+function zenderChips(zenders, mijn) {
+  return zenders
+    .map((z) => `<span class="zender-chip${mijn.includes(z.naam) ? ' mijn' : ''}">${veilig(z.naam)}${z.zeker ? '' : ' (onder voorbehoud)'}</span>`)
+    .join('');
+}
+
+function kijkTekst(zenders, mijn) {
+  if (!mijn.length) return '';
+  const mijnZ = zenders.filter((z) => mijn.includes(z.naam));
+  if (mijnZ.some((z) => z.zeker)) return `<span class="koers-kijk">Jij kijkt via ${veilig(mijnZ.find((z) => z.zeker).naam)}</span>`;
+  if (mijnZ.length) return `<span class="koers-kijk misschien">Misschien via ${veilig(mijnZ[0].naam)}</span>`;
+  return '<span class="koers-kijk nee">Niet bij jouw zenders</span>';
+}
+
+async function toonVoetbal(nr, mijn) {
+  const vak = () => (nr === schermNr ? document.getElementById('voetbal') : null);
+  const [schema, oranje] = await Promise.all([haalVoetbal(), haalOranje().catch(() => null)]);
+  if (!vak()) return;
+  const keuzes = leesVoetbalKeuzes();
+  const oranjeHtml = oranje
+    ? `<div class="oranje">
+         <span class="koers-soort">Oranje · volgende interland</span>
+         <strong>${veilig(oranje.thuis)} – ${veilig(oranje.uit)}</strong>
+         <span class="zacht">${veilig(dagNaam(nlDagVan(oranje), vandaag()))} · ${veilig(aftrap(oranje.start))} · ${veilig(oranje.competitie)}</span>
+         <div class="koers-zenders">${zenderChips(oranje.zenders, mijn)}</div>
+         ${kijkTekst(oranje.zenders, mijn)}
+       </div>`
+    : '';
+  if (!schema) {
+    vak().innerHTML = `${oranjeHtml}<p class="leeg">Het voetbalschema staat nog niet klaar. Zodra de sleutel van football-data.org in GitHub staat, verschijnt het hier (de volgende ochtend, of na de eerstvolgende nieuwe versie).</p>`;
+    return;
+  }
+  if (!keuzes.clubs.length && !keuzes.alles.length) {
+    vak().innerHTML = `${oranjeHtml}<p class="leeg">Kies in <a href="#/instellingen">Instellingen</a> bij Mijn voetbal je clubs en competities.</p>`;
+    return;
+  }
+  const dagen = perDag(mijnWedstrijden(schema.wedstrijden, keuzes).filter((w) => w.status !== 'FINISHED' || nlDagVan(w) === vandaag()));
+  const maandag = weekStart(vandaag());
+  const volgendeMaandag = new Date(`${maandag}T12:00:00Z`);
+  volgendeMaandag.setUTCDate(volgendeMaandag.getUTCDate() + 7);
+  const grens = volgendeMaandag.toISOString().slice(0, 10);
+  const inWeek = (d) => (voetbalWeek === 'deze' ? d.dag >= vandaag() && d.dag < grens : d.dag >= grens);
+  const rij = (w) => {
+    const c = COMPETITIES[w.competitie];
+    const mijnClub = (p) => keuzes.clubs.includes(p.id);
+    return `
+      <li class="wedstrijd">
+        <span class="aftrap">${veilig(aftrap(w.start))}</span>
+        <div class="wedstrijd-tekst">
+          <strong><span class="${mijnClub(w.thuis) ? 'mijn-club' : ''}">${veilig(w.thuis.naam)}</span> – <span class="${mijnClub(w.uit) ? 'mijn-club' : ''}">${veilig(w.uit.naam)}</span></strong>
+          <span class="zacht">${veilig(c.naam)}</span>
+          <div class="koers-zenders">${zenderChips(c.zenders, mijn)}</div>
+          ${kijkTekst(c.zenders, mijn)}
+        </div>
+      </li>`;
+  };
+  const zichtbaar = dagen.filter(inWeek);
+  vak().innerHTML = `
+    ${oranjeHtml}
+    <div class="keuzes week-keuze" id="voetbal-week">
+      <button class="keuze${voetbalWeek === 'deze' ? ' actief' : ''}" data-week="deze">Deze week</button>
+      <button class="keuze${voetbalWeek === 'volgende' ? ' actief' : ''}" data-week="volgende">Volgende week</button>
+    </div>
+    ${
+      zichtbaar.length
+        ? zichtbaar
+            .map((d) => `<p class="label sport-label">${veilig(dagNaam(d.dag, vandaag()))}</p><ul class="wedstrijden">${d.wedstrijden.map(rij).join('')}</ul>`)
+            .join('')
+        : `<p class="leeg">Geen wedstrijden ${voetbalWeek === 'deze' ? 'meer deze week' : 'volgende week'} bij jouw keuzes.</p>`
+    }
+    <p class="bron">Tijden in Nederlandse tijd. Schema van football-data.org, bijgewerkt ${veilig(new Date(schema.op).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }))}. Oranje via TheSportsDB. Zenders gecontroleerd in ${veilig(VOETBAL_GECONTROLEERD)}; Premier League en Bundesliga gaan mogelijk naar Videoland.</p>`;
+  document.getElementById('voetbal-week').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-week]');
+    if (!knop || knop.dataset.week === voetbalWeek) return;
+    voetbalWeek = knop.dataset.week;
+    toonVoetbal(nr, mijn);
+  });
+}
+
+function nlDagVan(w) {
+  return new Date(w.start).toLocaleDateString('sv-SE', { timeZone: 'Europe/Amsterdam' });
+}
+
 async function toonSport() {
   const nr = schermNr;
   const mijn = leesSportzenders();
   app.innerHTML = `
     <header class="kop"><h1>Sport</h1></header>
     ${mijn.length ? '' : '<p class="zacht sport-tip">Tip: kies in <a href="#/instellingen">Instellingen</a> je sportzenders, dan zie je wat jij live kunt volgen.</p>'}
+    <section class="sport-blok">
+      <h2>Voetbal</h2>
+      <div id="voetbal"><p class="bezig">Schema ophalen…</p></div>
+    </section>
     <section class="sport-blok">
       <h2>Formule 1</h2>
       <p class="zender${mijn.includes(F1_ZENDERS.live) ? ' bij-jou-zender' : ''}"><strong>${
@@ -887,6 +990,7 @@ async function toonSport() {
       ${wielrennenHtml(mijn)}
     </section>
   `;
+  toonVoetbal(nr, mijn);
   let schema;
   try {
     schema = await haalF1();
@@ -1230,6 +1334,36 @@ async function toonTitel(id) {
 
 // --- Instellingen ---
 
+async function toonClubsKeuze(nr) {
+  const schema = await haalVoetbal();
+  const vak = nr === schermNr ? document.getElementById('clubs-keuze') : null;
+  if (!vak) return;
+  if (!schema) {
+    vak.innerHTML = '<p class="zacht">Zodra het voetbalschema klaarstaat, kies je hier je clubs.</p>';
+    return;
+  }
+  const per = ploegenPerCompetitie(schema.wedstrijden);
+  const gekozen = new Set(leesVoetbalKeuzes().clubs);
+  vak.innerHTML = Object.entries(per)
+    .map(
+      ([c, ploegen]) => `
+      <p class="label clubs-kop">${veilig(COMPETITIES[c].naam)}</p>
+      <div class="keuzes klein">${ploegen
+        .map((p) => `<button class="keuze${gekozen.has(p.id) ? ' actief' : ''}" data-club="${p.id}">${veilig(p.naam)}</button>`)
+        .join('')}</div>`
+    )
+    .join('') + '<p class="zacht klein">Je ziet ploegen die de komende twee weken spelen. Een club in meerdere competities kies je één keer.</p>';
+  vak.addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-club]');
+    if (!knop) return;
+    const id = Number(knop.dataset.club);
+    gekozen.has(id) ? gekozen.delete(id) : gekozen.add(id);
+    vak.querySelectorAll(`[data-club="${id}"]`).forEach((k) => k.classList.toggle('actief', gekozen.has(id)));
+    zetVoetbalKeuzes({ ...leesVoetbalKeuzes(), clubs: [...gekozen] });
+    document.getElementById('clubs-stand').textContent = gekozen.size ? `${gekozen.size} gekozen` : 'Nog geen clubs gekozen';
+  });
+}
+
 const MEER_NA = 15;
 
 // Licht of donker. Het wisselen zelf gebeurt in thema.js, dat al laadt vóór de app.
@@ -1353,6 +1487,18 @@ async function toonInstellingen() {
     </section>
 
     <section class="blok">
+      <h2>Mijn voetbal</h2>
+      <p>Je ziet in Sport altijd de wedstrijden van je clubs, in elke competitie. Wil je van een competitie álle wedstrijden zien, zet hem dan aan.</p>
+      <div class="keuzes" id="voetbal-alles">${Object.entries(COMPETITIES)
+        .map(([c, x]) => `<button class="keuze${leesVoetbalKeuzes().alles.includes(c) ? ' actief' : ''}" data-competitie="${c}">Alles ${veilig(x.naam)}</button>`)
+        .join('')}</div>
+      <details class="uitklap" id="clubs-uitklap">
+        <summary><span class="uitklap-kop">Clubs kiezen</span><span class="zacht uitklap-stand" id="clubs-stand">${leesVoetbalKeuzes().clubs.length ? `${leesVoetbalKeuzes().clubs.length} gekozen` : 'Nog geen clubs gekozen'}</span></summary>
+        <div id="clubs-keuze"><p class="zacht">Clubs ophalen…</p></div>
+      </details>
+    </section>
+
+    <section class="blok">
       <h2>Mijn sportzenders</h2>
       <p>Welke zenders en diensten heb je? Dan laat Sport zien wat jij live kunt volgen. NOS valt onder de gewone NPO-zenders.</p>
       <div class="keuzes" id="sportzenders">${SPORTZENDERS.map(
@@ -1420,6 +1566,15 @@ async function toonInstellingen() {
           ? `${n === 1 ? '1 titel is' : `${n} titels zijn`} nieuw bij je diensten. Kijk bovenaan Mijn lijst.`
           : 'Niets nieuws: je titels op Wil ik zien staan nog bij dezelfde diensten.';
   });
+
+  document.getElementById('voetbal-alles').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-competitie]');
+    if (!knop) return;
+    knop.classList.toggle('actief');
+    const k = leesVoetbalKeuzes();
+    zetVoetbalKeuzes({ ...k, alles: [...document.querySelectorAll('#voetbal-alles .actief')].map((x) => x.dataset.competitie) });
+  });
+  document.getElementById('clubs-uitklap').addEventListener('toggle', (e) => e.target.open && toonClubsKeuze(nr), { once: true });
 
   document.getElementById('sportzenders').addEventListener('click', (e) => {
     const knop = e.target.closest('[data-zender]');
