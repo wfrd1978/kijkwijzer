@@ -23,7 +23,7 @@ Een persoonlijke mobiele webapp waarmee je films en series bijhoudt die je wilt 
 | 1.2 | Zoeken en toevoegen | Titel typen, films en series door elkaar, kiezen uit resultaten met poster | TMDB |
 | 1.3 | Eigen gegevens | Status (wil ik zien / bezig / gezien), 0–5 sterren, kijkdatum, notitie (bijv. "tip van …") | Opslag op de telefoon |
 | 1.4 | Waar kijken | Per titel: bij welke dienst in NL (abonnement, huren, kopen), met datum "bijgewerkt op" | TMDB, data van JustWatch |
-| 1.5 | Mijn lijst | Zoeken, filteren op status en film/serie, sorteren op datum, sterren, titel | In de app |
+| 1.5 | Mijn lijst | Zoeken, filteren op status en film/serie, sorteren op datum, sterren, titel; een titel naar links vegen om te verwijderen (met Ongedaan maken, zoals in de boekenapp) | In de app |
 | 1.6 | Dubbel-waarschuwing | "Staat al in je lijst (gezien op …)" vóór toevoegen | Vergelijk op TMDB-nummer |
 | 1.7 | Backup & terugzetten | Backupbestand via het deelmenu naar Google Drive; later terugzetten. Je TMDB-sleutel zit er bewust niet in | JSON-bestand, Web Share |
 | 1.8 | Mijn diensten | In Instellingen (in een blok dat je kunt in- en uitklappen) per streamingdienst kiezen: Abonnement, Tonen of Verbergen, of in één tik alles verbergen behalve je abonnementen (of alles weer tonen). Op de titelpagina eerst "Bij jou te zien", verborgen diensten niet tonen. Per dienst een knop die de dienst opent (met de titel als zoekterm waar de dienst dat toelaat) | TMDB-lijst van NL-diensten; keuze op de telefoon |
@@ -45,7 +45,7 @@ Je kunt op je telefoon (vanaf het beginscherm) een film of serie zoeken en toevo
 
 ## Werklijst — kleine verbeteringen
 
-- **Vegen om te verwijderen.** In Mijn lijst een titel naar links vegen om hem te verwijderen, met "Ongedaan maken" in de melding, zoals in de boekenapp.
+Nu leeg.
 
 ## Fase 2 — Verdieping
 

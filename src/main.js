@@ -114,10 +114,113 @@ let soort = onthoud('soort', 'alle', Object.keys(SOORTEN));
 let sortering = onthoud('sortering', 'toegevoegd', Object.keys(SORTERINGEN));
 let lijstZoek = '';
 
+// --- Vegen om te verwijderen (zoals in de boekenapp) ---
+// Een regel naar links vegen toont een rode knop Verwijder; snel vegen telt ook.
+
+const VEEG_BREEDTE = 96;
+
+function maakVeegbaar(lijst, onVerwijder) {
+  let open = null;
+  let start = null;
+  let frame = 0;
+
+  const zet = (li, x, animeer) => {
+    const a = li.querySelector('.titel');
+    li.classList.add('veegt');
+    a.style.transition = animeer ? 'transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)' : 'none';
+    a.style.transform = x ? `translate3d(${x}px, 0, 0)` : '';
+    // Dicht geschoven: knop en extra laag weer weg zodra de beweging klaar is.
+    if (!x) {
+      clearTimeout(li.veegTimer);
+      li.veegTimer = setTimeout(() => {
+        if (!a.style.transform) li.classList.remove('veegt');
+      }, animeer ? 350 : 0);
+    }
+  };
+  const sluit = () => {
+    if (open) zet(open, 0, true);
+    open = null;
+  };
+  // Voorbij de knop gaat het zwaarder, zoals een elastiek.
+  const elastiek = (x) => (x >= -VEEG_BREEDTE ? x : -VEEG_BREEDTE + (x + VEEG_BREEDTE) * 0.3);
+
+  lijst.addEventListener('touchstart', (e) => {
+    const li = e.target.closest('.veeg');
+    if (!li || e.target.closest('.veeg-actie')) return;
+    if (open && open !== li) sluit();
+    const t = e.touches[0];
+    start = { li, x: t.clientX, y: t.clientY, basis: open === li ? -VEEG_BREEDTE : 0, richting: null, laatste: [] };
+  }, { passive: true });
+
+  lijst.addEventListener('touchmove', (e) => {
+    if (!start) return;
+    const t = e.touches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    // Pas beslissen na een paar pixels: vegen opzij of gewoon scrollen.
+    if (!start.richting) {
+      if (Math.abs(dx) + Math.abs(dy) < 10) return;
+      start.richting = Math.abs(dx) > Math.abs(dy) ? 'opzij' : 'scroll';
+      // Vanaf hier meten, zodat de regel niet verspringt.
+      start.x = t.clientX;
+    }
+    if (start.richting !== 'opzij') return;
+    e.preventDefault();
+    start.laatste.push({ x: t.clientX, t: e.timeStamp });
+    if (start.laatste.length > 5) start.laatste.shift();
+    const x = elastiek(Math.min(0, start.basis + t.clientX - start.x));
+    const li = start.li;
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => zet(li, x, false));
+  }, { passive: false });
+
+  // Onderbroken (bijvoorbeeld door een melding): regel netjes dichtschuiven.
+  lijst.addEventListener('touchcancel', () => {
+    if (start?.li) zet(start.li, start.basis, true);
+    start = null;
+  });
+
+  lijst.addEventListener('touchend', (e) => {
+    if (!start) return;
+    if (start.richting === 'opzij') {
+      cancelAnimationFrame(frame);
+      const x = start.basis + (e.changedTouches[0].clientX - start.x);
+      // Snelheid van de laatste beweging: een snelle veeg telt ook als hij kort is.
+      const p = start.laatste;
+      const snelheid = p.length > 1 ? (p[p.length - 1].x - p[0].x) / Math.max(1, p[p.length - 1].t - p[0].t) : 0;
+      const openen = snelheid < -0.4 || (snelheid <= 0.4 && x < -VEEG_BREEDTE / 2);
+      zet(start.li, openen ? -VEEG_BREEDTE : 0, true);
+      open = openen ? start.li : open === start.li ? null : open;
+      // Na vegen geen titel openen.
+      const li = start.li;
+      li.dataset.geveegd = 'ja';
+      setTimeout(() => delete li.dataset.geveegd, 400);
+    }
+    start = null;
+  });
+
+  lijst.addEventListener('click', (e) => {
+    const li = e.target.closest('.veeg');
+    if (!li) return;
+    if (e.target.closest('.veeg-actie')) {
+      open = null;
+      onVerwijder(li);
+      return;
+    }
+    // Tik op een open regel (of net geveegd): dichtschuiven in plaats van openen.
+    if (li.dataset.geveegd || open === li) {
+      e.preventDefault();
+      sluit();
+    }
+  });
+}
+
 function titelRegel(t, zoek = '') {
   const acteur = gevondenActeur(t, zoek);
   return `
-      <li><a class="titel" href="#/titel/${t.id}">
+      <li class="veeg" data-id="${t.id}">
+        <button class="veeg-actie" tabindex="-1">Verwijder</button>
+        <a class="titel" href="#/titel/${t.id}">
         ${posterHtml(t)}
         <div class="titel-tekst">
           <span class="regel">
@@ -244,6 +347,26 @@ async function toonLijst() {
     document.getElementById('aantal').textContent = zichtbaar.length === 1 ? '1 titel' : `${zichtbaar.length} titels`;
   };
   teken();
+
+  maakVeegbaar(document.getElementById('lijst'), async (li) => {
+    const id = Number(li.dataset.id);
+    const kopie = (await haalTitel(id)) ?? titels.find((t) => t.id === id);
+    if (!kopie) return;
+    await titelVerwijderen(id);
+    titels.splice(titels.findIndex((t) => t.id === id), 1);
+    li.classList.add('weg');
+    setTimeout(teken, 250);
+    melding(`"${kopie.titel}" verwijderd`, {
+      tekst: 'Ongedaan maken',
+      actie: async () => {
+        await titelTerugzetten(kopie);
+        // Staat de lijst nog open, dan bijwerken; anders komt hij straks vanzelf.
+        if (!document.getElementById('lijst')) return;
+        titels.push(kopie);
+        teken();
+      },
+    });
+  });
 
   document.getElementById('nieuw-gezien')?.addEventListener('click', async () => {
     for (const t of titels.filter((x) => x.nieuwBij?.length)) {
