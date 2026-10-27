@@ -12,7 +12,7 @@ Kijkwijzer is een persoonlijke mobiele webapp om films en series bij te houden. 
 2. **Verdieping** — voortgang bij series, melding als een titel bij je dienst verschijnt, trailer, acteurs bij films en series, import uit Letterboxd/IMDb/Netflix, tv en sport (eerst onderzoek naar bronnen).
 3. **Delen** — lijsten en tips delen; mogelijke koppeling met de boekenapp.
 
-Werk alleen aan de fase die actief is. Nu actief: **Fase 1**.
+Werk alleen aan de fase die actief is. Fase 1 is af. Nu actief: **Fase 2**.
 
 ## Gekozen techniek (en waarom, in gewoon Nederlands)
 
@@ -55,3 +55,14 @@ Adres van de app: https://wfrd1978.github.io/kijkwijzer/
 | 8 | Samen kijken: titel delen als uitnodiging, met optioneel dag en tijd |
 | 9 | Ontdekken: trending + filter op mijn diensten |
 | 10 | Tips voor mij |
+
+## Stappenplan Fase 2
+
+| Stap | Resultaat om te testen |
+|---|---|
+| 11 | Trailer en acteurs (foto en rol) op de titelpagina |
+| 12 | Tikken op een acteur: andere films en series met die acteur, en die op je lijst zetten |
+| 13 | Zoeken op acteur in Mijn lijst |
+| 14 | Melding in de app: "Nieuw bij jouw diensten" voor titels op Wil ik zien (bij openen, max. 1x per dag gecontroleerd; geen pushmelding, want geen server) |
+| 15 | Importeren uit Letterboxd, IMDb of Netflix-kijkgeschiedenis (bij de start kiezen welke eerst) |
+| later | Voortgang bij series; tv en sport (eerst onderzoek naar bronnen) |

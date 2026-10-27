@@ -47,11 +47,15 @@ Je kunt op je telefoon (vanaf het beginscherm) een film of serie zoeken en toevo
 
 Nu leeg.
 
-## Fase 2 — Verdieping (later uitwerken)
+## Fase 2 — Verdieping
 
 Voortgang bij series (seizoen en aflevering), melding als een titel uit je lijst bij een van je diensten verschijnt, trailer, en importeren uit Letterboxd, IMDb of Netflix-kijkgeschiedenis.
 
-**Acteurs.** Bij elke film en serie de belangrijkste acteurs met foto en rol (TMDB). Uit te werken bij de start van fase 2: of je op een acteur kunt tikken om andere films en series met die acteur te zien, en of je in je lijst op acteur kunt zoeken.
+**Trailer en acteurs.** Op de titelpagina een knop naar de trailer (opent YouTube) en de belangrijkste acteurs met foto en rol (TMDB). Tik je op een acteur, dan zie je andere films en series met die acteur en kun je die op je lijst zetten. In Mijn lijst kun je ook op acteur zoeken; daarvoor bewaart de app de namen van de belangrijkste acteurs bij elke titel.
+
+**Nieuw bij jouw diensten.** Bij het openen van de app (hoogstens één keer per dag) kijkt de app of titels op "Wil ik zien" nieuw te zien zijn bij een van je abonnementen. Zo ja, dan staat bovenaan Mijn lijst een melding en krijgt de titel een label. Een pushmelding als de app dicht is kan niet zonder eigen server; daar is bewust van afgezien.
+
+**Importeren.** Uit Letterboxd, IMDb of de Netflix-kijkgeschiedenis; welke eerst kiezen we bij de start van die stap.
 
 **Tv en sport.** Gewenst: (1) wedstrijden en races van een vaste selectie eigen sporten, met waar je ze kunt zien, en daarbij rekening houden met sportzenders waarop je een abonnement hebt (bijvoorbeeld Ziggo Sport); (2) een melding of overzicht als een film of serie van je lijst op een gewone tv-zender komt. **Eerst onderzoek:** er is geen gratis officiële Nederlandse tv-gids voor een app zonder server, en sportschema's vermelden niet altijd de zender. Voor de start van fase 2 zoeken we uit welke bronnen gratis, betrouwbaar en toegestaan zijn, en kiezen we op basis daarvan wat we bouwen.
 
