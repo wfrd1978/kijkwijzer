@@ -126,3 +126,10 @@ export async function haalOpDiensten(soort, ids, pagina = 1) {
   const data = await vraag(`/discover/${s}`, dienstenParams(ids, pagina));
   return (data.results ?? []).map((r) => naarTitel(r, s)).filter(Boolean);
 }
+
+// Wat TMDB aanraadt bij één titel (zelfde soort: films bij een film, series bij een serie).
+export async function haalAanbevelingen(soort, tmdbId) {
+  const s = TMDB_SOORT[soort];
+  const data = await vraag(`/${s}/${tmdbId}/recommendations`);
+  return (data.results ?? []).map((r) => naarTitel(r, s)).filter(Boolean);
+}

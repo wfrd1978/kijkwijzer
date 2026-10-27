@@ -186,6 +186,7 @@ a.titel { text-decoration: none; }
 .terug { border: 0; background: none; padding: 0; color: var(--tekst); font-size: 1rem; cursor: pointer; }
 .bevestig h2 { margin: 0 0 4px; font-family: var(--schreef); font-weight: 700; font-size: 1.6rem; line-height: 1.2; text-align: center; }
 .bevestig > p { margin: 0; text-align: center; color: var(--zacht); }
+.bevestig .reden { color: var(--accent); font-weight: 600; margin-top: 10px; }
 .bevestig .beschrijving { text-align: left; color: var(--tekst); margin-top: 18px; line-height: 1.5; }
 .bevestig .hoofdknop { margin-top: 24px; }
 .bevestig .label {

@@ -1,7 +1,8 @@
 import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
-import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten } from './tmdb.js';
+import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen } from './tmdb.js';
+import { kiesFavorieten, combineerTips } from './tips.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
@@ -313,6 +314,7 @@ function toonBevestigen(t, alOpLijst, terug = { naam: 'Resultaten', toon: toonZo
       ${posterHtml(t, 'poster-groot')}
       <h2>${veilig(t.titel)}</h2>
       <p>${soortJaar(t)}${t.origineel && t.origineel !== t.titel ? ` · ${veilig(t.origineel)}` : ''}</p>
+      ${t.reden ? `<p class="reden">${veilig(t.reden)}</p>` : ''}
       ${t.beschrijving ? `<p class="beschrijving">${veilig(t.beschrijving)}</p>` : ''}
       ${
         alOpLijst
@@ -333,7 +335,7 @@ function toonBevestigen(t, alOpLijst, terug = { naam: 'Resultaten', toon: toonZo
 // --- Ontdekken ---
 
 const ONTDEK_SOORTEN = { film: 'Films', serie: 'Series' };
-const ONTDEK_BRONNEN = { trending: 'Trending', diensten: 'Bij mijn diensten' };
+const ONTDEK_BRONNEN = { trending: 'Trending', diensten: 'Bij mijn diensten', tips: 'Tips voor mij' };
 let ontdekSoort = onthoud('ontdekSoort', 'film', Object.keys(ONTDEK_SOORTEN));
 let ontdekBron = onthoud('ontdekBron', 'trending', Object.keys(ONTDEK_BRONNEN));
 // Wat al geladen is blijft bewaard, zodat 'terug' meteen werkt en je op dezelfde plek uitkomt.
@@ -365,7 +367,9 @@ async function toonOntdekken({ terugNaarPlek = false } = {}) {
     <p class="zacht ontdek-uitleg">${
       ontdekBron === 'trending'
         ? `${ONTDEK_SOORTEN[ontdekSoort]} waar deze week veel over gepraat wordt.`
-        : `Populaire ${ONTDEK_SOORTEN[ontdekSoort].toLowerCase()} die je met je eigen abonnementen kunt kijken.`
+        : ontdekBron === 'diensten'
+          ? `Populaire ${ONTDEK_SOORTEN[ontdekSoort].toLowerCase()} die je met je eigen abonnementen kunt kijken.`
+          : `${ONTDEK_SOORTEN[ontdekSoort]} die lijken op wat je 4 of 5 sterren gaf. Wat al op je lijst staat, zie je hier niet.`
     }</p>
     <div id="ontdek-vak"></div>
   `;
@@ -386,9 +390,34 @@ async function toonOntdekken({ terugNaarPlek = false } = {}) {
     return;
   }
 
-  const sleutel = `${ontdekSoort}|${ontdekBron}|${eigen.join(',')}`;
-  const laad = async (pagina) =>
-    ontdekBron === 'trending' ? haalTrending(ontdekSoort, pagina) : haalOpDiensten(ontdekSoort, eigen, pagina);
+  const mijnTitels = await alleTitels();
+  if (nr !== schermNr) return;
+  const favorieten = ontdekBron === 'tips' ? kiesFavorieten(mijnTitels, ontdekSoort) : [];
+  if (ontdekBron === 'tips' && !favorieten.length) {
+    vak.innerHTML = `<p class="leeg">Geef eerst een ${ontdekSoort === 'film' ? 'film' : 'serie'} die je gezien hebt 4 of 5 sterren. Daarop baseert de app je tips.</p>`;
+    return;
+  }
+
+  // Tips worden opnieuw berekend als je favorieten of je lijst veranderen.
+  const sleutel = `${ontdekSoort}|${ontdekBron}|${eigen.join(',')}|${
+    ontdekBron === 'tips' ? `${favorieten.map((f) => `${f.tmdbId}:${f.sterren}`).join(',')}|${mijnTitels.length}` : ''
+  }`;
+  const laad = async (pagina) => {
+    if (ontdekBron === 'trending') return haalTrending(ontdekSoort, pagina);
+    if (ontdekBron === 'diensten') return haalOpDiensten(ontdekSoort, eigen, pagina);
+    // Lukt het bij één favoriet niet, dan tellen de andere gewoon mee.
+    const per = await Promise.all(
+      favorieten.map((favoriet) =>
+        haalAanbevelingen(favoriet.soort, favoriet.tmdbId)
+          .then((aanbevolen) => ({ favoriet, aanbevolen }))
+          .catch((fout) => {
+            if (fout instanceof SleutelFout) throw fout;
+            return { favoriet, aanbevolen: [] };
+          })
+      )
+    );
+    return combineerTips(per, new Set(mijnTitels.map(titelSleutel)));
+  };
 
   let stand = ontdekGeladen.get(sleutel);
   if (!stand) {
@@ -410,6 +439,7 @@ async function toonOntdekken({ terugNaarPlek = false } = {}) {
   const opLijst = new Map((await alleTitels()).map((t) => [titelSleutel(t), t]));
   if (nr !== schermNr) return;
 
+  const metMeer = ontdekBron !== 'tips' && stand.pagina < 5;
   const teken = () => {
     vak.innerHTML = stand.titels.length
       ? `<ul class="raster">${stand.titels
@@ -423,9 +453,9 @@ async function toonOntdekken({ terugNaarPlek = false } = {}) {
           </button></li>`
           )
           .join('')}</ul>
-         ${stand.pagina < 5 ? '<button class="tweede-knop" id="meer">Meer laden</button>' : ''}
+         ${metMeer && stand.pagina < 5 ? '<button class="tweede-knop" id="meer">Meer laden</button>' : ''}
          ${ontdekBron === 'diensten' ? JUSTWATCH : ''}${BRON}`
-      : '<p class="leeg">Niets gevonden.</p>';
+      : `<p class="leeg">${ontdekBron === 'tips' ? 'Nog geen tips gevonden. Geef meer titels 4 of 5 sterren.' : 'Niets gevonden.'}</p>`;
     vak.querySelectorAll('.raster-titel').forEach((knop) =>
       knop.addEventListener('click', () => {
         ontdekScroll = window.scrollY;

@@ -29,7 +29,7 @@ Een persoonlijke mobiele webapp waarmee je films en series bijhoudt die je wilt 
 | 1.8 | Mijn diensten | In Instellingen (in een blok dat je kunt in- en uitklappen) per streamingdienst kiezen: Abonnement, Tonen of Verbergen, of in één tik alles verbergen behalve je abonnementen (of alles weer tonen). Op de titelpagina eerst "Bij jou te zien", verborgen diensten niet tonen. Per dienst een knop die de dienst opent (met de titel als zoekterm waar de dienst dat toelaat) | TMDB-lijst van NL-diensten; keuze op de telefoon |
 | 1.9 | Samen kijken | Een titel delen via het deelmenu (WhatsApp, iMessage, mail) als uitnodiging om samen te kijken: titel, waar te zien, link en optioneel een voorstel voor dag en tijd | Web Share |
 | 1.10 | Ontdekken | Trending films en series; filter op "mijn diensten" | TMDB |
-| 1.11 | Tips voor mij | Aanbevelingen op basis van titels met 4–5 sterren; titels die al in je lijst staan vallen weg | TMDB-aanbevelingen, op basis van regels |
+| 1.11 | Tips voor mij | In Ontdekken: aanbevelingen op basis van titels met 4–5 sterren, met de reden erbij ("Omdat je … hoog waardeerde"); titels die al in je lijst staan vallen weg | TMDB-aanbevelingen, op basis van regels |
 | 1.12 | Nieuwe versie | Staat er een nieuwe versie online, dan verschijnt bovenin een knop om te vernieuwen (zoals in de boekenapp) | In de app |
 | 1.13 | Weergave | In Instellingen kiezen: donker 's avonds, zoals de iPhone, altijd licht of altijd donker (zoals in de boekenapp) | In de app |
 
