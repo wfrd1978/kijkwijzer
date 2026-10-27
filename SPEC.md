@@ -46,6 +46,7 @@ Je kunt op je telefoon (vanaf het beginscherm) een film of serie zoeken en toevo
 ## Werklijst — kleine verbeteringen
 
 - **Vormgeving.** Later kijken naar de opmaak van de Sport-pagina, en eigenlijk naar de vormgeving van de hele app. Eerst verder bouwen.
+- **Nieuw ontwerp (later samen uitwerken).** Een startscherm met een overzicht van de dag en de week. Voor films en series de tabbladen Ontdekken, Wil ik zien en Gezien behouden; "Bezig" hoeft niet in het uiteindelijke ontwerp. Bij Ontdekken misschien ook het onderwerp sport. Aandachtspunt bij het uitwerken: de voortgang bij series (stap 15) hangt nu aan de status Bezig; daar moet een nieuwe plek voor komen.
 
 ## Fase 2 — Verdieping
 
