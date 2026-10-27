@@ -566,7 +566,13 @@ function extraHtml(titel) {
   return `
     ${
       trailer
-        ? `<div class="trailer" id="trailer"><button class="trailer-knop" id="trailer-start"><span aria-hidden="true">▶</span> Bekijk trailer</button></div>
+        ? `<div class="trailer" id="trailer">
+             <button class="trailer-voorplaat" id="trailer-start" aria-label="Speel de trailer af">
+               ${titel.achtergrond ? `<img src="${veiligeUrl(posterUrl(titel.achtergrond, 'w780'))}" alt="" loading="lazy" />` : ''}
+               <span class="trailer-speel" aria-hidden="true"></span>
+               <span class="trailer-tekst">Trailer</span>
+             </button>
+           </div>
            <a class="trailer-link" href="${trailer}" target="_blank" rel="noopener">Open in YouTube ↗</a>`
         : ''
     }
@@ -603,10 +609,11 @@ const EXTRA_VERVERS_DAGEN = 30;
 
 async function verversExtra(titel, bewaar, nr) {
   if (!leesSleutel()) return;
-  if (titel.extraOp && dagenSinds(new Date(titel.extraOp)) < EXTRA_VERVERS_DAGEN) return;
+  // Titels van vóór de voorplaat (zonder 'achtergrond') worden één keer extra bijgewerkt.
+  if (titel.extraOp && 'achtergrond' in titel && dagenSinds(new Date(titel.extraOp)) < EXTRA_VERVERS_DAGEN) return;
   try {
-    const { trailer, acteurs } = await haalTrailerEnActeurs(titel.soort, titel.tmdbId);
-    await bewaar({ trailer, acteurs, extraOp: vandaag() });
+    const { trailer, acteurs, achtergrond } = await haalTrailerEnActeurs(titel.soort, titel.tmdbId);
+    await bewaar({ trailer, acteurs, achtergrond, extraOp: vandaag() });
   } catch {
     return; // Geen verbinding: dan de volgende keer.
   }

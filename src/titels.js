@@ -138,6 +138,6 @@ export function normaliseerTitel(t) {
     notitie: tekst(t.notitie),
     toegevoegdOp: typeof t.toegevoegdOp === 'string' && !isNaN(Date.parse(t.toegevoegdOp)) ? t.toegevoegdOp : new Date().toISOString(),
     ...(DATUM.test(t.dienstenOp ?? '') ? { dienstenOp: t.dienstenOp, diensten: schoneDiensten(t.diensten) } : {}),
-    ...(DATUM.test(t.extraOp ?? '') ? { extraOp: t.extraOp, trailer: /^[\w-]{6,20}$/.test(t.trailer ?? '') ? t.trailer : '', acteurs: schoneActeurs(t.acteurs) } : {}),
+    ...(DATUM.test(t.extraOp ?? '') ? { extraOp: t.extraOp, trailer: /^[\w-]{6,20}$/.test(t.trailer ?? '') ? t.trailer : '', acteurs: schoneActeurs(t.acteurs), achtergrond: /^\/[\w.-]+$/.test(t.achtergrond ?? '') ? t.achtergrond : '' } : {}),
   };
 }

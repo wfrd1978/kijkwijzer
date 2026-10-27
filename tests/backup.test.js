@@ -47,6 +47,8 @@ describe('normaliseerTitel', () => {
     const t = normaliseerTitel({ ...goed, extraOp: '2026-10-27', trailer: 'abc123XYZ', acteurs: [{ id: 1, naam: 'A', rol: 'R', foto: 'javascript:x' }, { naam: 'zonder id' }] });
     expect(t).toMatchObject({ trailer: 'abc123XYZ', acteurs: [{ id: 1, naam: 'A', rol: 'R', foto: '' }] });
     expect(normaliseerTitel({ ...goed, extraOp: '2026-10-27', trailer: '"><script>' }).trailer).toBe('');
+    expect(normaliseerTitel({ ...goed, extraOp: '2026-10-27', achtergrond: '/b.jpg' }).achtergrond).toBe('/b.jpg');
+    expect(normaliseerTitel({ ...goed, extraOp: '2026-10-27', achtergrond: 'https://x' }).achtergrond).toBe('');
   });
   it('neemt diensten alleen mee met een geldige datum', () => {
     expect(normaliseerTitel({ ...goed, dienstenOp: '2026-10-20', diensten: { abonnement: [{ id: 8, naam: 'Netflix', logo: '/n.jpg' }] } }).diensten.abonnement).toHaveLength(1);

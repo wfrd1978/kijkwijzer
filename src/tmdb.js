@@ -167,5 +167,10 @@ export async function haalTrailerEnActeurs(soort, tmdbId) {
     append_to_response: s === 'tv' ? 'videos,aggregate_credits' : 'videos,credits',
     include_video_language: 'nl,en',
   });
-  return { trailer: kiesTrailer(data.videos?.results), acteurs: naarActeurs(s === 'tv' ? data.aggregate_credits : data.credits) };
+  return {
+    trailer: kiesTrailer(data.videos?.results),
+    acteurs: naarActeurs(s === 'tv' ? data.aggregate_credits : data.credits),
+    // Een breed beeld uit de film of serie, als 'voorplaat' van de trailer.
+    achtergrond: data.backdrop_path ?? '',
+  };
 }
