@@ -9,7 +9,7 @@ import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwe
 import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
 import {
   titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst,
-  TABS, SOORTEN, SORTERINGEN, filterTitels, sorteerTitels, dubbelTekst,
+  TABS, SOORTEN, SORTERINGEN, filterTitels, sorteerTitels, dubbelTekst, gevondenActeur,
 } from './titels.js';
 
 const app = document.getElementById('app');
@@ -113,7 +113,8 @@ let soort = onthoud('soort', 'alle', Object.keys(SOORTEN));
 let sortering = onthoud('sortering', 'toegevoegd', Object.keys(SORTERINGEN));
 let lijstZoek = '';
 
-function titelRegel(t) {
+function titelRegel(t, zoek = '') {
+  const acteur = gevondenActeur(t, zoek);
   return `
       <li><a class="titel" href="#/titel/${t.id}">
         ${posterHtml(t)}
@@ -124,6 +125,7 @@ function titelRegel(t) {
           </span>
           <strong>${veilig(t.titel)}</strong>
           <span>${soortJaar(t)}</span>
+          ${acteur ? `<span class="met-acteur">Met ${veilig(acteur)}</span>` : ''}
         </div>
       </a></li>`;
 }
@@ -162,7 +164,7 @@ async function toonLijst() {
     ${moetHerinneren(titels.length) ? herinneringHtml() : ''}
     <nav class="tabs" id="tabs">${TABS.map((t) => `<button class="tab${t === tab ? ' actief' : ''}" data-tab="${t}">${t}</button>`).join('')}</nav>
     <div class="lijst-bediening">
-      <input id="lijst-zoek" type="search" placeholder="Zoek in je lijst" value="${veilig(lijstZoek)}" autocomplete="off" enterkeyhint="search" aria-label="Zoek in je lijst" />
+      <input id="lijst-zoek" type="search" placeholder="Zoek op titel, acteur of notitie" value="${veilig(lijstZoek)}" autocomplete="off" enterkeyhint="search" aria-label="Zoek in je lijst" />
       <div class="lijst-regel">
         <label class="sorteer">Toon
           <select id="soort">${Object.entries(SOORTEN).map(([k, v]) => `<option value="${k}"${k === soort ? ' selected' : ''}>${v}</option>`).join('')}</select>
@@ -180,7 +182,7 @@ async function toonLijst() {
   const teken = () => {
     const zichtbaar = sorteerTitels(filterTitels(titels, { tab, soort, zoek: lijstZoek }), sortering);
     document.getElementById('lijst').innerHTML = zichtbaar.length
-      ? zichtbaar.map(titelRegel).join('')
+      ? zichtbaar.map((t) => titelRegel(t, lijstZoek)).join('')
       : `<li class="leeg">${
           lijstZoek ? `Niets gevonden voor "${veilig(lijstZoek)}".` : tab === 'Alles' ? `Geen ${SOORTEN[soort].toLowerCase()} op je lijst.` : `Nog niets bij ${veilig(tab)}.`
         }</li>`;
@@ -1189,6 +1191,24 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', bewaarNu);
 
 vraagBlijvendeOpslag();
+
+// Titels van vóór stap 11 hebben nog geen acteurs (en trailer). Die vult de app op de
+// achtergrond aan, één voor één, zodat zoeken op acteur voor je hele lijst werkt.
+// Alleen deze gegevens worden toegevoegd; je eigen status, sterren en notities blijven zoals ze zijn.
+async function vulActeursAan() {
+  if (!leesSleutel()) return;
+  const zonder = (await alleTitels()).filter((t) => !t.extraOp);
+  for (const t of zonder.slice(0, 100)) {
+    try {
+      const { trailer, acteurs, achtergrond } = await haalTrailerEnActeurs(t.soort, t.tmdbId);
+      await titelBijwerken(t.id, { trailer, acteurs, achtergrond, extraOp: vandaag() });
+    } catch {
+      return; // Geen internet of sleutel geweigerd: de volgende keer verder.
+    }
+    await new Promise((klaar) => setTimeout(klaar, 300)); // rustig aan richting TMDB
+  }
+}
+setTimeout(vulActeursAan, 3000);
 
 window.addEventListener('hashchange', route);
 route();

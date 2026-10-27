@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  nieuweTitel, titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst, filterTitels, sorteerTitels, dubbelTekst,
+  nieuweTitel, titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst, filterTitels, sorteerTitels, dubbelTekst, gevondenActeur,
 } from '../src/titels.js';
 
 describe('nieuweTitel', () => {
@@ -98,5 +98,21 @@ describe('dubbelTekst', () => {
   it('noemt anders de status', () => {
     expect(dubbelTekst({ status: 'Wil ik zien', kijkdatum: '' })).toBe('Staat al op je lijst · Wil ik zien');
     expect(dubbelTekst({ status: 'Gezien', kijkdatum: '' })).toBe('Staat al op je lijst · Gezien');
+  });
+});
+
+describe('zoeken op acteur', () => {
+  const dune = { titel: 'Dune', origineel: 'Dune', soort: 'film', status: 'Gezien', notitie: '', acteurs: [{ naam: 'Timothée Chalamet' }, { naam: 'Zendaya' }] };
+  const wonka = { titel: 'Wonka', origineel: 'Wonka', soort: 'film', status: 'Wil ik zien', notitie: '', acteurs: [{ naam: 'Timothée Chalamet' }] };
+  const oud = { titel: 'Oud', origineel: '', soort: 'film', status: 'Gezien', notitie: '' };
+  it('vindt titels via de acteur, zonder accenten', () => {
+    expect(filterTitels([dune, wonka, oud], { zoek: 'timothee' }).map((t) => t.titel)).toEqual(['Dune', 'Wonka']);
+    expect(filterTitels([dune, wonka, oud], { zoek: 'zendaya' }).map((t) => t.titel)).toEqual(['Dune']);
+  });
+  it('noemt de gevonden acteur, maar niet als de titel zelf al past', () => {
+    expect(gevondenActeur(dune, 'chalamet')).toBe('Timothée Chalamet');
+    expect(gevondenActeur(dune, 'dune')).toBe('');
+    expect(gevondenActeur(oud, 'chalamet')).toBe('');
+    expect(gevondenActeur(dune, '')).toBe('');
   });
 });

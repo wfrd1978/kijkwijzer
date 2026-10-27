@@ -62,15 +62,28 @@ export const SORTERINGEN = {
   titel: 'Titel',
 };
 
-// Zoekt in titel, originele titel en notitie (zo vind je ook 'tip van …').
+const zoekwoorden = (zoek) => kaal(zoek).split(/\s+/).filter(Boolean);
+const acteursnamen = (t) => (t.acteurs ?? []).map((a) => a.naam).join(' ');
+
+// Zoekt in titel, originele titel, notitie (zo vind je ook 'tip van …') en acteurs.
 export function filterTitels(titels, { tab = 'Alles', soort = 'alle', zoek = '' } = {}) {
-  const woorden = kaal(zoek).split(/\s+/).filter(Boolean);
+  const woorden = zoekwoorden(zoek);
   return titels.filter((t) => {
     if (tab !== 'Alles' && t.status !== tab) return false;
     if (soort !== 'alle' && t.soort !== soort) return false;
-    const tekst = kaal(`${t.titel} ${t.origineel} ${t.notitie}`);
+    const tekst = kaal(`${t.titel} ${t.origineel} ${t.notitie} ${acteursnamen(t)}`);
     return woorden.every((w) => tekst.includes(w));
   });
+}
+
+// De acteur die bij de zoekopdracht hoort, om 'Met …' bij de titel te zetten.
+// Alleen als alle woorden in één naam staan en de titel zelf het niet al verklaart.
+export function gevondenActeur(t, zoek) {
+  const woorden = zoekwoorden(zoek);
+  if (!woorden.length) return '';
+  const titel = kaal(`${t.titel} ${t.origineel}`);
+  if (woorden.every((w) => titel.includes(w))) return '';
+  return (t.acteurs ?? []).find((a) => woorden.every((w) => kaal(a.naam).includes(w)))?.naam ?? '';
 }
 
 const opTitel = (a, b) => a.titel.localeCompare(b.titel, 'nl', { sensitivity: 'base' });
