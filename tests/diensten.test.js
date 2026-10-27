@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { verdeelDiensten, doorklikLink, keuzeVan } from '../src/diensten.js';
+import { verdeelDiensten, doorklikLink, keuzeVan, alleKeuzes } from '../src/diensten.js';
 import { naarDienstenLijst } from '../src/tmdb.js';
 
 const n = { id: 8, naam: 'Netflix', logo: '' };
@@ -52,5 +52,15 @@ describe('naarDienstenLijst', () => {
     const films = { results: [{ provider_id: 8, provider_name: 'Netflix', display_priorities: { NL: 1 } }, { provider_id: 2, provider_name: 'Apple TV', display_priorities: { NL: 9 } }] };
     const series = { results: [{ provider_id: 8, provider_name: 'Netflix', display_priorities: { NL: 1 } }, { provider_id: 72, provider_name: 'Videoland', display_priorities: { NL: 3 } }] };
     expect(namen(naarDienstenLijst(films, series))).toEqual(['Netflix', 'Videoland', 'Apple TV']);
+  });
+});
+
+describe('alleKeuzes', () => {
+  const keuzes = { 8: 'abonnement', 72: 'verbergen', 999: 'abonnement' };
+  it('verbergt alles behalve je abonnementen', () => {
+    expect(alleKeuzes(keuzes, [8, 72, 35], 'verbergen')).toEqual({ 8: 'abonnement', 72: 'verbergen', 35: 'verbergen', 999: 'abonnement' });
+  });
+  it('toont alles weer, abonnementen blijven', () => {
+    expect(alleKeuzes(keuzes, [8, 72, 35], 'tonen')).toEqual({ 8: 'abonnement', 999: 'abonnement' });
   });
 });

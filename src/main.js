@@ -3,7 +3,7 @@ import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
 import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten } from './tmdb.js';
 import { uitnodigingTekst, deel } from './delen.js';
-import { KEUZES, leesKeuzes, zetKeuze, keuzeVan, verdeelDiensten, doorklikLink } from './diensten.js';
+import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
 import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
 import {
@@ -744,6 +744,10 @@ async function toonDienstenKeuze(nr) {
         .join('')}</span>
     </li>`;
   vak().innerHTML = `
+    <div class="alles-knoppen">
+      <button class="keuze" data-alles="verbergen">Verberg alles behalve mijn abonnementen</button>
+      <button class="keuze" data-alles="tonen">Toon alles</button>
+    </div>
     <ul class="diensten-lijst">${boven.map(regel).join('')}</ul>
     ${
       onder.length
@@ -751,6 +755,17 @@ async function toonDienstenKeuze(nr) {
         : ''
     }`;
   vak().addEventListener('click', (e) => {
+    const alles = e.target.closest('[data-alles]');
+    if (alles) {
+      zetAlleKeuzes(alle.map((d) => d.id), alles.dataset.alles);
+      const nu = leesKeuzes();
+      vak().querySelectorAll('.dienst-keuze').forEach((li) =>
+        li.querySelectorAll('.keuze').forEach((k) => k.classList.toggle('actief', k.dataset.keuze === keuzeVan(nu, Number(li.dataset.id))))
+      );
+      document.getElementById('diensten-stand').textContent = dienstenStand();
+      melding(alles.dataset.alles === 'verbergen' ? 'Alles verborgen behalve je abonnementen' : 'Alle diensten worden weer getoond');
+      return;
+    }
     const knop = e.target.closest('[data-keuze]');
     if (!knop) return;
     const li = knop.closest('.dienst-keuze');

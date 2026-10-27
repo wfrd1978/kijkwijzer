@@ -20,6 +20,22 @@ export function zetKeuze(id, keuze) {
   localStorage.setItem(OPSLAG, JSON.stringify(keuzes));
 }
 
+// Alle diensten in één keer op Tonen of Verbergen zetten. Je abonnementen blijven staan.
+export function alleKeuzes(keuzes, ids, keuze) {
+  const nieuw = {};
+  for (const id of ids) {
+    if (keuzes[id] === 'abonnement') nieuw[id] = 'abonnement';
+    else if (keuze === 'verbergen') nieuw[id] = 'verbergen';
+  }
+  // Abonnementen op diensten die nu niet in de lijst staan, niet kwijtraken.
+  for (const [id, k] of Object.entries(keuzes)) if (k === 'abonnement') nieuw[id] = 'abonnement';
+  return nieuw;
+}
+
+export function zetAlleKeuzes(ids, keuze) {
+  localStorage.setItem(OPSLAG, JSON.stringify(alleKeuzes(leesKeuzes(), ids, keuze)));
+}
+
 export function keuzeVan(keuzes, id) {
   return keuzes[id] in KEUZES ? keuzes[id] : 'tonen';
 }
