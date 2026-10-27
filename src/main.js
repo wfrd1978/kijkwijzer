@@ -222,6 +222,7 @@ async function toonLijst() {
 
 let laatsteZoekterm = '';
 let laatsteResultaten = [];
+let laatstePersonen = [];
 let zoekNr = 0;
 
 function toonZoek() {
@@ -232,7 +233,7 @@ function toonZoek() {
   app.innerHTML = `
     ${WOORDMERK}
     <form class="zoekbalk" id="zoek-form" role="search">
-      <input id="zoekveld" type="search" placeholder="Film of serie" autocomplete="off" enterkeyhint="search" value="${veilig(laatsteZoekterm)}" aria-label="Zoek een film of serie" />
+      <input id="zoekveld" type="search" placeholder="Film, serie of acteur" autocomplete="off" enterkeyhint="search" value="${veilig(laatsteZoekterm)}" aria-label="Zoek een film, serie of acteur" />
       <button type="submit">Zoek</button>
     </form>
     <div id="resultaten"></div>
@@ -265,9 +266,10 @@ async function zoek(term) {
   const nr = ++zoekNr;
   vak.innerHTML = '<p class="bezig">Zoeken…</p>';
   try {
-    const titels = await zoekTitels(laatsteZoekterm);
+    const { titels, personen } = await zoekTitels(laatsteZoekterm);
     if (nr !== zoekNr) return; // er is intussen verder getypt
     laatsteResultaten = titels;
+    laatstePersonen = personen;
     await toonResultaten();
   } catch (fout) {
     if (nr !== zoekNr) return;
@@ -282,8 +284,25 @@ async function toonResultaten() {
   const vak = document.getElementById('resultaten');
   if (!vak) return;
   const opLijst = new Map((await alleTitels()).map((t) => [titelSleutel(t), t]));
-  vak.innerHTML = laatsteResultaten.length
-    ? `<ul class="lijst">${laatsteResultaten
+  // Acteurs bovenaan; tik je erop, dan zie je al hun films en series.
+  const personen = laatstePersonen.length
+    ? `<p class="label zoek-kop">Acteurs</p>
+       <ul class="lijst">${laatstePersonen
+         .map((a) => {
+           const foto = veiligeUrl(posterUrl(a.foto, 'w185'));
+           return `<li><a class="titel persoon" href="#/acteur/${a.id}">
+             ${foto ? `<img class="persoon-foto" src="${foto}" alt="" loading="lazy" />` : `<span class="persoon-foto acteur-leeg" aria-hidden="true">${veilig(a.naam.slice(0, 1))}</span>`}
+             <div class="titel-tekst">
+               <strong>${veilig(a.naam)}</strong>
+               <span>Acteur${a.bekendVan.length ? ` · ${a.bekendVan.map(veilig).join(', ')}` : ''}</span>
+             </div>
+           </a></li>`;
+         })
+         .join('')}</ul>
+       ${laatsteResultaten.length ? '<p class="label zoek-kop">Films en series</p>' : ''}`
+    : '';
+  vak.innerHTML = laatsteResultaten.length || laatstePersonen.length
+    ? `${personen}<ul class="lijst">${laatsteResultaten
         .map(
           (t, i) => `
         <li><button class="titel resultaat" data-i="${i}">

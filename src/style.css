@@ -122,6 +122,10 @@ a { color: var(--accent); }
   border: 0; border-bottom: 1px solid var(--lijn); background: none; text-align: left; color: inherit;
 }
 .resultaat { cursor: pointer; }
+.label.zoek-kop { margin: 18px 0 2px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.titel.persoon { text-decoration: none; }
+.persoon-foto { flex: none; width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: var(--poster-leeg); }
+.persoon-foto.acteur-leeg { display: flex; align-items: center; justify-content: center; color: var(--zacht); font-family: var(--schreef); font-weight: 700; font-size: 1.3rem; }
 .aantal { color: var(--zacht); font-size: 0.9rem; }
 
 /* --- Tabjes en bediening boven de lijst (gelijk aan de boekenapp) --- */

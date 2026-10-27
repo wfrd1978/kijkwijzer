@@ -54,10 +54,25 @@ export function naarTitel(r, standaard) {
   };
 }
 
-// Films en series door elkaar, op volgorde van TMDB (meest bekende eerst).
+// Een acteur uit de zoekresultaten, met waar hij of zij het bekendst van is.
+// Regisseurs en andere makers vallen weg: hun pagina zou geen rollen tonen.
+export function naarPersoon(r) {
+  if (r.media_type !== 'person' || r.known_for_department !== 'Acting') return null;
+  return {
+    id: r.id,
+    naam: r.name ?? 'Onbekend',
+    foto: r.profile_path ?? '',
+    bekendVan: (r.known_for ?? []).map((k) => k.title ?? k.name).filter(Boolean).slice(0, 2),
+  };
+}
+
+export const MAX_PERSONEN = 5;
+
+// Films, series en acteurs, op volgorde van TMDB (meest bekende eerst).
 export async function zoekTitels(zoekterm) {
   const data = await vraag('/search/multi', { query: zoekterm, include_adult: 'false' });
-  return (data.results ?? []).map(naarTitel).filter(Boolean);
+  const r = data.results ?? [];
+  return { titels: r.map((x) => naarTitel(x)).filter(Boolean), personen: r.map(naarPersoon).filter(Boolean).slice(0, MAX_PERSONEN) };
 }
 
 // Waar kun je het kijken in Nederland? TMDB krijgt deze gegevens van JustWatch.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maakVerzoek, naarTitel, posterUrl, naarDiensten, dienstenParams, kiesTrailer, naarActeurs, naarRollen } from '../src/tmdb.js';
+import { maakVerzoek, naarTitel, posterUrl, naarDiensten, dienstenParams, kiesTrailer, naarActeurs, naarRollen, naarPersoon } from '../src/tmdb.js';
 
 describe('maakVerzoek', () => {
   it('zet de korte sleutel in het adres', () => {
@@ -119,5 +119,16 @@ describe('naarRollen', () => {
   });
   it('leeg zonder gegevens', () => {
     expect(naarRollen(undefined)).toEqual([]);
+  });
+});
+
+describe('naarPersoon', () => {
+  it('neemt acteurs met hun bekendste titels', () => {
+    expect(naarPersoon({ media_type: 'person', id: 7, name: 'Zendaya', known_for_department: 'Acting', profile_path: '/z.jpg', known_for: [{ name: 'Euphoria' }, { title: 'Dune' }, { title: 'Spider-Man' }] }))
+      .toEqual({ id: 7, naam: 'Zendaya', foto: '/z.jpg', bekendVan: ['Euphoria', 'Dune'] });
+  });
+  it('laat regisseurs, films en series weg', () => {
+    expect(naarPersoon({ media_type: 'person', id: 8, name: 'Villeneuve', known_for_department: 'Directing' })).toBe(null);
+    expect(naarPersoon({ media_type: 'movie', id: 1, title: 'Dune' })).toBe(null);
   });
 });
