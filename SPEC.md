@@ -45,7 +45,7 @@ Je kunt op je telefoon (vanaf het beginscherm) een film of serie zoeken en toevo
 
 ## Werklijst — kleine verbeteringen
 
-Nu leeg.
+- **Vegen om te verwijderen.** In Mijn lijst een titel naar links vegen om hem te verwijderen, met "Ongedaan maken" in de melding, zoals in de boekenapp.
 
 ## Fase 2 — Verdieping
 
