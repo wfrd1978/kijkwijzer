@@ -26,11 +26,12 @@ Een persoonlijke mobiele webapp waarmee je films en series bijhoudt die je wilt 
 | 1.5 | Mijn lijst | Zoeken, filteren op status en film/serie, sorteren op datum, sterren, titel | In de app |
 | 1.6 | Dubbel-waarschuwing | "Staat al in je lijst (gezien op …)" vóór toevoegen | Vergelijk op TMDB-nummer |
 | 1.7 | Backup & terugzetten | Backupbestand via het deelmenu naar Google Drive; later terugzetten. Je TMDB-sleutel zit er bewust niet in | JSON-bestand, Web Share |
-| 1.8 | Mijn diensten | In Instellingen per streamingdienst kiezen: Abonnement, Tonen of Verbergen. Op de titelpagina eerst "Bij jou te zien", verborgen diensten niet tonen. Per dienst een knop die de dienst opent (met de titel als zoekterm waar de dienst dat toelaat) | TMDB-lijst van NL-diensten; keuze op de telefoon |
+| 1.8 | Mijn diensten | In Instellingen (in een blok dat je kunt in- en uitklappen) per streamingdienst kiezen: Abonnement, Tonen of Verbergen. Op de titelpagina eerst "Bij jou te zien", verborgen diensten niet tonen. Per dienst een knop die de dienst opent (met de titel als zoekterm waar de dienst dat toelaat) | TMDB-lijst van NL-diensten; keuze op de telefoon |
 | 1.9 | Samen kijken | Een titel delen via het deelmenu (WhatsApp, iMessage, mail) als uitnodiging om samen te kijken: titel, waar te zien, link en optioneel een voorstel voor dag en tijd | Web Share |
 | 1.10 | Ontdekken | Trending films en series; filter op "mijn diensten" | TMDB |
 | 1.11 | Tips voor mij | Aanbevelingen op basis van titels met 4–5 sterren; titels die al in je lijst staan vallen weg | TMDB-aanbevelingen, op basis van regels |
 | 1.12 | Nieuwe versie | Staat er een nieuwe versie online, dan verschijnt bovenin een knop om te vernieuwen (zoals in de boekenapp) | In de app |
+| 1.13 | Weergave | In Instellingen kiezen: donker 's avonds, zoals de iPhone, altijd licht of altijd donker (zoals in de boekenapp) | In de app |
 
 **Bewust beperkt:** de streaminginformatie komt van JustWatch via TMDB en loopt soms een paar dagen achter. Daarom staat bij elke titel wanneer die informatie is opgehaald. TMDB geeft geen directe link naar een titel bij een dienst; doorklikken opent de dienst (waar mogelijk met de titel als zoekterm) of de overzichtspagina met alle opties.
 

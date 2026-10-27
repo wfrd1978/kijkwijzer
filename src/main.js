@@ -705,6 +705,22 @@ async function toonTitel(id) {
 
 const MEER_NA = 15;
 
+// Licht of donker. Het wisselen zelf gebeurt in thema.js, dat al laadt vóór de app.
+const WEERGAVEN = { avond: "Donker 's avonds", iphone: 'Zoals mijn iPhone', licht: 'Altijd licht', donker: 'Altijd donker' };
+
+function weergave() {
+  return onthoud('weergave', 'avond', Object.keys(WEERGAVEN));
+}
+
+// Korte stand onder het ingeklapte blok, zodat je zonder openklappen ziet wat je hebt gekozen.
+function dienstenStand() {
+  const k = Object.values(leesKeuzes());
+  const abo = k.filter((x) => x === 'abonnement').length;
+  const weg = k.filter((x) => x === 'verbergen').length;
+  if (!abo && !weg) return 'Nog niets gekozen';
+  return [abo && `${abo} ${abo === 1 ? 'abonnement' : 'abonnementen'}`, weg && `${weg} verborgen`].filter(Boolean).join(' · ');
+}
+
 async function toonDienstenKeuze(nr) {
   const vak = () => (nr === schermNr ? document.getElementById('diensten-keuze') : null);
   let alle;
@@ -740,6 +756,7 @@ async function toonDienstenKeuze(nr) {
     const li = knop.closest('.dienst-keuze');
     zetKeuze(Number(li.dataset.id), knop.dataset.keuze);
     li.querySelectorAll('.keuze').forEach((k) => k.classList.toggle('actief', k === knop));
+    document.getElementById('diensten-stand').textContent = dienstenStand();
   });
 }
 
@@ -776,7 +793,24 @@ async function toonInstellingen() {
     <section class="blok">
       <h2>Mijn diensten</h2>
       <p>Kies per streamingdienst: <b>Abonnement</b> als je hem hebt, <b>Tonen</b> om hem bij een titel te zien, of <b>Verbergen</b> als hij je niet interesseert.</p>
-      <div id="diensten-keuze">${sleutel ? '<p class="zacht">Diensten ophalen…</p>' : '<p class="zacht">Stel eerst hieronder je TMDB-sleutel in.</p>'}</div>
+      ${
+        sleutel
+          ? `<details class="uitklap" id="diensten-uitklap">
+               <summary><span class="uitklap-kop">Diensten aanpassen</span><span class="zacht uitklap-stand" id="diensten-stand">${veilig(dienstenStand())}</span></summary>
+               <div id="diensten-keuze"><p class="zacht">Diensten ophalen…</p></div>
+             </details>`
+          : '<p class="zacht">Stel eerst hieronder je TMDB-sleutel in.</p>'
+      }
+    </section>
+
+    <section class="blok">
+      <h2>Weergave</h2>
+      <div class="keuzes" id="weergave">
+        ${Object.entries(WEERGAVEN)
+          .map(([k, naam]) => `<button class="keuze${k === weergave() ? ' actief' : ''}" data-weergave="${k}">${naam}</button>`)
+          .join('')}
+      </div>
+      <p class="zacht klein">Donker 's avonds: van 20:00 tot 7:00 donker, en altijd als je iPhone op donker staat.</p>
     </section>
 
     <section class="blok">
@@ -804,7 +838,22 @@ async function toonInstellingen() {
     </section>
   `;
 
-  if (sleutel) toonDienstenKeuze(nr);
+  // De lijst met diensten pas ophalen als je het blok openklapt.
+  document.getElementById('diensten-uitklap')?.addEventListener(
+    'toggle',
+    (e) => {
+      if (e.target.open) toonDienstenKeuze(nr);
+    },
+    { once: true }
+  );
+
+  document.getElementById('weergave').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-weergave]');
+    if (!knop) return;
+    bewaarKeuze('weergave', knop.dataset.weergave);
+    window.kijkThema?.toepassen();
+    document.querySelectorAll('#weergave .keuze').forEach((k) => k.classList.toggle('actief', k === knop));
+  });
 
   // Eerst klaarmaken, dan bewaren: het deelmenu van de iPhone moet direct na een tik openen.
   const maakKnop = document.getElementById('backup-maken');

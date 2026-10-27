@@ -227,6 +227,16 @@ a.titel { text-decoration: none; }
 .dienst-naam { display: flex; align-items: center; gap: 10px; font-weight: 600; }
 .dienst-naam img { width: 28px; height: 28px; border-radius: 7px; }
 .keuzes.klein .keuze { padding: 5px 12px; font-size: 0.88rem; }
+.uitklap { margin-top: 6px; border: 1px solid var(--lijn); border-radius: 10px; padding: 0 14px; }
+.uitklap > summary {
+  display: flex; flex-direction: column; gap: 2px; padding: 12px 24px 12px 0; cursor: pointer; list-style: none; position: relative;
+}
+.uitklap > summary::-webkit-details-marker { display: none; }
+.uitklap > summary::after { content: '›'; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); font-size: 1.4rem; color: var(--zacht); transition: transform 0.2s; }
+.uitklap[open] > summary::after { transform: translateY(-50%) rotate(90deg); }
+.uitklap-kop { font-weight: 600; color: var(--accent); }
+.uitklap-stand { font-size: 0.88rem; }
+.uitklap[open] { padding-bottom: 10px; }
 .meer-diensten { margin-top: 12px; }
 .meer-diensten summary { cursor: pointer; color: var(--accent); padding: 8px 0; }
 .bevestig .bijgewerkt { font-size: 0.8rem; margin-top: 4px; text-align: left; }
