@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { verdeelDiensten, doorklikLink, keuzeVan, alleKeuzes } from '../src/diensten.js';
+import { verdeelDiensten, doorklikLink, keuzeVan, alleKeuzes, nieuwBijJou } from '../src/diensten.js';
 import { naarDienstenLijst } from '../src/tmdb.js';
 
 const n = { id: 8, naam: 'Netflix', logo: '' };
@@ -62,5 +62,24 @@ describe('alleKeuzes', () => {
   });
   it('toont alles weer, abonnementen blijven', () => {
     expect(alleKeuzes(keuzes, [8, 72, 35], 'tonen')).toEqual({ 8: 'abonnement', 999: 'abonnement' });
+  });
+});
+
+describe('nieuwBijJou', () => {
+  const keuzes = { 8: 'abonnement', 1867: 'abonnement' };
+  const leeg = { abonnement: [], gratis: [], huren: [], kopen: [], link: '' };
+  it('meldt een dienst die er nieuw bij is gekomen', () => {
+    const titel = { dienstenOp: '2026-10-20', diensten: { ...leeg, huren: [r] } };
+    expect(nieuwBijJou(titel, { ...leeg, abonnement: [n], huren: [r] }, keuzes)).toEqual([{ id: 8, naam: 'Netflix' }]);
+  });
+  it('ook als de titel eerst nergens in Nederland te zien was', () => {
+    expect(nieuwBijJou({ dienstenOp: '2026-10-20', diensten: null }, { ...leeg, gratis: [npo] }, keuzes)).toEqual([{ id: 1867, naam: 'NPO Start' }]);
+  });
+  it('niets als het er al stond, of als er nog nooit gekeken is', () => {
+    expect(nieuwBijJou({ dienstenOp: '2026-10-20', diensten: { ...leeg, abonnement: [n] } }, { ...leeg, abonnement: [n] }, keuzes)).toEqual([]);
+    expect(nieuwBijJou({ diensten: null }, { ...leeg, abonnement: [n] }, keuzes)).toEqual([]);
+  });
+  it('een dienst waar je geen abonnement op hebt telt niet', () => {
+    expect(nieuwBijJou({ dienstenOp: '2026-10-20', diensten: null }, { ...leeg, abonnement: [v] }, keuzes)).toEqual([]);
   });
 });

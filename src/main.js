@@ -4,7 +4,7 @@ import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.
 import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur } from './tmdb.js';
 import { kiesFavorieten, combineerTips } from './tips.js';
 import { uitnodigingTekst, deel } from './delen.js';
-import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, verdeelDiensten, doorklikLink } from './diensten.js';
+import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
 import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
 import {
@@ -122,12 +122,64 @@ function titelRegel(t, zoek = '') {
           <span class="regel">
             <span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>
             ${t.sterren ? `<span class="sterren-klein" aria-label="${t.sterren} sterren">${sterrenTekst(t.sterren)}</span>` : ''}
+            ${t.nieuwBij?.length ? `<span class="nieuw-label">Nieuw bij ${veilig(t.nieuwBij.map((d) => d.naam).join(' en '))}</span>` : ''}
           </span>
           <strong>${veilig(t.titel)}</strong>
           <span>${soortJaar(t)}</span>
           ${acteur ? `<span class="met-acteur">Met ${veilig(acteur)}</span>` : ''}
         </div>
       </a></li>`;
+}
+
+// --- Nieuw bij jouw diensten ---
+
+function nieuwHtml(titels) {
+  const nieuw = titels.filter((t) => t.nieuwBij?.length);
+  if (!nieuw.length) return '';
+  return `
+    <div class="nieuw-melding">
+      <p class="nieuw-kop">Nieuw bij jouw diensten</p>
+      <ul>${nieuw
+        .slice(0, 5)
+        .map((t) => `<li><a href="#/titel/${t.id}"><strong>${veilig(t.titel)}</strong> · ${veilig(t.nieuwBij.map((d) => d.naam).join(' en '))}</a></li>`)
+        .join('')}</ul>
+      ${nieuw.length > 5 ? `<p class="zacht">En nog ${nieuw.length - 5} andere titels.</p>` : ''}
+      <button class="link-knop" id="nieuw-gezien">Gezien, melding weg</button>
+    </div>`;
+}
+
+const NIEUW_GECONTROLEERD = 'nieuwGecontroleerd';
+
+// Kijkt of titels op 'Wil ik zien' nieuw te zien zijn bij een van je abonnementen.
+// Eén keer per dag vanzelf (of nu, via Instellingen). Geeft het aantal nieuwe titels,
+// of null als er niets te controleren viel.
+async function controleerNieuw({ nu = false } = {}) {
+  if (!leesSleutel()) return null;
+  const keuzes = leesKeuzes();
+  if (!Object.values(keuzes).includes('abonnement')) return null;
+  if (!nu && onthoud(NIEUW_GECONTROLEERD, '', [vandaag()]) === vandaag()) return null;
+  let gevonden = 0;
+  for (const t of (await alleTitels()).filter((x) => x.status === 'Wil ik zien')) {
+    let diensten;
+    try {
+      diensten = await haalDiensten(t.soort, t.tmdbId);
+    } catch {
+      return gevonden; // Geen internet: morgen (of bij de volgende keer) opnieuw.
+    }
+    const nieuw = nieuwBijJou(t, diensten, keuzes);
+    const wijziging = { diensten, dienstenOp: vandaag() };
+    if (nieuw.length) {
+      const al = t.nieuwBij ?? [];
+      wijziging.nieuwBij = [...al, ...nieuw.filter((d) => !al.some((a) => a.id === d.id))];
+      gevonden += 1;
+    }
+    await titelBijwerken(t.id, wijziging);
+    await new Promise((klaar) => setTimeout(klaar, 300)); // rustig aan richting TMDB
+  }
+  bewaarKeuze(NIEUW_GECONTROLEERD, vandaag());
+  // Staat Mijn lijst open, dan meteen de melding laten zien.
+  if (gevonden && (location.hash === '' || location.hash === '#/')) route();
+  return gevonden;
 }
 
 function herinneringHtml() {
@@ -161,6 +213,7 @@ async function toonLijst() {
   }
   app.innerHTML = `
     ${WOORDMERK}
+    ${nieuwHtml(titels)}
     ${moetHerinneren(titels.length) ? herinneringHtml() : ''}
     <nav class="tabs" id="tabs">${TABS.map((t) => `<button class="tab${t === tab ? ' actief' : ''}" data-tab="${t}">${t}</button>`).join('')}</nav>
     <div class="lijst-bediening">
@@ -190,6 +243,14 @@ async function toonLijst() {
   };
   teken();
 
+  document.getElementById('nieuw-gezien')?.addEventListener('click', async () => {
+    for (const t of titels.filter((x) => x.nieuwBij?.length)) {
+      await titelBijwerken(t.id, { nieuwBij: [] });
+      t.nieuwBij = [];
+    }
+    document.querySelector('.nieuw-melding').remove();
+    teken();
+  });
   document.getElementById('later')?.addEventListener('click', () => {
     herinnerLater();
     document.querySelector('.herinnering').remove();
@@ -790,6 +851,8 @@ async function toonTitel(id) {
   };
   tekenStatus();
   tekenSterren();
+  // Je hebt de titel bekeken: dan is het 'nieuw'-label niet meer nodig.
+  if (titel.nieuwBij?.length) bewaar({ nieuwBij: [] });
   verversDiensten(titel, bewaar, nr);
   verversExtra(titel, bewaar, nr);
   document.getElementById('extra').addEventListener('click', (e) => {
@@ -1000,6 +1063,13 @@ async function toonInstellingen() {
              </details>`
           : '<p class="zacht">Stel eerst hieronder je TMDB-sleutel in.</p>'
       }
+      ${
+        sleutel
+          ? `<p class="zacht klein">Eén keer per dag kijkt de app of titels op Wil ik zien nieuw bij je abonnementen te zien zijn. Je ziet dat bovenaan Mijn lijst.</p>
+             <button class="tweede-knop" id="nieuw-nu">Nu controleren</button>
+             <p class="zacht klein" id="nieuw-uitkomst" hidden></p>`
+          : ''
+      }
     </section>
 
     <section class="blok">
@@ -1045,6 +1115,23 @@ async function toonInstellingen() {
     },
     { once: true }
   );
+
+  document.getElementById('nieuw-nu')?.addEventListener('click', async (e) => {
+    const knop = e.currentTarget;
+    const uitkomst = document.getElementById('nieuw-uitkomst');
+    knop.disabled = true;
+    knop.textContent = 'Controleren…';
+    const n = await controleerNieuw({ nu: true });
+    knop.disabled = false;
+    knop.textContent = 'Nu controleren';
+    uitkomst.hidden = false;
+    uitkomst.textContent =
+      n === null
+        ? 'Kies eerst hierboven bij Diensten aanpassen welke abonnementen je hebt.'
+        : n
+          ? `${n === 1 ? '1 titel is' : `${n} titels zijn`} nieuw bij je diensten. Kijk bovenaan Mijn lijst.`
+          : 'Niets nieuws: je titels op Wil ik zien staan nog bij dezelfde diensten.';
+  });
 
   document.getElementById('weergave').addEventListener('click', (e) => {
     const knop = e.target.closest('[data-weergave]');
@@ -1227,7 +1314,10 @@ async function vulActeursAan() {
     await new Promise((klaar) => setTimeout(klaar, 300)); // rustig aan richting TMDB
   }
 }
-setTimeout(vulActeursAan, 3000);
+setTimeout(async () => {
+  await vulActeursAan();
+  await controleerNieuw();
+}, 3000);
 
 window.addEventListener('hashchange', route);
 route();

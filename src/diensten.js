@@ -76,3 +76,15 @@ export function doorklikLink(dienst, titel) {
   const regel = DOORKLIK.find(([patroon]) => patroon.test(naam));
   return regel ? regel[1](encodeURIComponent(titel)) : '';
 }
+
+// Welke van je eigen diensten zijn nieuw voor deze titel? Beide keren wordt met je huidige
+// keuzes gerekend, zodat een nieuw abonnement afsluiten niet als 'nieuw' telt.
+// Zonder eerdere controle (geen datum) is er niets om mee te vergelijken: dan niets nieuws.
+export function nieuwBijJou(titel, nieuweDiensten, keuzes) {
+  if (!titel.dienstenOp || !nieuweDiensten) return [];
+  const leeg = { abonnement: [], gratis: [], huren: [], kopen: [] };
+  const oud = new Set(verdeelDiensten(titel.diensten ?? leeg, keuzes).bijJou.map((d) => d.id));
+  return verdeelDiensten(nieuweDiensten, keuzes)
+    .bijJou.filter((d) => !oud.has(d.id))
+    .map((d) => ({ id: d.id, naam: d.naam }));
+}

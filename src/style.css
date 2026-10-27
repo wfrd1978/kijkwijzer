@@ -330,6 +330,13 @@ a.titel { text-decoration: none; }
 }
 .gevaar-knop:disabled { opacity: 0.6; }
 
+.nieuw-melding { margin: 14px 0; padding: 14px 16px; border-radius: 10px; background: var(--accent-zacht); }
+.nieuw-melding .nieuw-kop { margin: 0 0 6px; font-weight: 700; color: var(--accent); }
+.nieuw-melding ul { list-style: none; margin: 0; padding: 0; }
+.nieuw-melding li a { display: block; padding: 6px 0; color: var(--tekst); text-decoration: none; }
+.nieuw-melding p { margin: 4px 0 0; }
+.nieuw-melding .link-knop { padding: 8px 0 0; color: var(--zacht); font-size: 0.9rem; }
+.nieuw-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; background: var(--accent); color: var(--accent-tekst) !important; }
 .herinnering, .waarschuwing { padding: 14px 16px; margin: 14px 0; border-radius: 10px; background: var(--geel); text-align: left; }
 .herinnering { display: flex; flex-direction: column; gap: 6px; }
 .herinnering p, .waarschuwing p { margin: 0; color: var(--tekst); }
