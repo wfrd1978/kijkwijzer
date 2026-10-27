@@ -51,7 +51,7 @@ Nu leeg.
 
 Voortgang bij series (seizoen en aflevering), melding als een titel uit je lijst bij een van je diensten verschijnt, trailer, en importeren uit Letterboxd, IMDb of Netflix-kijkgeschiedenis.
 
-**Trailer en acteurs.** Op de titelpagina een knop naar de trailer (opent YouTube) en de belangrijkste acteurs met foto en rol (TMDB). Tik je op een acteur, dan zie je andere films en series met die acteur en kun je die op je lijst zetten. In Mijn lijst kun je ook op acteur zoeken; daarvoor bewaart de app de namen van de belangrijkste acteurs bij elke titel.
+**Trailer en acteurs.** Op de titelpagina de trailer, die na een tik in de pagina speelt (privacyvriendelijke YouTube-speler zonder volgcookies; altijd ook een link "Open in YouTube") en de belangrijkste acteurs met foto en rol (TMDB). Tik je op een acteur, dan zie je andere films en series met die acteur en kun je die op je lijst zetten. In Mijn lijst kun je ook op acteur zoeken; daarvoor bewaart de app de namen van de belangrijkste acteurs bij elke titel.
 
 **Nieuw bij jouw diensten.** Bij het openen van de app (hoogstens één keer per dag) kijkt de app of titels op "Wil ik zien" nieuw te zien zijn bij een van je abonnementen. Zo ja, dan staat bovenaan Mijn lijst een melding en krijgt de titel een label. Een pushmelding als de app dicht is kan niet zonder eigen server; daar is bewust van afgezien.
 

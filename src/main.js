@@ -564,7 +564,12 @@ function extraHtml(titel) {
   const trailer = titel.trailer ? veiligeUrl(`https://www.youtube.com/watch?v=${encodeURIComponent(titel.trailer)}`) : '';
   const acteurs = titel.acteurs ?? [];
   return `
-    ${trailer ? `<a class="trailer-knop" href="${trailer}" target="_blank" rel="noopener"><span aria-hidden="true">▶</span> Bekijk trailer</a>` : ''}
+    ${
+      trailer
+        ? `<div class="trailer" id="trailer"><button class="trailer-knop" id="trailer-start"><span aria-hidden="true">▶</span> Bekijk trailer</button></div>
+           <a class="trailer-link" href="${trailer}" target="_blank" rel="noopener">Open in YouTube ↗</a>`
+        : ''
+    }
     ${
       acteurs.length
         ? `<p class="label">Acteurs</p>
@@ -580,6 +585,17 @@ function extraHtml(titel) {
              .join('')}</ul>`
         : ''
     }`;
+}
+
+// De trailer speelt in de pagina, via de privacyvriendelijke variant van YouTube (zonder
+// volgcookies). Pas na je tik maakt de app contact met YouTube. Blokkeert de maker afspelen
+// buiten YouTube, dan staat er een foutmelding in beeld en is er de link 'Open in YouTube'.
+function speelTrailer(key) {
+  const vak = document.getElementById('trailer');
+  if (!vak || !/^[\w-]{6,20}$/.test(key)) return;
+  const src = `https://www.youtube-nocookie.com/embed/${key}?autoplay=1&playsinline=1&rel=0&hl=nl&cc_lang_pref=nl`;
+  vak.classList.add('speelt');
+  vak.innerHTML = `<iframe src="${src}" title="Trailer" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
 }
 
 // Trailer en acteurs veranderen zelden: ophalen als ze er nog niet zijn, en verder eens per maand.
@@ -683,6 +699,9 @@ async function toonTitel(id) {
   tekenSterren();
   verversDiensten(titel, bewaar, nr);
   verversExtra(titel, bewaar, nr);
+  document.getElementById('extra').addEventListener('click', (e) => {
+    if (e.target.closest('#trailer-start')) speelTrailer(titel.trailer);
+  });
 
   document.getElementById('statussen').addEventListener('click', async (e) => {
     const knop = e.target.closest('.keuze');
