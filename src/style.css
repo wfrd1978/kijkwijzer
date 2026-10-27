@@ -299,6 +299,26 @@ a.titel { text-decoration: none; }
 .fout { color: var(--rood); margin: 8px 0 0 !important; }
 .bron { color: var(--zacht); font-size: 0.8rem; margin-top: 24px; }
 
+/* --- Sport --- */
+
+.sport-blok h2 { font-family: var(--schreef); font-size: 1.4rem; margin: 0 0 8px; }
+.zender { margin: 0 0 16px; padding: 12px 14px; border-radius: 10px; background: var(--vlak); font-size: 0.9rem; color: var(--zacht); }
+.zender strong { color: var(--tekst); }
+.race-volgend { padding: 16px; border-radius: 12px; background: var(--accent-zacht); }
+.race-volgend h3 { font-family: var(--schreef); font-size: 1.35rem; margin: 2px 0; }
+.race-volgend p { margin: 0; }
+.race-ronde { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.sessies { list-style: none; margin: 12px 0 0; padding: 0; }
+.sessies li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--lijn); font-size: 0.95rem; }
+.sessies li span:last-child { font-variant-numeric: tabular-nums; }
+.sessies li.is-race { font-weight: 700; color: var(--accent); }
+.label.sport-label { margin: 24px 0 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.races { list-style: none; margin: 0; padding: 0; }
+.races li { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--lijn); }
+.race-nr { width: 22px; color: var(--zacht); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.race-naam { flex: 1; font-weight: 600; }
+.race-dag { color: var(--zacht); font-size: 0.88rem; }
+
 /* --- Acteur --- */
 
 .acteur-kop { text-align: center; margin-bottom: 6px; }
@@ -384,7 +404,7 @@ a.titel { text-decoration: none; }
   z-index: 10;
 }
 .balk a {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 6px 4px; border-radius: 999px; color: var(--tekst); text-decoration: none; font-size: 0.72rem;
 }
 .balk svg { width: 24px; height: 24px; fill: currentColor; }

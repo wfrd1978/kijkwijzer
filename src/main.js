@@ -3,6 +3,7 @@ import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
 import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur } from './tmdb.js';
 import { kiesFavorieten, combineerTips } from './tips.js';
+import { haalF1, komendeRaces, nlTijd, F1_ZENDERS } from './sport.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
@@ -835,6 +836,50 @@ async function verversExtra(titel, bewaar, nr) {
   toonTitel.tekenVoortgang?.();
 }
 
+// --- Sport ---
+
+async function toonSport() {
+  const nr = schermNr;
+  app.innerHTML = `
+    <header class="kop"><h1>Sport</h1></header>
+    <section class="sport-blok">
+      <h2>Formule 1</h2>
+      <p class="zender"><strong>Live bij ${veilig(F1_ZENDERS.live)}</strong><br />${veilig(F1_ZENDERS.extra)}</p>
+      <div id="f1"><p class="bezig">Schema ophalen…</p></div>
+    </section>
+  `;
+  let schema;
+  try {
+    schema = await haalF1();
+  } catch {
+    if (nr === schermNr) document.getElementById('f1').innerHTML = '<p class="leeg">Het schema ophalen lukt nu niet. Heb je internet?</p>';
+    return;
+  }
+  if (nr !== schermNr) return;
+  const komend = komendeRaces(schema.races);
+  const [volgende, ...rest] = komend;
+  document.getElementById('f1').innerHTML = volgende
+    ? `
+      <div class="race-volgend">
+        <p class="race-ronde">Ronde ${volgende.ronde} · eerstvolgende</p>
+        <h3>${veilig(volgende.naam)}</h3>
+        <p class="zacht">${veilig([volgende.plaats, volgende.land].filter(Boolean).join(', '))}</p>
+        <ul class="sessies">${volgende.sessies
+          .map((x) => `<li class="${x.naam === 'Race' ? 'is-race' : ''}"><span>${veilig(x.naam)}</span><span>${veilig(nlTijd(x))}</span></li>`)
+          .join('')}</ul>
+      </div>
+      ${
+        rest.length
+          ? `<p class="label sport-label">Rest van het seizoen</p>
+             <ul class="races">${rest
+               .map((r) => `<li><span class="race-nr">${r.ronde}</span><span class="race-naam">${veilig(r.naam)}</span><span class="race-dag">${veilig(nlTijd(r.sessies.at(-1)))}</span></li>`)
+               .join('')}</ul>`
+          : ''
+      }
+      <p class="bron">Alle tijden in Nederlandse tijd. Schema van Jolpica F1; zenders gecontroleerd in ${veilig(F1_ZENDERS.gecontroleerd)}.</p>`
+    : '<p class="leeg">Het seizoen zit erop. Het schema voor volgend jaar verschijnt hier zodra het bekend is.</p>';
+}
+
 // --- Eén acteur ---
 
 // Wat al opgehaald is blijft bewaard zolang de app open is, zodat 'terug' meteen werkt.
@@ -1475,11 +1520,12 @@ async function route() {
   window.scrollTo(0, 0);
   const titelId = location.hash.match(/^#\/titel\/(\d+)$/);
   const acteurId = location.hash.match(/^#\/acteur\/(\d+)$/);
-  const plek = { '#/zoek': 'zoek', '#/ontdekken': 'ontdekken', '#/instellingen': 'instellingen' }[location.hash] || 'lijst';
+  const plek = { '#/zoek': 'zoek', '#/ontdekken': 'ontdekken', '#/sport': 'sport', '#/instellingen': 'instellingen' }[location.hash] || 'lijst';
   document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === plek));
   if (plek === 'instellingen') toonInstellingen();
   else if (plek === 'zoek') toonZoek();
   else if (plek === 'ontdekken') toonOntdekken();
+  else if (plek === 'sport') toonSport();
   else if (titelId) toonTitel(Number(titelId[1]));
   else if (acteurId) toonActeur(Number(acteurId[1]));
   else toonLijst();
