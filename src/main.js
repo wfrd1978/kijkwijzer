@@ -1,7 +1,7 @@
 import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
-import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs } from './tmdb.js';
+import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur } from './tmdb.js';
 import { kiesFavorieten, combineerTips } from './tips.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, verdeelDiensten, doorklikLink } from './diensten.js';
@@ -332,6 +332,21 @@ function toonBevestigen(t, alOpLijst, terug = { naam: 'Resultaten', toon: toonZo
   });
 }
 
+// Een raster met posters (Ontdekken, acteurs). 'onder' is een extra regel per titel, zoals een rol.
+function rasterHtml(titels, opLijst, onder = (t) => (t.jaar ? veilig(t.jaar) : '&nbsp;')) {
+  return `<ul class="raster">${titels
+    .map(
+      (t, i) => `
+      <li><button class="raster-titel" data-i="${i}">
+        ${posterHtml(t, 'poster-raster')}
+        ${opLijst.has(titelSleutel(t)) ? '<span class="raster-label">Op je lijst</span>' : ''}
+        <strong>${veilig(t.titel)}</strong>
+        <span>${onder(t)}</span>
+      </button></li>`
+    )
+    .join('')}</ul>`;
+}
+
 // --- Ontdekken ---
 
 const ONTDEK_SOORTEN = { film: 'Films', serie: 'Series' };
@@ -442,17 +457,7 @@ async function toonOntdekken({ terugNaarPlek = false } = {}) {
   const metMeer = ontdekBron !== 'tips' && stand.pagina < 5;
   const teken = () => {
     vak.innerHTML = stand.titels.length
-      ? `<ul class="raster">${stand.titels
-          .map(
-            (t, i) => `
-          <li><button class="raster-titel" data-i="${i}">
-            ${posterHtml(t, 'poster-raster')}
-            ${opLijst.has(titelSleutel(t)) ? '<span class="raster-label">Op je lijst</span>' : ''}
-            <strong>${veilig(t.titel)}</strong>
-            <span>${t.jaar ? veilig(t.jaar) : '&nbsp;'}</span>
-          </button></li>`
-          )
-          .join('')}</ul>
+      ? `${rasterHtml(stand.titels, opLijst)}
          ${metMeer && stand.pagina < 5 ? '<button class="tweede-knop" id="meer">Meer laden</button>' : ''}
          ${ontdekBron === 'diensten' ? JUSTWATCH : ''}${BRON}`
       : `<p class="leeg">${ontdekBron === 'tips' ? 'Nog geen tips gevonden. Geef meer titels 4 of 5 sterren.' : 'Niets gevonden.'}</p>`;
@@ -582,11 +587,11 @@ function extraHtml(titel) {
            <ul class="acteurs">${acteurs
              .map((a) => {
                const foto = veiligeUrl(posterUrl(a.foto, 'w185'));
-               return `<li class="acteur">
+               return `<li><a class="acteur" href="#/acteur/${a.id}">
                  ${foto ? `<img src="${foto}" alt="" loading="lazy" />` : `<span class="acteur-leeg" aria-hidden="true">${veilig(a.naam.slice(0, 1))}</span>`}
                  <strong>${veilig(a.naam)}</strong>
                  ${a.rol ? `<span>${veilig(a.rol)}</span>` : ''}
-               </li>`;
+               </a></li>`;
              })
              .join('')}</ul>`
         : ''
@@ -618,6 +623,66 @@ async function verversExtra(titel, bewaar, nr) {
     return; // Geen verbinding: dan de volgende keer.
   }
   if (nr === schermNr) document.getElementById('extra').innerHTML = extraHtml(titel);
+}
+
+// --- Eén acteur ---
+
+// Wat al opgehaald is blijft bewaard zolang de app open is, zodat 'terug' meteen werkt.
+const acteurGeladen = new Map();
+let acteurScroll = 0;
+
+async function toonActeur(id, { terugNaarPlek = false } = {}) {
+  const nr = schermNr;
+  if (!leesSleutel()) {
+    location.hash = '#/instellingen';
+    return;
+  }
+  const terug = '<header class="kop"><button class="terug" id="terug">‹ Terug</button></header>';
+  const koppelTerug = () => document.getElementById('terug').addEventListener('click', () => history.back());
+  let acteur = acteurGeladen.get(id);
+  if (!acteur) {
+    app.innerHTML = `${terug}<p class="bezig">Ophalen…</p>`;
+    koppelTerug();
+    try {
+      acteur = await haalActeur(id);
+      acteurGeladen.set(id, acteur);
+    } catch (fout) {
+      if (nr !== schermNr) return;
+      document.querySelector('.bezig').outerHTML =
+        fout instanceof SleutelFout
+          ? '<p class="leeg">TMDB accepteert je sleutel niet. <a href="#/instellingen">Plak hem opnieuw</a>.</p>'
+          : '<p class="leeg">Ophalen lukt nu niet. Heb je internet?</p>';
+      return;
+    }
+  }
+  const opLijst = new Map((await alleTitels()).map((t) => [titelSleutel(t), t]));
+  if (nr !== schermNr) return;
+
+  const foto = veiligeUrl(posterUrl(acteur.foto, 'w185'));
+  const jaar = acteur.geboren.slice(0, 4);
+  app.innerHTML = `
+    ${terug}
+    <section class="acteur-kop">
+      ${foto ? `<img src="${foto}" alt="" />` : `<span class="acteur-leeg groot" aria-hidden="true">${veilig(acteur.naam.slice(0, 1))}</span>`}
+      <h2>${veilig(acteur.naam)}</h2>
+      ${jaar || acteur.plaats ? `<p class="zacht">${[jaar && `Geboren in ${veilig(jaar)}`, acteur.plaats && veilig(acteur.plaats)].filter(Boolean).join(' · ')}</p>` : ''}
+    </section>
+    <p class="label acteur-label">Speelde in</p>
+    ${
+      acteur.rollen.length
+        ? `${rasterHtml(acteur.rollen, opLijst, (t) => [t.jaar, t.rol].filter(Boolean).map(veilig).join(' · ') || '&nbsp;')}${BRON}`
+        : '<p class="leeg">Geen films of series gevonden.</p>'
+    }
+  `;
+  koppelTerug();
+  app.querySelectorAll('.raster-titel').forEach((knop) =>
+    knop.addEventListener('click', () => {
+      acteurScroll = window.scrollY;
+      const t = acteur.rollen[Number(knop.dataset.i)];
+      toonBevestigen(t, opLijst.get(titelSleutel(t)), { naam: acteur.naam, toon: () => toonActeur(id, { terugNaarPlek: true }) });
+    })
+  );
+  if (terugNaarPlek) window.scrollTo(0, acteurScroll);
 }
 
 // --- Eén titel van je lijst ---
@@ -1105,12 +1170,14 @@ async function route() {
   }
   window.scrollTo(0, 0);
   const titelId = location.hash.match(/^#\/titel\/(\d+)$/);
+  const acteurId = location.hash.match(/^#\/acteur\/(\d+)$/);
   const plek = { '#/zoek': 'zoek', '#/ontdekken': 'ontdekken', '#/instellingen': 'instellingen' }[location.hash] || 'lijst';
   document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === plek));
   if (plek === 'instellingen') toonInstellingen();
   else if (plek === 'zoek') toonZoek();
   else if (plek === 'ontdekken') toonOntdekken();
   else if (titelId) toonTitel(Number(titelId[1]));
+  else if (acteurId) toonActeur(Number(acteurId[1]));
   else toonLijst();
 }
 

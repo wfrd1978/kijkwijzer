@@ -174,3 +174,43 @@ export async function haalTrailerEnActeurs(soort, tmdbId) {
     achtergrond: data.backdrop_path ?? '',
   };
 }
+
+// --- Acteurs ---
+
+// Praatprogramma's, nieuws en realityshows tellen niet mee: daar zit iemand meestal als zichzelf.
+const GEEN_ROL_GENRES = [10763, 10764, 10767];
+const ALS_ZICHZELF = /^(self|himself|herself|themselves|zichzelf|host|presenter|narrator)\b/i;
+export const MAX_ROLLEN = 40;
+
+// De films en series van een acteur, de bekendste eerst (meeste stemmen bij TMDB),
+// elke titel één keer, met de rol erbij.
+export function naarRollen(credits) {
+  const gezien = new Set();
+  return (credits?.cast ?? [])
+    .filter((c) => !(c.genre_ids ?? []).some((g) => GEEN_ROL_GENRES.includes(g)) && !ALS_ZICHZELF.test(c.character ?? ''))
+    .sort((a, b) => (b.vote_count ?? 0) - (a.vote_count ?? 0))
+    .map((c) => {
+      const t = naarTitel(c);
+      return t && { ...t, rol: c.character ?? '' };
+    })
+    .filter((t) => {
+      if (!t) return false;
+      const k = `${t.soort}:${t.tmdbId}`;
+      if (gezien.has(k)) return false;
+      gezien.add(k);
+      return true;
+    })
+    .slice(0, MAX_ROLLEN);
+}
+
+export async function haalActeur(id) {
+  const data = await vraag(`/person/${id}`, { append_to_response: 'combined_credits' });
+  return {
+    id: data.id,
+    naam: data.name ?? 'Onbekend',
+    foto: data.profile_path ?? '',
+    geboren: data.birthday ?? '',
+    plaats: data.place_of_birth ?? '',
+    rollen: naarRollen(data.combined_credits),
+  };
+}

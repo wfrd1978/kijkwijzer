@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maakVerzoek, naarTitel, posterUrl, naarDiensten, dienstenParams, kiesTrailer, naarActeurs } from '../src/tmdb.js';
+import { maakVerzoek, naarTitel, posterUrl, naarDiensten, dienstenParams, kiesTrailer, naarActeurs, naarRollen } from '../src/tmdb.js';
 
 describe('maakVerzoek', () => {
   it('zet de korte sleutel in het adres', () => {
@@ -101,5 +101,23 @@ describe('naarActeurs', () => {
   it('maximaal 15 en leeg zonder gegevens', () => {
     expect(naarActeurs({ cast: Array.from({ length: 30 }, (_, i) => ({ id: i, name: `N${i}`, order: i })) })).toHaveLength(15);
     expect(naarActeurs(undefined)).toEqual([]);
+  });
+});
+
+describe('naarRollen', () => {
+  it('bekendste eerst, elke titel één keer, zonder talkshows en zichzelf', () => {
+    const rollen = naarRollen({ cast: [
+      { media_type: 'movie', id: 1, title: 'Klein', vote_count: 10, character: 'Bijrol' },
+      { media_type: 'movie', id: 2, title: 'Groot', vote_count: 9000, character: 'Hoofdrol' },
+      { media_type: 'tv', id: 3, name: 'Talkshow', vote_count: 5000, character: 'Self', genre_ids: [10767] },
+      { media_type: 'tv', id: 4, name: 'Prijsuitreiking', vote_count: 4000, character: 'Himself - Guest' },
+      { media_type: 'movie', id: 2, title: 'Groot', vote_count: 9000, character: 'Tweede rol' },
+      { media_type: 'tv', id: 5, name: 'Serie', vote_count: 300, character: 'Agent' },
+    ] });
+    expect(rollen.map((r) => `${r.titel} (${r.rol})`)).toEqual(['Groot (Hoofdrol)', 'Serie (Agent)', 'Klein (Bijrol)']);
+    expect(rollen[1].soort).toBe('serie');
+  });
+  it('leeg zonder gegevens', () => {
+    expect(naarRollen(undefined)).toEqual([]);
   });
 });

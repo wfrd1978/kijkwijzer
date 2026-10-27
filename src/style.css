@@ -230,7 +230,7 @@ a.titel { text-decoration: none; }
   overflow-x: auto; scrollbar-width: none; text-align: center;
 }
 .acteurs::-webkit-scrollbar { display: none; }
-.acteur { flex: none; width: 84px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.acteur { flex: none; width: 84px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: inherit; text-decoration: none; }
 .acteur img, .acteur-leeg { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: var(--poster-leeg); margin-bottom: 4px; }
 .acteur .acteur-leeg { display: flex; align-items: center; justify-content: center; color: var(--zacht); font-family: var(--schreef); font-weight: 700; font-size: 1.4rem; }
 .acteur strong { font-size: 0.82rem; line-height: 1.2; }
@@ -280,6 +280,18 @@ a.titel { text-decoration: none; }
 .leeg, .bezig { color: var(--zacht); text-align: center; margin: 48px 0; }
 .fout { color: var(--rood); margin: 8px 0 0 !important; }
 .bron { color: var(--zacht); font-size: 0.8rem; margin-top: 24px; }
+
+/* --- Acteur --- */
+
+.acteur-kop { text-align: center; margin-bottom: 6px; }
+.acteur-kop img, .acteur-leeg.groot { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; background: var(--poster-leeg); display: block; margin: 0 auto 12px; }
+.acteur-leeg.groot { display: flex; align-items: center; justify-content: center; color: var(--zacht); font-family: var(--schreef); font-weight: 700; font-size: 2.4rem; }
+.acteur-kop h2 { margin: 0 0 4px; font-family: var(--schreef); font-size: 1.6rem; }
+.acteur-kop p { margin: 0; font-size: 0.9rem; }
+.label.acteur-label {
+  margin: 24px 0 12px; padding-top: 14px; border-top: 1px solid var(--lijn);
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+}
 
 /* --- Ontdekken --- */
 
