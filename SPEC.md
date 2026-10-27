@@ -63,9 +63,9 @@ Trailer en acteurs, melding als een titel uit je lijst bij een van je diensten v
 - *Tv-gids (films en series op gewone zenders):* er is geen officiële, gratis Nederlandse tv-gids om te gebruiken. Wat er is, haalt de gegevens van tvgids.nl af (scrapen), bijvoorbeeld met een GitHub Action die twee keer per dag een gidsbestand maakt. Of tvgids.nl dat toestaat is niet bekend; programmabeschrijvingen kunnen auteursrechtelijk beschermd zijn. Advies: niet scrapen. Wel kan: per titel een knop "Komt hij op tv?" die zoekt in tvgids.nl.
 - *Formule 1:* het raceschema komt gratis en zonder sleutel van Jolpica (opvolger van Ergast) en werkt direct in de app (getest). Een zender staat er niet bij; die is bekend: live bij Viaplay (rechten tot en met 2029), Ziggo Sport heeft samenvattingen en voorbeschouwingen, geen live races.
 - *Wielrennen:* er is geen gratis bron met een koerskalender én zender (ProCyclingStats heeft geen officiële API). Uitzendingen zijn verspreid over NOS, Sporza, Eurosport en HBO Max (sport add-on). Mogelijk: een eigen kalender van de grote koersen met zender, in de app meegeleverd en per seizoen bijgewerkt (zoals de lijsten in de boekenapp).
-- *Voetbal:* wedstrijdschema's kunnen via football-data.org (gratis, maar een tweede sleutel nodig); de zender staat er niet bij.
+- *Voetbal:* wedstrijdschema's kunnen via football-data.org (gratis, maar een tweede sleutel nodig); de zender staat er niet bij. De dienst laat niet toe dat de app het rechtstreeks ophaalt (alleen vanaf een testomgeving). Wel mogelijk: GitHub haalt het schema dagelijks op met de sleutel als GitHub-geheim (niet in de code) en zet het klaar voor de app.
 
-Keuze van de eigenaar volgt; daarna wordt dit uitgewerkt tot stappen.
+**Keuze van de eigenaar:** Formule 1, wielrennen en voetbal volgen in een nieuw scherm **Sport**. Films en series op gewone tv: niet nodig (vervallen). Uitwerking in de stappen 16 (Formule 1), 17 (wielrennen) en 18 (voetbal).
 
 ## Fase 3 — Delen (later uitwerken)
 

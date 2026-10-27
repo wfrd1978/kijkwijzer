@@ -9,7 +9,7 @@ Kijkwijzer is een persoonlijke mobiele webapp om films en series bij te houden. 
 ## Fases
 
 1. **Kern** — sleutel instellen; zoeken en toevoegen; status, sterren, kijkdatum, notitie; waar kijken in NL; mijn lijst met zoeken en filteren; dubbel-waarschuwing; backup/terugzetten naar Google Drive; mijn diensten; samen kijken delen; ontdekken; tips voor mij.
-2. **Verdieping** — voortgang bij series, melding als een titel bij je dienst verschijnt, trailer, acteurs bij films en series, tv en sport (eerst onderzoek naar bronnen).
+2. **Verdieping** — voortgang bij series, melding als een titel bij je dienst verschijnt, trailer, acteurs bij films en series, sport: Formule 1, wielrennen en voetbal.
 3. **Delen** — lijsten en tips delen; mogelijke koppeling met de boekenapp.
 
 Werk alleen aan de fase die actief is. Fase 1 is af. Nu actief: **Fase 2**.
@@ -65,5 +65,8 @@ Adres van de app: https://wfrd1978.github.io/kijkwijzer/
 | 13 | Zoeken op acteur in Mijn lijst |
 | 14 | Melding in de app: "Nieuw bij jouw diensten" voor titels op Wil ik zien (bij openen, max. 1x per dag gecontroleerd; geen pushmelding, want geen server) |
 | 15 | Voortgang bij series: bij welk seizoen en welke aflevering je bent, met één tik naar de volgende aflevering |
-| later | Tv en sport (eerst onderzoek naar bronnen) |
+| 16 | Sport: nieuw scherm in het menu, met Formule 1 (komende races in Nederlandse tijd, en waar te zien) |
+| 17 | Wielrennen in Sport: kalender van de grote koersen met zender, meegeleverd in de app en per seizoen bijgewerkt |
+| 18 | Voetbal in Sport: wedstrijdschema via football-data.org. Kan niet rechtstreeks vanuit de app; bij de start kiezen of GitHub het dagelijks ophaalt (sleutel als GitHub-geheim) |
+| vervallen | Films en series op gewone tv: geen toegestane gratis tv-gids, en niet nodig |
 | vervallen | Importeren uit Letterboxd/IMDb/Netflix: er is geen kijkgeschiedenis om te importeren |
