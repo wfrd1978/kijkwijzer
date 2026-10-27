@@ -84,3 +84,21 @@ export async function haalF1({ fetcher = fetch } = {}) {
     throw fout;
   }
 }
+
+// Mijn sportzenders: welke zenders en diensten je hebt, om te laten zien wat jij live kunt volgen.
+// Je kiest ze zelf in Instellingen; ze staan op de telefoon en gaan mee in de backup.
+export const SPORTZENDERS = ['NOS', 'ESPN', 'Viaplay', 'Ziggo Sport', 'HBO Max'];
+const MIJN_ZENDERS = 'sportzenders';
+
+export function leesSportzenders() {
+  try {
+    const l = JSON.parse(localStorage.getItem(MIJN_ZENDERS) || '[]');
+    return Array.isArray(l) ? l.filter((z) => SPORTZENDERS.includes(z)) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function zetSportzenders(lijst) {
+  localStorage.setItem(MIJN_ZENDERS, JSON.stringify(lijst.filter((z) => SPORTZENDERS.includes(z))));
+}

@@ -319,6 +319,25 @@ a.titel { text-decoration: none; }
 .race-naam { flex: 1; font-weight: 600; }
 .race-dag { color: var(--zacht); font-size: 0.88rem; }
 
+.sport-blok + .sport-blok { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--lijn); }
+.sport-tip { font-size: 0.88rem; margin: -6px 0 16px; }
+.sport-uitleg { font-size: 0.9rem; margin: 0 0 10px; }
+.zender.bij-jou-zender { background: var(--accent-zacht); color: var(--tekst); }
+.zender.bij-jou-zender strong { color: var(--accent); }
+.koersen { list-style: none; margin: 0; padding: 0; }
+.koers { display: flex; flex-direction: column; gap: 3px; padding: 12px 0; border-bottom: 1px solid var(--lijn); }
+.koers-kop { display: flex; justify-content: space-between; gap: 10px; }
+.koers-datum { font-weight: 600; font-size: 0.9rem; color: var(--accent); }
+.koers-soort { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--zacht); }
+.koers strong { font-family: var(--schreef); font-size: 1.08rem; }
+.koers-zenders { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.zender-chip { font-size: 0.8rem; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--lijn); color: var(--zacht); }
+.zender-chip.mijn { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.koers-kijk { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
+.koers-kijk.misschien { color: var(--goud); }
+.koers-kijk.nee { color: var(--zacht); font-weight: 500; }
+.koers-noot { font-size: 0.8rem; }
+
 /* --- Acteur --- */
 
 .acteur-kop { text-align: center; margin-bottom: 6px; }

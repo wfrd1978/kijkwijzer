@@ -69,6 +69,10 @@ Trailer en acteurs, melding als een titel uit je lijst bij een van je diensten v
 
 **Wensen voor voetbal (stap 18, verder te specificeren):** zelf kiezen welke clubs en wedstrijden je volgt; per dag en per week duidelijk zien welke wedstrijden er zijn en waar je ze kunt volgen, met nadruk op de zenders en diensten die je hebt. Jouw zenders: KPN-basispakket (waaronder ESPN 1), Viaplay en Ziggo Sport 1 t/m 6. Welke zender welke competitie uitzendt, wordt bij de start van stap 18 opgezocht en gecontroleerd. Die "mijn zenders" kunnen ook bij Formule 1 en wielrennen laten zien wat jij live kunt volgen.
 
+**Mijn sportzenders (sinds stap 17).** In Instellingen kies je zelf welke zenders en diensten je hebt (NOS, ESPN, Viaplay, Ziggo Sport, HBO Max). Sport laat daarmee zien wat jij live kunt volgen. De keuze staat op de telefoon en gaat mee in de backup; ze staat bewust niet in de code.
+
+**Wielrennen (stap 17).** De grote koersen van het seizoen (grote rondes, monumenten, belangrijkste klassiekers, WK) met datum en zender, meegeleverd in de app (`src/wielrennen.js`). Data uit de UCI WorldTour-kalender; zenders met de hand gecontroleerd, met "onder voorbehoud" waar het nog niet vaststaat. Elk seizoen bijwerken.
+
 ## Fase 3 — Delen (later uitwerken)
 
 Lijsten of tips delen met anderen (één titel delen om samen te kijken zit al in fase 1). **Open beslissing:** delen vraagt online opslag of een deelbare export. Dat kiezen we bij de start van fase 3, zodat fase 1 eenvoudig en gratis blijft. Mogelijke koppeling met de boekenapp (één leesprofiel en kijkprofiel) hoort hier ook.

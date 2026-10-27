@@ -3,7 +3,8 @@ import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
 import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur } from './tmdb.js';
 import { kiesFavorieten, combineerTips } from './tips.js';
-import { haalF1, komendeRaces, nlTijd, F1_ZENDERS } from './sport.js';
+import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
+import { WIELRENNEN, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
@@ -842,14 +843,48 @@ async function verversExtra(titel, bewaar, nr) {
 
 // --- Sport ---
 
+function wielrennenHtml(mijn) {
+  const komend = komendeKoersen(WIELRENNEN.koersen, vandaag());
+  if (!komend.length) return '<p class="leeg">De kalender voor het volgende seizoen volgt.</p>';
+  const tussenseizoen = komend[0].van.slice(0, 4) > vandaag().slice(0, 4);
+  const regel = (k) => {
+    const kijk = mijn.length ? kanIkKijken(k, mijn) : '';
+    return `
+      <li class="koers koers-${kijk || 'onbekend'}">
+        <div class="koers-kop">
+          <span class="koers-datum">${veilig(koersDatum(k))}</span>
+          <span class="koers-soort">${veilig(k.soort)}</span>
+        </div>
+        <strong>${veilig(k.naam)}</strong>
+        <div class="koers-zenders">${k.zenders
+          .map((z) => `<span class="zender-chip${mijn.includes(z.naam) ? ' mijn' : ''}">${veilig(z.naam)}${z.zeker ? '' : ' (onder voorbehoud)'}</span>`)
+          .join('')}</div>
+        ${kijk === 'ja' ? '<span class="koers-kijk">Jij kunt live kijken</span>' : kijk === 'misschien' ? '<span class="koers-kijk misschien">Misschien bij jouw zenders</span>' : kijk === 'nee' ? '<span class="koers-kijk nee">Niet bij jouw zenders</span>' : ''}
+        ${k.noot ? `<span class="zacht koers-noot">${veilig(k.noot)}</span>` : ''}
+      </li>`;
+  };
+  return `
+    ${tussenseizoen ? `<p class="zacht sport-uitleg">Het wegseizoen zit erop. Dit is de kalender voor ${WIELRENNEN.seizoen}.</p>` : ''}
+    <ul class="koersen">${komend.map(regel).join('')}</ul>
+    <p class="bron">Data: UCI WorldTour-kalender ${WIELRENNEN.seizoen}. Zenders gecontroleerd in ${veilig(WIELRENNEN.gecontroleerd)}; uitzendrechten kunnen nog veranderen.</p>`;
+}
+
 async function toonSport() {
   const nr = schermNr;
+  const mijn = leesSportzenders();
   app.innerHTML = `
     <header class="kop"><h1>Sport</h1></header>
+    ${mijn.length ? '' : '<p class="zacht sport-tip">Tip: kies in <a href="#/instellingen">Instellingen</a> je sportzenders, dan zie je wat jij live kunt volgen.</p>'}
     <section class="sport-blok">
       <h2>Formule 1</h2>
-      <p class="zender"><strong>Live bij ${veilig(F1_ZENDERS.live)}</strong><br />${veilig(F1_ZENDERS.extra)}</p>
+      <p class="zender${mijn.includes(F1_ZENDERS.live) ? ' bij-jou-zender' : ''}"><strong>${
+        mijn.includes(F1_ZENDERS.live) ? `Jij kijkt live via ${veilig(F1_ZENDERS.live)}` : `Live bij ${veilig(F1_ZENDERS.live)}`
+      }</strong><br />${veilig(F1_ZENDERS.extra)}</p>
       <div id="f1"><p class="bezig">Schema ophalen…</p></div>
+    </section>
+    <section class="sport-blok">
+      <h2>Wielrennen</h2>
+      ${wielrennenHtml(mijn)}
     </section>
   `;
   let schema;
@@ -1318,6 +1353,14 @@ async function toonInstellingen() {
     </section>
 
     <section class="blok">
+      <h2>Mijn sportzenders</h2>
+      <p>Welke zenders en diensten heb je? Dan laat Sport zien wat jij live kunt volgen. NOS valt onder de gewone NPO-zenders.</p>
+      <div class="keuzes" id="sportzenders">${SPORTZENDERS.map(
+        (z) => `<button class="keuze${leesSportzenders().includes(z) ? ' actief' : ''}" data-zender="${z}" aria-pressed="${leesSportzenders().includes(z)}">${z}</button>`
+      ).join('')}</div>
+    </section>
+
+    <section class="blok">
       <h2>Weergave</h2>
       <div class="keuzes" id="weergave">
         ${Object.entries(WEERGAVEN)
@@ -1376,6 +1419,15 @@ async function toonInstellingen() {
         : n
           ? `${n === 1 ? '1 titel is' : `${n} titels zijn`} nieuw bij je diensten. Kijk bovenaan Mijn lijst.`
           : 'Niets nieuws: je titels op Wil ik zien staan nog bij dezelfde diensten.';
+  });
+
+  document.getElementById('sportzenders').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-zender]');
+    if (!knop) return;
+    const aan = !knop.classList.contains('actief');
+    knop.classList.toggle('actief', aan);
+    knop.setAttribute('aria-pressed', String(aan));
+    zetSportzenders([...document.querySelectorAll('#sportzenders .actief')].map((k) => k.dataset.zender));
   });
 
   document.getElementById('weergave').addEventListener('click', (e) => {
