@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maakVerzoek, naarTitel, posterUrl, naarDiensten, dienstenParams } from '../src/tmdb.js';
+import { maakVerzoek, naarTitel, posterUrl, naarDiensten, dienstenParams, kiesTrailer, naarActeurs } from '../src/tmdb.js';
 
 describe('maakVerzoek', () => {
   it('zet de korte sleutel in het adres', () => {
@@ -75,5 +75,31 @@ describe('ontdekken', () => {
       with_watch_providers: '8|1867',
       with_watch_monetization_types: 'flatrate|free|ads',
     });
+  });
+});
+
+describe('kiesTrailer', () => {
+  const v = (key, extra) => ({ site: 'YouTube', key, type: 'Trailer', iso_639_1: 'en', official: true, ...extra });
+  it('kiest een Nederlandse trailer boven een Engelse, en een trailer boven een teaser', () => {
+    expect(kiesTrailer([v('teaserNL1', { type: 'Teaser', iso_639_1: 'nl' }), v('trailerEN'), v('trailerNL', { iso_639_1: 'nl' })])).toBe('trailerNL');
+    expect(kiesTrailer([v('teaserNL1', { type: 'Teaser', iso_639_1: 'nl' }), v('trailerEN')])).toBe('trailerEN');
+  });
+  it('slaat andere sites, soorten en rare codes over', () => {
+    expect(kiesTrailer([v('abcdefg', { site: 'Vimeo' }), v('abcdefg', { type: 'Featurette' }), v('a"><x')])).toBe('');
+    expect(kiesTrailer(undefined)).toBe('');
+  });
+});
+
+describe('naarActeurs', () => {
+  it('neemt de hoofdrollen op volgorde, ook bij series met meerdere rollen', () => {
+    const a = naarActeurs({ cast: [
+      { id: 2, name: 'B', order: 1, roles: [{ character: 'Rol B' }] },
+      { id: 1, name: 'A', order: 0, character: 'Rol A', profile_path: '/a.jpg' },
+    ] });
+    expect(a).toEqual([{ id: 1, naam: 'A', rol: 'Rol A', foto: '/a.jpg' }, { id: 2, naam: 'B', rol: 'Rol B', foto: '' }]);
+  });
+  it('maximaal 15 en leeg zonder gegevens', () => {
+    expect(naarActeurs({ cast: Array.from({ length: 30 }, (_, i) => ({ id: i, name: `N${i}`, order: i })) })).toHaveLength(15);
+    expect(naarActeurs(undefined)).toEqual([]);
   });
 });

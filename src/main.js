@@ -1,7 +1,7 @@
 import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
-import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen } from './tmdb.js';
+import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs } from './tmdb.js';
 import { kiesFavorieten, combineerTips } from './tips.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, verdeelDiensten, doorklikLink } from './diensten.js';
@@ -558,6 +558,45 @@ async function verversDiensten(titel, bewaar, nr) {
   if (vak()) vak().innerHTML = dienstenHtml(titel);
 }
 
+// --- Trailer en acteurs ---
+
+function extraHtml(titel) {
+  const trailer = titel.trailer ? veiligeUrl(`https://www.youtube.com/watch?v=${encodeURIComponent(titel.trailer)}`) : '';
+  const acteurs = titel.acteurs ?? [];
+  return `
+    ${trailer ? `<a class="trailer-knop" href="${trailer}" target="_blank" rel="noopener"><span aria-hidden="true">▶</span> Bekijk trailer</a>` : ''}
+    ${
+      acteurs.length
+        ? `<p class="label">Acteurs</p>
+           <ul class="acteurs">${acteurs
+             .map((a) => {
+               const foto = veiligeUrl(posterUrl(a.foto, 'w185'));
+               return `<li class="acteur">
+                 ${foto ? `<img src="${foto}" alt="" loading="lazy" />` : `<span class="acteur-leeg" aria-hidden="true">${veilig(a.naam.slice(0, 1))}</span>`}
+                 <strong>${veilig(a.naam)}</strong>
+                 ${a.rol ? `<span>${veilig(a.rol)}</span>` : ''}
+               </li>`;
+             })
+             .join('')}</ul>`
+        : ''
+    }`;
+}
+
+// Trailer en acteurs veranderen zelden: ophalen als ze er nog niet zijn, en verder eens per maand.
+const EXTRA_VERVERS_DAGEN = 30;
+
+async function verversExtra(titel, bewaar, nr) {
+  if (!leesSleutel()) return;
+  if (titel.extraOp && dagenSinds(new Date(titel.extraOp)) < EXTRA_VERVERS_DAGEN) return;
+  try {
+    const { trailer, acteurs } = await haalTrailerEnActeurs(titel.soort, titel.tmdbId);
+    await bewaar({ trailer, acteurs, extraOp: vandaag() });
+  } catch {
+    return; // Geen verbinding: dan de volgende keer.
+  }
+  if (nr === schermNr) document.getElementById('extra').innerHTML = extraHtml(titel);
+}
+
 // --- Eén titel van je lijst ---
 
 async function toonTitel(id) {
@@ -596,6 +635,8 @@ async function toonTitel(id) {
       <h2>${veilig(titel.titel)}</h2>
       <p>${soortJaar(titel)}${titel.origineel && titel.origineel !== titel.titel ? ` · ${veilig(titel.origineel)}` : ''}</p>
       ${titel.beschrijving ? `<p class="beschrijving">${veilig(titel.beschrijving)}</p>` : ''}
+
+      <div id="extra">${extraHtml(titel)}</div>
 
       <p class="label">Waar kijken</p>
       <div id="diensten" class="diensten">${dienstenHtml(titel, true)}</div>
@@ -641,6 +682,7 @@ async function toonTitel(id) {
   tekenStatus();
   tekenSterren();
   verversDiensten(titel, bewaar, nr);
+  verversExtra(titel, bewaar, nr);
 
   document.getElementById('statussen').addEventListener('click', async (e) => {
     const knop = e.target.closest('.keuze');

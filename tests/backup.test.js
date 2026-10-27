@@ -43,6 +43,11 @@ describe('normaliseerTitel', () => {
     expect(() => normaliseerTitel({ titel: 'X', soort: 'film' })).toThrow();
     expect(() => normaliseerTitel({ titel: 'X', tmdbId: 1, soort: 'boek' })).toThrow();
   });
+  it('neemt trailer en acteurs mee, en maakt rare waarden leeg', () => {
+    const t = normaliseerTitel({ ...goed, extraOp: '2026-10-27', trailer: 'abc123XYZ', acteurs: [{ id: 1, naam: 'A', rol: 'R', foto: 'javascript:x' }, { naam: 'zonder id' }] });
+    expect(t).toMatchObject({ trailer: 'abc123XYZ', acteurs: [{ id: 1, naam: 'A', rol: 'R', foto: '' }] });
+    expect(normaliseerTitel({ ...goed, extraOp: '2026-10-27', trailer: '"><script>' }).trailer).toBe('');
+  });
   it('neemt diensten alleen mee met een geldige datum', () => {
     expect(normaliseerTitel({ ...goed, dienstenOp: '2026-10-20', diensten: { abonnement: [{ id: 8, naam: 'Netflix', logo: '/n.jpg' }] } }).diensten.abonnement).toHaveLength(1);
     expect(normaliseerTitel({ ...goed, diensten: {} }).diensten).toBeUndefined();

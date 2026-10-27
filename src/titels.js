@@ -106,6 +106,14 @@ function schoneDiensten(d) {
   return { abonnement: lijst(d.abonnement), gratis: lijst(d.gratis), huren: lijst(d.huren), kopen: lijst(d.kopen), link: typeof d.link === 'string' ? d.link : '' };
 }
 
+function schoneActeurs(l) {
+  if (!Array.isArray(l)) return [];
+  return l
+    .filter((a) => a && Number.isInteger(a.id) && typeof a.naam === 'string')
+    .slice(0, 15)
+    .map((a) => ({ id: a.id, naam: a.naam, rol: typeof a.rol === 'string' ? a.rol : '', foto: /^\/[\w.-]+$/.test(a.foto ?? '') ? a.foto : '' }));
+}
+
 // Controleert een titel uit een backup en zet hem in de vaste vorm. Onbekende velden vallen weg,
 // verkeerde gegevens worden leeg. Zonder titel, TMDB-nummer of soort: een fout.
 export function normaliseerTitel(t) {
@@ -130,5 +138,6 @@ export function normaliseerTitel(t) {
     notitie: tekst(t.notitie),
     toegevoegdOp: typeof t.toegevoegdOp === 'string' && !isNaN(Date.parse(t.toegevoegdOp)) ? t.toegevoegdOp : new Date().toISOString(),
     ...(DATUM.test(t.dienstenOp ?? '') ? { dienstenOp: t.dienstenOp, diensten: schoneDiensten(t.diensten) } : {}),
+    ...(DATUM.test(t.extraOp ?? '') ? { extraOp: t.extraOp, trailer: /^[\w-]{6,20}$/.test(t.trailer ?? '') ? t.trailer : '', acteurs: schoneActeurs(t.acteurs) } : {}),
   };
 }

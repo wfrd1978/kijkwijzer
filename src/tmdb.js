@@ -133,3 +133,39 @@ export async function haalAanbevelingen(soort, tmdbId) {
   const data = await vraag(`/${s}/${tmdbId}/recommendations`);
   return (data.results ?? []).map((r) => naarTitel(r, s)).filter(Boolean);
 }
+
+// --- Trailer en acteurs ---
+
+// De beste trailer op YouTube: eerst een Nederlandse, dan een Engelse; een echte trailer
+// gaat voor een teaser, een officiële voor een andere.
+export function kiesTrailer(videos) {
+  const geschikt = (videos ?? []).filter((v) => v.site === 'YouTube' && /^[\w-]{6,20}$/.test(v.key ?? '') && ['Trailer', 'Teaser'].includes(v.type));
+  const punten = (v) => (v.type === 'Trailer' ? 4 : 0) + (v.iso_639_1 === 'nl' ? 2 : 0) + (v.official ? 1 : 0);
+  return geschikt.sort((a, b) => punten(b) - punten(a))[0]?.key ?? '';
+}
+
+export const MAX_ACTEURS = 15;
+
+// De belangrijkste acteurs met hun rol. Bij series telt TMDB alle seizoenen samen
+// (aggregate_credits), met de rollen in een lijst.
+export function naarActeurs(credits) {
+  return (credits?.cast ?? [])
+    .slice()
+    .sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
+    .slice(0, MAX_ACTEURS)
+    .map((c) => ({
+      id: c.id,
+      naam: c.name,
+      rol: c.character ?? c.roles?.[0]?.character ?? '',
+      foto: c.profile_path ?? '',
+    }));
+}
+
+export async function haalTrailerEnActeurs(soort, tmdbId) {
+  const s = TMDB_SOORT[soort];
+  const data = await vraag(`/${s}/${tmdbId}`, {
+    append_to_response: s === 'tv' ? 'videos,aggregate_credits' : 'videos,credits',
+    include_video_language: 'nl,en',
+  });
+  return { trailer: kiesTrailer(data.videos?.results), acteurs: naarActeurs(s === 'tv' ? data.aggregate_credits : data.credits) };
+}
