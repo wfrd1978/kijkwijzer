@@ -71,3 +71,16 @@ Adres van de app: https://wfrd1978.github.io/kijkwijzer/
 | 18 | Voetbal in Sport: wedstrijdschema via football-data.org. Kan niet rechtstreeks vanuit de app; bij de start kiezen of GitHub het dagelijks ophaalt (sleutel als GitHub-geheim) |
 | vervallen | Films en series op gewone tv: geen toegestane gratis tv-gids, en niet nodig |
 | vervallen | Importeren uit Letterboxd/IMDb/Netflix: er is geen kijkgeschiedenis om te importeren |
+
+## Stappenplan Nieuw ontwerp (na fase 2)
+
+Gebaseerd op de schets "Kijkwijzer – schets nieuw ontwerp" en de keuzes in SPEC.md (werklijst).
+
+| Stap | Resultaat om te testen |
+|---|---|
+| 19 | Nieuwe look op alle schermen: stevige smalle koppenletter, donker als basis, felle accentkleur (letters in de app zelf, niet van Google) |
+| 20 | Nieuwe indeling: onderin Vandaag, Films & series (Ontdekken · Wil ik zien · Gezien, één zoekveld) en Sport; Instellingen als tandwiel |
+| 21 | Status Bezig opheffen (eerst backup): series met voortgang staan bij Wil ik zien en op Vandaag bij Verder kijken |
+| 22 | Vandaag compleet: kijktip uit je lijst bij jouw diensten, en Deze week (maandag tot en met zondag) |
+| 23 | Sport met schakelaar Voetbal · Formule 1 · Wielrennen |
+| 24 | Instellingen opgeschoond in vier blokken |

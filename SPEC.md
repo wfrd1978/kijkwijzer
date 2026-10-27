@@ -31,7 +31,7 @@ Een persoonlijke mobiele webapp waarmee je films en series bijhoudt die je wilt 
 | 1.10 | Ontdekken | Trending films en series; filter op "mijn diensten" | TMDB |
 | 1.11 | Tips voor mij | In Ontdekken: aanbevelingen op basis van titels met 4–5 sterren, met de reden erbij ("Omdat je … hoog waardeerde"); titels die al in je lijst staan vallen weg | TMDB-aanbevelingen, op basis van regels |
 | 1.12 | Nieuwe versie | Staat er een nieuwe versie online, dan verschijnt bovenin een knop om te vernieuwen (zoals in de boekenapp). Gecontroleerd bij opstarten, bij terugkeren naar de app en elk half uur | In de app |
-| 1.13 | Weergave | In Instellingen kiezen: donker 's avonds, zoals de iPhone, altijd licht of altijd donker (zoals in de boekenapp) | In de app |
+| 1.13 | Weergave | In Instellingen kiezen: altijd donker (de basis), donker 's avonds, zoals de iPhone, of altijd licht | In de app |
 
 **Bewust beperkt:** de streaminginformatie komt van JustWatch via TMDB en loopt soms een paar dagen achter. Daarom staat bij elke titel wanneer die informatie is opgehaald. TMDB geeft geen directe link naar een titel bij een dienst; doorklikken opent de dienst (waar mogelijk met de titel als zoekterm) of de overzichtspagina met alle opties.
 

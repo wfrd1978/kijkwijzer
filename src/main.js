@@ -1367,10 +1367,10 @@ async function toonClubsKeuze(nr) {
 const MEER_NA = 15;
 
 // Licht of donker. Het wisselen zelf gebeurt in thema.js, dat al laadt vóór de app.
-const WEERGAVEN = { avond: "Donker 's avonds", iphone: 'Zoals mijn iPhone', licht: 'Altijd licht', donker: 'Altijd donker' };
+const WEERGAVEN = { donker: 'Altijd donker', avond: "Donker 's avonds", iphone: 'Zoals mijn iPhone', licht: 'Altijd licht' };
 
 function weergave() {
-  return onthoud('weergave', 'avond', Object.keys(WEERGAVEN));
+  return onthoud('weergave', 'donker', Object.keys(WEERGAVEN));
 }
 
 // Korte stand onder het ingeklapte blok, zodat je zonder openklappen ziet wat je hebt gekozen.
@@ -1513,7 +1513,7 @@ async function toonInstellingen() {
           .map(([k, naam]) => `<button class="keuze${k === weergave() ? ' actief' : ''}" data-weergave="${k}">${naam}</button>`)
           .join('')}
       </div>
-      <p class="zacht klein">Donker 's avonds: van 20:00 tot 7:00 donker, en altijd als je iPhone op donker staat.</p>
+      <p class="zacht klein">Donker is de basis. Donker 's avonds: van 20:00 tot 7:00 donker, en altijd als je iPhone op donker staat.</p>
     </section>
 
     <section class="blok">

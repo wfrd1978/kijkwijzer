@@ -1,5 +1,5 @@
 // Licht of donker, al vóór de rest van de app laadt (zodat het scherm niet eerst wit oplicht).
-// Keuzes: 'avond' (standaard: donker van 20:00 tot 7:00, en altijd als de iPhone donker staat),
+// Keuzes: 'donker' (standaard), 'avond' (donker van 20:00 tot 7:00, en altijd als de iPhone donker staat),
 // 'iphone' (precies zoals de iPhone), 'licht' en 'donker'.
 (function () {
   var AVOND_VAN = 20;
@@ -7,9 +7,9 @@
 
   function keuze() {
     try {
-      return localStorage.getItem('weergave') || 'avond';
+      return localStorage.getItem('weergave') || 'donker';
     } catch (e) {
-      return 'avond';
+      return 'donker';
     }
   }
 
@@ -24,7 +24,7 @@
     // De balk van de iPhone bovenin in dezelfde kleur als de achtergrond.
     var donker = thema === 'donker' || (!thema && window.matchMedia('(prefers-color-scheme: dark)').matches);
     var metas = document.querySelectorAll('meta[name="theme-color"]');
-    for (var i = 0; i < metas.length; i++) metas[i].setAttribute('content', donker ? '#121413' : '#fbf9f5');
+    for (var i = 0; i < metas.length; i++) metas[i].setAttribute('content', donker ? '#0f1013' : '#f4f3ef');
   }
 
   toepassen();
