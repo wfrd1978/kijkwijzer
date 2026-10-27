@@ -488,3 +488,54 @@ a.titel { text-decoration: none; }
 .balk a.actief { background: var(--tekst); color: var(--bg); }
 .aftrap, .race-nr { font-family: var(--kop); font-weight: 800; font-size: 1.35rem; }
 .koers-datum { font-family: var(--kop); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.04em; }
+
+/* --- Nieuwe indeling: kop met tandwiel, één zoekveld, schakelaar, Vandaag --- */
+
+.balk svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; width: 22px; height: 22px; }
+.balk a { font-size: 0.72rem; font-weight: 600; padding: 8px 4px; }
+
+.schermkop { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: 16px 0 16px; }
+.schermkop h1 { margin: 0; font-family: var(--kop); font-weight: 800; font-size: 3rem; line-height: 0.95; text-transform: uppercase; letter-spacing: 0.01em; }
+.schermkop-boven { margin: 0 0 2px; font-family: var(--kop); font-weight: 600; font-size: 0.95rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--zacht); }
+.tandwiel {
+  flex: none; width: 44px; height: 44px; border-radius: 22px; margin-top: 4px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--lijn); background: var(--vlak); color: var(--tekst);
+}
+.tandwiel svg, .films-zoek svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.films-zoek {
+  display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px;
+  border-radius: 12px; background: var(--vlak); border: 1px solid var(--lijn); color: var(--zacht);
+}
+.films-zoek svg { width: 18px; height: 18px; stroke-width: 2; flex: none; }
+.films-zoek input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--tekst); font-size: 16px; outline: none; padding: 0; }
+
+.segment { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; margin: 14px 0 12px; border-radius: 12px; background: var(--vlak); }
+.segment button {
+  height: 40px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); cursor: pointer;
+  font-family: var(--kop); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+}
+.segment button[aria-selected="true"] { background: var(--accent); color: var(--accent-tekst); }
+#films-vak .ontdek-keuzes { margin-top: 4px; }
+#eigen-vondsten .zoek-kop:first-child { margin-top: 16px; }
+
+.vandaag-blok { margin: 24px 0 0; }
+.vak-kop { margin: 0 0 10px; font-family: var(--kop); font-weight: 700; font-size: 1.1rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.verder-kaart { display: flex; gap: 14px; align-items: center; padding: 12px; border-radius: 14px; background: var(--vlak); margin-bottom: 10px; }
+.verder-kaart > a { flex: none; line-height: 0; }
+.verder-tekst { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.verder-tekst a { color: var(--tekst); text-decoration: none; }
+.verder-tekst strong { font-family: var(--kop); font-weight: 700; font-size: 1.35rem; line-height: 1.05; }
+.verder-tekst .zacht { font-size: 0.85rem; }
+.verder-tekst .hoofdknop { margin: 6px 0 0; padding: 10px 12px; font-size: 0.95rem; width: 100%; }
+
+.sport-vandaag { list-style: none; margin: 0; padding: 0; border-radius: 14px; background: var(--vlak); overflow: hidden; }
+.sport-vandaag li { display: flex; gap: 14px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--lijn); }
+.sport-vandaag li:last-child { border-bottom: 0; }
+.sport-tijd { width: 58px; flex: none; font-family: var(--kop); font-weight: 800; font-size: 1.5rem; }
+.sport-tijd.dag { font-size: 0.9rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--zacht); }
+.sport-wat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sport-wat strong { font-size: 0.98rem; }
+.sport-wat span { font-size: 0.8rem; }
+.leeg-klein { margin: 0; padding: 14px; border-radius: 14px; border: 1px solid var(--lijn); color: var(--zacht); font-size: 0.92rem; }

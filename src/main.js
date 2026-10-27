@@ -15,7 +15,7 @@ import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwe
 import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
 import {
   titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst,
-  TABS, SOORTEN, SORTERINGEN, filterTitels, sorteerTitels, dubbelTekst, gevondenActeur,
+  SOORTEN, SORTERINGEN, filterTitels, sorteerTitels, dubbelTekst, gevondenActeur,
   beginVoortgang, volgendeAflevering, voortgangKort,
 } from './titels.js';
 
@@ -85,7 +85,27 @@ function sterrenTekst(aantal) {
 const JUSTWATCH = '<p class="bron">Streaminginformatie van JustWatch.</p>';
 const BRON = '<p class="bron">Gegevens en posters van TMDB. Deze app gebruikt de TMDB API, maar is niet door TMDB goedgekeurd of gecertificeerd.</p>';
 
-const WOORDMERK = '<header class="woordmerk"><h1>Kijk<span>wijzer</span></h1></header>';
+const TANDWIEL =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>';
+
+// Kop van de drie hoofdschermen: grote titel, eventueel een regel erboven, en het tandwiel naar Instellingen.
+function schermKop(titel, boven = '') {
+  return `
+    <header class="schermkop">
+      <div>${boven ? `<p class="schermkop-boven">${veilig(boven)}</p>` : ''}<h1>${veilig(titel)}</h1></div>
+      <a class="tandwiel" href="#/instellingen" aria-label="Instellingen">${TANDWIEL}</a>
+    </header>`;
+}
+
+// Terugknop: terug naar waar je vandaan kwam, of (net geopend) naar een vaste plek.
+let binnenApp = false;
+const terugKnop = (standaard, naam = 'Terug') => `<button class="terug" data-terug="${standaard}">‹ ${naam}</button>`;
+app.addEventListener('click', (e) => {
+  const knop = e.target.closest('[data-terug]');
+  if (!knop) return;
+  if (binnenApp) history.back();
+  else location.hash = knop.dataset.terug;
+});
 
 function posterHtml(t, klasse = 'poster-klein') {
   const url = veiligeUrl(posterUrl(t.poster, klasse === 'poster-groot' ? 'w342' : 'w185'));
@@ -119,10 +139,8 @@ function bewaarKeuze(sleutel, waarde) {
     // Niet erg: dan geldt de keuze alleen nu.
   }
 }
-let tab = onthoud('tab', 'Alles', TABS);
 let soort = onthoud('soort', 'alle', Object.keys(SOORTEN));
 let sortering = onthoud('sortering', 'toegevoegd', Object.keys(SORTERINGEN));
-let lijstZoek = '';
 
 // --- Vegen om te verwijderen (zoals in de boekenapp) ---
 // Een regel naar links vegen toont een rode knop Verwijder; snel vegen telt ook.
@@ -225,7 +243,7 @@ function maakVeegbaar(lijst, onVerwijder) {
   });
 }
 
-function titelRegel(t, zoek = '') {
+function titelRegel(t, zoek = '', { status = true } = {}) {
   const acteur = gevondenActeur(t, zoek);
   return `
       <li class="veeg" data-id="${t.id}">
@@ -234,7 +252,7 @@ function titelRegel(t, zoek = '') {
         ${posterHtml(t)}
         <div class="titel-tekst">
           <span class="regel">
-            <span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>
+            ${status || t.status === 'Bezig' ? `<span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>` : ''}
             ${t.sterren ? `<span class="sterren-klein" aria-label="${t.sterren} sterren">${sterrenTekst(t.sterren)}</span>` : ''}
             ${t.soort === 'serie' && t.status === 'Bezig' && voortgangKort(t.voortgang) ? `<span class="voortgang-kort">${voortgangKort(t.voortgang)}</span>` : ''}
             ${t.nieuwBij?.length ? `<span class="nieuw-label">Nieuw bij ${veilig(t.nieuwBij.map((d) => d.naam).join(' en '))}</span>` : ''}
@@ -309,147 +327,12 @@ function herinneringHtml() {
     </div>`;
 }
 
-async function toonLijst() {
-  const nr = schermNr;
-  const titels = await alleTitels();
-  if (nr !== schermNr) return;
-  if (!titels.length) {
-    app.innerHTML = `
-      ${WOORDMERK}
-      <section class="welkom">
-        <p>Je films en series, rustig op één plek.</p>
-        ${
-          leesSleutel()
-            ? '<p class="zacht">Je lijst is nog leeg. Zoek een film of serie om te beginnen.</p><a class="hoofdknop" href="#/zoek">Zoek een titel</a>'
-            : '<p class="zacht">Plak eerst één keer je TMDB-sleutel, dan kun je zoeken.</p><a class="hoofdknop" href="#/instellingen">Sleutel instellen</a>'
-        }
-      </section>`;
-    return;
-  }
-  app.innerHTML = `
-    ${WOORDMERK}
-    ${nieuwHtml(titels)}
-    ${moetHerinneren(titels.length) ? herinneringHtml() : ''}
-    <nav class="tabs" id="tabs">${TABS.map((t) => `<button class="tab${t === tab ? ' actief' : ''}" data-tab="${t}">${t}</button>`).join('')}</nav>
-    <div class="lijst-bediening">
-      <input id="lijst-zoek" type="search" placeholder="Zoek op titel, acteur of notitie" value="${veilig(lijstZoek)}" autocomplete="off" enterkeyhint="search" aria-label="Zoek in je lijst" />
-      <div class="lijst-regel">
-        <label class="sorteer">Toon
-          <select id="soort">${Object.entries(SOORTEN).map(([k, v]) => `<option value="${k}"${k === soort ? ' selected' : ''}>${v}</option>`).join('')}</select>
-        </label>
-        <label class="sorteer">Sorteer
-          <select id="sorteer">${Object.entries(SORTERINGEN).map(([k, v]) => `<option value="${k}"${k === sortering ? ' selected' : ''}>${v}</option>`).join('')}</select>
-        </label>
-        <span class="aantal" id="aantal"></span>
-      </div>
-    </div>
-    <ul class="lijst" id="lijst"></ul>
-  `;
-
-  // Alleen de lijst zelf opnieuw tekenen, zodat het zoekveld en het toetsenbord blijven staan.
-  const teken = () => {
-    const zichtbaar = sorteerTitels(filterTitels(titels, { tab, soort, zoek: lijstZoek }), sortering);
-    document.getElementById('lijst').innerHTML = zichtbaar.length
-      ? zichtbaar.map((t) => titelRegel(t, lijstZoek)).join('')
-      : `<li class="leeg">${
-          lijstZoek ? `Niets gevonden voor "${veilig(lijstZoek)}".` : tab === 'Alles' ? `Geen ${SOORTEN[soort].toLowerCase()} op je lijst.` : `Nog niets bij ${veilig(tab)}.`
-        }</li>`;
-    document.getElementById('aantal').textContent = zichtbaar.length === 1 ? '1 titel' : `${zichtbaar.length} titels`;
-  };
-  teken();
-
-  maakVeegbaar(document.getElementById('lijst'), async (li) => {
-    const id = Number(li.dataset.id);
-    const kopie = (await haalTitel(id)) ?? titels.find((t) => t.id === id);
-    if (!kopie) return;
-    await titelVerwijderen(id);
-    titels.splice(titels.findIndex((t) => t.id === id), 1);
-    li.classList.add('weg');
-    setTimeout(teken, 250);
-    melding(`"${kopie.titel}" verwijderd`, {
-      tekst: 'Ongedaan maken',
-      actie: async () => {
-        await titelTerugzetten(kopie);
-        // Staat de lijst nog open, dan bijwerken; anders komt hij straks vanzelf.
-        if (!document.getElementById('lijst')) return;
-        titels.push(kopie);
-        teken();
-      },
-    });
-  });
-
-  document.getElementById('nieuw-gezien')?.addEventListener('click', async () => {
-    for (const t of titels.filter((x) => x.nieuwBij?.length)) {
-      await titelBijwerken(t.id, { nieuwBij: [] });
-      t.nieuwBij = [];
-    }
-    document.querySelector('.nieuw-melding').remove();
-    teken();
-  });
-  document.getElementById('later')?.addEventListener('click', () => {
-    herinnerLater();
-    document.querySelector('.herinnering').remove();
-  });
-  document.getElementById('tabs').addEventListener('click', (e) => {
-    const knop = e.target.closest('.tab');
-    if (!knop) return;
-    tab = knop.dataset.tab;
-    bewaarKeuze('tab', tab);
-    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('actief', t.dataset.tab === tab));
-    teken();
-  });
-  document.getElementById('lijst-zoek').addEventListener('input', (e) => {
-    lijstZoek = e.target.value;
-    teken();
-  });
-  document.getElementById('soort').addEventListener('change', (e) => {
-    soort = e.target.value;
-    bewaarKeuze('soort', soort);
-    teken();
-  });
-  document.getElementById('sorteer').addEventListener('change', (e) => {
-    sortering = e.target.value;
-    bewaarKeuze('sortering', sortering);
-    teken();
-  });
-}
-
 // --- Zoeken ---
 
 let laatsteZoekterm = '';
 let laatsteResultaten = [];
 let laatstePersonen = [];
 let zoekNr = 0;
-
-function toonZoek() {
-  if (!leesSleutel()) {
-    location.hash = '#/instellingen';
-    return;
-  }
-  app.innerHTML = `
-    ${WOORDMERK}
-    <form class="zoekbalk" id="zoek-form" role="search">
-      <input id="zoekveld" type="search" placeholder="Film, serie of acteur" autocomplete="off" enterkeyhint="search" value="${veilig(laatsteZoekterm)}" aria-label="Zoek een film, serie of acteur" />
-      <button type="submit">Zoek</button>
-    </form>
-    <div id="resultaten"></div>
-  `;
-  const veld = document.getElementById('zoekveld');
-  let wacht;
-  // Zoeken terwijl je typt, met een korte pauze zodat niet elke letter een vraag aan TMDB wordt.
-  veld.addEventListener('input', () => {
-    clearTimeout(wacht);
-    wacht = setTimeout(() => zoek(veld.value), 400);
-  });
-  document.getElementById('zoek-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    clearTimeout(wacht);
-    veld.blur(); // toetsenbord weg, zodat je de resultaten ziet
-    zoek(veld.value);
-  });
-  if (laatsteZoekterm) toonResultaten();
-  else veld.focus();
-}
 
 async function zoek(term) {
   const vak = document.getElementById('resultaten');
@@ -495,10 +378,10 @@ async function toonResultaten() {
            </a></li>`;
          })
          .join('')}</ul>
-       ${laatsteResultaten.length ? '<p class="label zoek-kop">Films en series</p>' : ''}`
+`
     : '';
   vak.innerHTML = laatsteResultaten.length || laatstePersonen.length
-    ? `${personen}<ul class="lijst">${laatsteResultaten
+    ? `${personen}${laatsteResultaten.length ? '<p class="label zoek-kop">Nieuw zoeken bij TMDB</p>' : ''}<ul class="lijst">${laatsteResultaten
         .map(
           (t, i) => `
         <li><button class="titel resultaat" data-i="${i}">
@@ -523,10 +406,10 @@ async function toonResultaten() {
 
 // Eén zoekresultaat groot, met de knop om hem op je lijst te zetten.
 // Staat hij er al op, dan zie je dat (met wanneer je hem zag) en kun je hem openen.
-function toonBevestigen(t, alOpLijst, terug = { naam: 'Resultaten', toon: toonZoek }) {
+function toonBevestigen(t, alOpLijst, terug = { naam: 'Films & series', toon: () => toonFilms() }) {
   window.scrollTo(0, 0);
   app.innerHTML = `
-    <header class="kop"><button class="terug" id="terug">‹ ${terug.naam}</button></header>
+    <header class="kop"><button class="terug" id="terug">‹ ${veilig(terug.naam)}</button></header>
     <section class="bevestig">
       ${posterHtml(t, 'poster-groot')}
       <h2>${veilig(t.titel)}</h2>
@@ -564,6 +447,272 @@ function rasterHtml(titels, opLijst, onder = (t) => (t.jaar ? veilig(t.jaar) : '
     .join('')}</ul>`;
 }
 
+// --- Vandaag ---
+
+function verderKaart(t) {
+  const v = t.voortgang ?? beginVoortgang();
+  const seizoenen = t.seizoenen ?? [];
+  const dit = seizoenen.find((x) => x.nr === v.seizoen);
+  const volgende = volgendeAflevering(v, seizoenen);
+  return `
+    <div class="verder-kaart" data-id="${t.id}">
+      <a href="#/titel/${t.id}" tabindex="-1">${posterHtml(t)}</a>
+      <div class="verder-tekst">
+        <a href="#/titel/${t.id}"><strong>${veilig(t.titel)}</strong></a>
+        <span class="zacht">${
+          v.aflevering ? `Seizoen ${v.seizoen} · aflevering ${v.aflevering}${dit ? ` van ${dit.afleveringen}` : ''}` : `Seizoen ${v.seizoen} · nog niet begonnen`
+        }</span>
+        ${
+          volgende
+            ? `<button class="hoofdknop" data-volgende>✓ ${volgende.seizoen !== v.seizoen ? `Seizoen ${volgende.seizoen}, aflevering 1` : `Aflevering ${volgende.aflevering}`} gezien</button>`
+            : '<span class="zacht">Alle afleveringen gezien. Zet hem op Gezien via de titel.</span>'
+        }
+      </div>
+    </div>`;
+}
+
+// Alles wat vandaag op tv of bij een stream is aan voetbal, Formule 1 en wielrennen dat jij volgt.
+async function sportVandaagHtml() {
+  const mijn = leesSportzenders();
+  const dag = vandaag();
+  const [schema, f1, oranje] = await Promise.all([haalVoetbal(), haalF1().catch(() => null), haalOranje().catch(() => null)]);
+  const items = [];
+  if (schema) {
+    for (const w of mijnWedstrijden(schema.wedstrijden, leesVoetbalKeuzes()).filter((x) => nlDagVan(x) === dag)) {
+      const c = COMPETITIES[w.competitie];
+      items.push({ start: w.start, tijd: aftrap(w.start), naam: `${w.thuis.naam} – ${w.uit.naam}`, sub: c.naam, zenders: c.zenders });
+    }
+  }
+  if (oranje && nlDagVan(oranje) === dag) {
+    items.push({ start: oranje.start, tijd: aftrap(oranje.start), naam: `${oranje.thuis} – ${oranje.uit}`, sub: oranje.competitie, zenders: oranje.zenders });
+  }
+  for (const r of f1?.races ?? []) {
+    for (const s of r.sessies.filter((x) => nlDagVan(x) === dag)) {
+      items.push({ start: s.start, tijd: s.metTijd ? aftrap(s.start) : '', naam: `${s.naam} · ${r.naam}`, sub: 'Formule 1', zenders: [{ naam: F1_ZENDERS.live, zeker: true }] });
+    }
+  }
+  for (const k of WIELRENNEN.koersen.filter((x) => x.van <= dag && (x.tot ?? x.van) >= dag)) {
+    items.push({ start: '', tijd: '', naam: k.naam, sub: `Wielrennen · ${k.soort}`, zenders: k.zenders });
+  }
+  if (!items.length) return '<p class="leeg-klein">Geen sport vandaag bij jouw keuzes. <a href="#/sport">Bekijk het schema</a></p>';
+  items.sort((a, b) => a.start.localeCompare(b.start));
+  // Eén zender per regel: liefst een van jouw zenders.
+  const zender = (zenders) => zenders.find((z) => mijn.includes(z.naam)) ?? zenders[0];
+  return `<ul class="sport-vandaag">${items
+    .map((x) => {
+      const z = x.zenders.length ? zender(x.zenders) : null;
+      return `
+      <li>
+        <span class="sport-tijd${x.tijd ? '' : ' dag'}">${x.tijd ? veilig(x.tijd) : 'Hele dag'}</span>
+        <div class="sport-wat"><strong>${veilig(x.naam)}</strong><span class="zacht">${veilig(x.sub)}</span></div>
+        ${z ? `<span class="zender-chip${mijn.includes(z.naam) ? ' mijn' : ''}">${veilig(z.naam)}${z.zeker ? '' : '?'}</span>` : ''}
+      </li>`;
+    })
+    .join('')}</ul>`;
+}
+
+async function toonVandaag() {
+  const nr = schermNr;
+  const titels = await alleTitels();
+  if (nr !== schermNr) return;
+  const kop = schermKop('Vandaag', new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }));
+  if (!leesSleutel() && !titels.length) {
+    app.innerHTML = `
+      ${kop}
+      <section class="welkom">
+        <p>Je films, series en sport, rustig op één plek.</p>
+        <p class="zacht">Plak eerst één keer je TMDB-sleutel, dan kun je zoeken.</p><a class="hoofdknop" href="#/instellingen">Sleutel instellen</a>
+      </section>`;
+    return;
+  }
+  const verder = titels.filter((t) => t.soort === 'serie' && t.status === 'Bezig');
+  app.innerHTML = `
+    ${kop}
+    ${nieuwHtml(titels)}
+    ${titels.length && moetHerinneren(titels.length) ? herinneringHtml() : ''}
+    ${
+      titels.length
+        ? ''
+        : '<section class="welkom"><p class="zacht">Je lijst is nog leeg. Zoek een film of serie om te beginnen.</p><a class="hoofdknop" href="#/films">Zoek een titel</a></section>'
+    }
+    ${verder.length ? `<section class="vandaag-blok"><h2 class="vak-kop">Verder kijken</h2><div id="verder">${verder.map(verderKaart).join('')}</div></section>` : ''}
+    <section class="vandaag-blok">
+      <h2 class="vak-kop">Sport vandaag</h2>
+      <div id="sport-vandaag"><p class="bezig">Ophalen…</p></div>
+    </section>
+  `;
+
+  document.getElementById('verder')?.addEventListener('click', async (e) => {
+    const knop = e.target.closest('[data-volgende]');
+    if (!knop) return;
+    const kaart = knop.closest('.verder-kaart');
+    const t = verder.find((x) => x.id === Number(kaart.dataset.id));
+    const volgende = volgendeAflevering(t.voortgang ?? beginVoortgang(), t.seizoenen ?? []);
+    if (!volgende) return;
+    knop.disabled = true;
+    await titelBijwerken(t.id, { voortgang: volgende });
+    t.voortgang = volgende;
+    kaart.outerHTML = verderKaart(t);
+    melding(`${t.titel}: seizoen ${volgende.seizoen}, aflevering ${volgende.aflevering} gezien`);
+  });
+  document.getElementById('nieuw-gezien')?.addEventListener('click', async () => {
+    for (const t of titels.filter((x) => x.nieuwBij?.length)) await titelBijwerken(t.id, { nieuwBij: [] });
+    document.querySelector('.nieuw-melding').remove();
+  });
+  document.getElementById('later')?.addEventListener('click', () => {
+    herinnerLater();
+    document.querySelector('.herinnering').remove();
+  });
+
+  const sport = await sportVandaagHtml();
+  if (nr === schermNr) document.getElementById('sport-vandaag').innerHTML = sport;
+}
+
+// --- Films & series: Ontdekken, Wil ik zien en Gezien, met één zoekveld ---
+
+const FILMS_TABS = { ontdekken: 'Ontdekken', wil: 'Wil ik zien', gezien: 'Gezien' };
+// Tot stap 21 hoort 'Bezig' nog bij Wil ik zien.
+const LIJST_STATUSSEN = { wil: ['Wil ik zien', 'Bezig'], gezien: ['Gezien'] };
+let filmsTab = onthoud('filmsTab', 'wil', Object.keys(FILMS_TABS));
+let filmsZoek = '';
+
+function toonLijstTab(vak, welke, titels) {
+  vak.innerHTML = `
+    <div class="lijst-regel">
+      <label class="sorteer">Toon
+        <select id="soort">${Object.entries(SOORTEN).map(([k, v]) => `<option value="${k}"${k === soort ? ' selected' : ''}>${v}</option>`).join('')}</select>
+      </label>
+      <label class="sorteer">Sorteer
+        <select id="sorteer">${Object.entries(SORTERINGEN).map(([k, v]) => `<option value="${k}"${k === sortering ? ' selected' : ''}>${v}</option>`).join('')}</select>
+      </label>
+      <span class="aantal" id="aantal"></span>
+    </div>
+    <ul class="lijst" id="lijst"></ul>
+  `;
+  const teken = () => {
+    const zichtbaar = sorteerTitels(filterTitels(titels, { soort }).filter((t) => LIJST_STATUSSEN[welke].includes(t.status)), sortering);
+    document.getElementById('lijst').innerHTML = zichtbaar.length
+      ? zichtbaar.map((t) => titelRegel(t, '', { status: false })).join('')
+      : `<li class="leeg">${
+          soort !== 'alle'
+            ? `Geen ${SOORTEN[soort].toLowerCase()} bij ${FILMS_TABS[welke]}.`
+            : welke === 'wil'
+              ? 'Nog niets op Wil ik zien. Zoek hierboven een titel, of kijk bij Ontdekken.'
+              : 'Nog niets gezien. Zet een titel op Gezien via de titelpagina.'
+        }</li>`;
+    document.getElementById('aantal').textContent = aantalTekst(zichtbaar.length);
+  };
+  teken();
+
+  maakVeegbaar(document.getElementById('lijst'), async (li) => {
+    const id = Number(li.dataset.id);
+    const kopie = (await haalTitel(id)) ?? titels.find((t) => t.id === id);
+    if (!kopie) return;
+    await titelVerwijderen(id);
+    titels.splice(titels.findIndex((t) => t.id === id), 1);
+    li.classList.add('weg');
+    setTimeout(teken, 250);
+    melding(`"${kopie.titel}" verwijderd`, {
+      tekst: 'Ongedaan maken',
+      actie: async () => {
+        await titelTerugzetten(kopie);
+        // Staat de lijst nog open, dan bijwerken; anders komt hij straks vanzelf.
+        if (!document.getElementById('lijst')) return;
+        titels.push(kopie);
+        teken();
+      },
+    });
+  });
+  document.getElementById('soort').addEventListener('change', (e) => {
+    soort = e.target.value;
+    bewaarKeuze('soort', soort);
+    teken();
+  });
+  document.getElementById('sorteer').addEventListener('change', (e) => {
+    sortering = e.target.value;
+    bewaarKeuze('sortering', sortering);
+    teken();
+  });
+}
+
+async function toonFilms({ terugNaarPlek = false } = {}) {
+  const nr = schermNr;
+  const titels = await alleTitels();
+  if (nr !== schermNr) return;
+  app.innerHTML = `
+    ${schermKop('Films & series')}
+    <form class="films-zoek" id="films-zoek-form" role="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+      <input id="films-zoek" type="search" placeholder="Zoek film, serie of acteur" autocomplete="off" enterkeyhint="search" value="${veilig(filmsZoek)}" aria-label="Zoek film, serie of acteur" />
+    </form>
+    <div class="segment" id="films-tabs" role="tablist">${Object.entries(FILMS_TABS)
+      .map(([k, naam]) => `<button role="tab" aria-selected="${k === filmsTab}" data-tab="${k}">${naam}</button>`)
+      .join('')}</div>
+    <div id="films-vak"></div>
+  `;
+  const veld = document.getElementById('films-zoek');
+  const segment = document.getElementById('films-tabs');
+  const vak = document.getElementById('films-vak');
+
+  // Zoeken: eerst wat al op je lijst staat (meteen), daarna nieuwe titels en acteurs bij TMDB.
+  const tekenZoek = () => {
+    if (!document.getElementById('eigen-vondsten')) vak.innerHTML = '<div id="eigen-vondsten"></div><div id="resultaten"></div>';
+    const eigen = sorteerTitels(filterTitels(titels, { zoek: filmsZoek }), 'titel');
+    document.getElementById('eigen-vondsten').innerHTML = eigen.length
+      ? `<p class="label zoek-kop">In je lijst</p><ul class="lijst">${eigen.slice(0, 20).map((t) => titelRegel(t, filmsZoek)).join('')}</ul>`
+      : leesSleutel()
+        ? ''
+        : `<p class="leeg">Niets gevonden in je lijst. Om ook nieuwe titels te zoeken, plak eerst je TMDB-sleutel in <a href="#/instellingen">Instellingen</a>.</p>`;
+  };
+  const tekenVak = () => {
+    segment.hidden = Boolean(filmsZoek.trim());
+    if (filmsZoek.trim()) tekenZoek();
+    else if (filmsTab === 'ontdekken') toonOntdekken({ terugNaarPlek });
+    else toonLijstTab(vak, filmsTab, titels);
+  };
+  tekenVak();
+  if (filmsZoek.trim() && leesSleutel()) {
+    if (laatsteZoekterm === filmsZoek.trim()) toonResultaten();
+    else zoek(filmsZoek);
+  }
+
+  let wacht;
+  // Zoeken terwijl je typt, met een korte pauze zodat niet elke letter een vraag aan TMDB wordt.
+  veld.addEventListener('input', () => {
+    const was = Boolean(filmsZoek.trim());
+    filmsZoek = veld.value;
+    clearTimeout(wacht);
+    if (!filmsZoek.trim()) {
+      laatsteZoekterm = '';
+      zoekNr += 1;
+      if (was) {
+        schermNr += 1;
+        tekenVak();
+      }
+      return;
+    }
+    tekenZoek();
+    segment.hidden = true;
+    if (leesSleutel()) wacht = setTimeout(() => zoek(filmsZoek), 400);
+  });
+  document.getElementById('films-zoek-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    clearTimeout(wacht);
+    veld.blur(); // toetsenbord weg, zodat je de resultaten ziet
+    if (filmsZoek.trim() && leesSleutel()) zoek(filmsZoek);
+  });
+  segment.addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-tab]');
+    if (!knop || knop.dataset.tab === filmsTab) return;
+    filmsTab = knop.dataset.tab;
+    bewaarKeuze('filmsTab', filmsTab);
+    segment.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === filmsTab)));
+    schermNr += 1; // wat Ontdekken nog aan het ophalen was, mag niet meer tekenen
+    terugNaarPlek = false;
+    tekenVak();
+  });
+}
+
 // --- Ontdekken ---
 
 const ONTDEK_SOORTEN = { film: 'Films', serie: 'Series' };
@@ -580,8 +729,10 @@ function eigenDiensten() {
 }
 
 async function toonOntdekken({ terugNaarPlek = false } = {}) {
+  const filmsVak = document.getElementById('films-vak');
+  if (!filmsVak) return;
   if (!leesSleutel()) {
-    location.hash = '#/instellingen';
+    filmsVak.innerHTML = '<p class="leeg">Om te ontdekken heeft de app je TMDB-sleutel nodig. <a href="#/instellingen">Sleutel instellen</a></p>';
     return;
   }
   const nr = schermNr;
@@ -590,8 +741,7 @@ async function toonOntdekken({ terugNaarPlek = false } = {}) {
     `<div class="keuzes" id="${id}">${Object.entries(opties)
       .map(([k, naam]) => `<button class="keuze${k === gekozen ? ' actief' : ''}" data-k="${k}">${naam}</button>`)
       .join('')}</div>`;
-  app.innerHTML = `
-    ${WOORDMERK}
+  filmsVak.innerHTML = `
     <div class="ontdek-keuzes">
       ${keuzeKnoppen('ontdek-soort', ONTDEK_SOORTEN, ontdekSoort)}
       ${keuzeKnoppen('ontdek-bron', ONTDEK_BRONNEN, ontdekBron)}
@@ -682,7 +832,7 @@ async function toonOntdekken({ terugNaarPlek = false } = {}) {
       knop.addEventListener('click', () => {
         ontdekScroll = window.scrollY;
         const t = stand.titels[Number(knop.dataset.i)];
-        toonBevestigen(t, opLijst.get(titelSleutel(t)), { naam: 'Ontdekken', toon: () => toonOntdekken({ terugNaarPlek: true }) });
+        toonBevestigen(t, opLijst.get(titelSleutel(t)), { naam: 'Ontdekken', toon: () => toonFilms({ terugNaarPlek: true }) });
       })
     );
     document.getElementById('meer')?.addEventListener('click', async (e) => {
@@ -972,7 +1122,7 @@ async function toonSport() {
   const nr = schermNr;
   const mijn = leesSportzenders();
   app.innerHTML = `
-    <header class="kop"><h1>Sport</h1></header>
+    ${schermKop('Sport')}
     ${mijn.length ? '' : '<p class="zacht sport-tip">Tip: kies in <a href="#/instellingen">Instellingen</a> je sportzenders, dan zie je wat jij live kunt volgen.</p>'}
     <section class="sport-blok">
       <h2>Voetbal</h2>
@@ -1100,7 +1250,7 @@ async function toonTitel(id) {
 
   app.innerHTML = `
     <header class="kop">
-      <a class="terug" href="#/">‹ Mijn lijst</a>
+      ${terugKnop('#/films')}
       <button class="link-knop deel-knop" id="samen" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l4 4-1.4 1.4L13 6.8V15h-2V6.8L9.4 8.4 8 7zM5 11h3v2H7v6h10v-6h-1v-2h3v10H5z" /></svg>
         Samen kijken
@@ -1452,6 +1602,7 @@ async function toonInstellingen() {
   const aantal = (await alleTitels()).length;
   if (nr !== schermNr) return;
   app.innerHTML = `
+    <header class="kop">${terugKnop('#/')}</header>
     <header class="kop"><h1>Instellingen</h1></header>
 
     <section class="blok">
@@ -1663,8 +1814,8 @@ async function toonInstellingen() {
       k.currentTarget.textContent = 'Bezig met terugzetten…';
       try {
         const n = await zetBackupTerug(inhoud);
-        // Keuzes uit de backup (tab, sortering) meteen gebruiken.
-        tab = onthoud('tab', 'Alles', TABS);
+        // Keuzes uit de backup (tabblad, sortering) meteen gebruiken.
+        filmsTab = onthoud('filmsTab', 'wil', Object.keys(FILMS_TABS));
         soort = onthoud('soort', 'alle', Object.keys(SOORTEN));
         sortering = onthoud('sortering', 'toegevoegd', Object.keys(SORTERINGEN));
         window.kijkThema?.toepassen();
@@ -1695,7 +1846,7 @@ async function toonInstellingen() {
       await testSleutel(tekst);
       bewaarSleutel(tekst);
       melding('Sleutel bewaard');
-      location.hash = '#/zoek';
+      location.hash = '#/films';
     } catch (f) {
       toonFout(f instanceof SleutelFout ? 'TMDB accepteert deze sleutel niet. Controleer of je hem helemaal hebt gekopieerd.' : 'Controleren lukt nu niet. Heb je internet?');
       knop.disabled = false;
@@ -1731,15 +1882,20 @@ async function route() {
   window.scrollTo(0, 0);
   const titelId = location.hash.match(/^#\/titel\/(\d+)$/);
   const acteurId = location.hash.match(/^#\/acteur\/(\d+)$/);
-  const plek = { '#/zoek': 'zoek', '#/ontdekken': 'ontdekken', '#/sport': 'sport', '#/instellingen': 'instellingen' }[location.hash] || 'lijst';
+  // Oude adressen (van voor de nieuwe indeling) komen uit bij Films & series.
+  if (location.hash === '#/zoek' || location.hash === '#/ontdekken') {
+    if (location.hash === '#/ontdekken') filmsTab = 'ontdekken';
+    history.replaceState(null, '', '#/films');
+  }
+  const plek =
+    { '#/films': 'films', '#/sport': 'sport', '#/instellingen': 'instellingen' }[location.hash] || (titelId || acteurId ? 'films' : 'vandaag');
   document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === plek));
   if (plek === 'instellingen') toonInstellingen();
-  else if (plek === 'zoek') toonZoek();
-  else if (plek === 'ontdekken') toonOntdekken();
   else if (plek === 'sport') toonSport();
   else if (titelId) toonTitel(Number(titelId[1]));
   else if (acteurId) toonActeur(Number(acteurId[1]));
-  else toonLijst();
+  else if (plek === 'films') toonFilms();
+  else toonVandaag();
 }
 
 // Gaat de app naar de achtergrond, dan een half getypte notitie meteen bewaren.
@@ -1771,5 +1927,8 @@ setTimeout(async () => {
   await controleerNieuw();
 }, 3000);
 
-window.addEventListener('hashchange', route);
+window.addEventListener('hashchange', () => {
+  binnenApp = true;
+  route();
+});
 route();
