@@ -1,7 +1,7 @@
 import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
-import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur } from './tmdb.js';
+import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur, haalAfleveringen } from './tmdb.js';
 import { kiesFavorieten, combineerTips } from './tips.js';
 import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, ZENDER_GIDS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
 import { WIELRENNEN, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
@@ -11,6 +11,7 @@ import {
 } from './voetbal.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { kiesKijktips, weekDagen, weekTekst } from './vandaag.js';
+import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
 import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
@@ -522,10 +523,21 @@ async function sportVandaagHtml() {
 }
 
 // Deze week: maandag tot en met zondag, per dag wat jij volgt. Afgelopen dagen staan grijs.
-async function weekHtml() {
+// Bij welke van jouw diensten een serie te zien is (of niets).
+function dienstVan(t) {
+  return t.diensten ? verdeelDiensten(t.diensten, leesKeuzes()).bijJou[0] ?? null : null;
+}
+
+async function weekHtml(titels, stand) {
   const mijn = leesSportzenders();
   const dagen = weekDagen(vandaag());
-  const items = await sportItems(dagen);
+  const items = [
+    ...(await sportItems(dagen)),
+    // Nieuwe afleveringen staan bovenaan hun dag.
+    ...afleveringenOp(titels, stand, dagen).map((e) => ({
+      dag: e.dag, start: `${e.dag}T00:00`, tijd: '', naam: `${e.titel.titel} ${afleveringKort(e)}`, sub: 'Nieuwe aflevering', zenders: [], dienst: dienstVan(e.titel), nieuw: true,
+    })),
+  ].sort((a, b) => a.start.localeCompare(b.start));
   const regels = dagen.map((dag) => {
     const d = new Date(`${dag}T12:00:00Z`);
     const wat = items.filter((x) => x.dag === dag);
@@ -540,15 +552,16 @@ async function weekHtml() {
             ? wat
                 .map((x) => {
                   const z = eenZender(x.zenders, mijn);
-                  return `<div class="week-regel"><span>${x.tijd ? `<strong>${veilig(x.tijd)}</strong> ` : ''}${veilig(x.naam)} <span class="zacht">· ${veilig(x.sub)}</span></span>${z ? zenderChip(z, mijn, true) : ''}</div>`;
+                  const rechts = x.nieuw ? (x.dienst ? `<span class="zender-chip mijn">${veilig(x.dienst.naam)}</span>` : '') : z ? zenderChip(z, mijn, true) : '';
+                  return `<div class="week-regel"><span>${x.tijd ? `<strong>${veilig(x.tijd)}</strong> ` : x.nieuw ? '<strong class="nieuw-woord">Nieuw</strong> ' : ''}${veilig(x.naam)} <span class="zacht">· ${veilig(x.sub)}</span></span>${rechts}</div>`;
                 })
                 .join('')
-            : '<span class="zacht">Geen sport bij jouw keuzes</span>'
+            : '<span class="zacht">Niets bij jouw keuzes</span>'
         }</div>
       </li>`;
   });
   return `<ul class="week">${regels.join('')}</ul>
-    <p class="bron">Alleen wat jij volgt in Sport: je clubs en competities, Oranje, Formule 1 en wielrennen. Tijden in Nederlandse tijd.</p>`;
+    <p class="bron">Alleen wat jij volgt: nieuwe afleveringen van series op je lijst, en in Sport je clubs en competities, Oranje, Formule 1 en wielrennen. Tijden in Nederlandse tijd; afleveringen volgens TMDB.</p>`;
 }
 
 // De kijktip: iets van je eigen lijst dat je vanavond bij een van je diensten kunt kijken.
@@ -607,8 +620,12 @@ async function toonVandaag() {
   if (week) {
     app.innerHTML = `${kop}${keuze}<div id="week"><p class="bezig">Ophalen…</p></div>`;
     koppelKeuze();
-    const html = await weekHtml();
-    if (nr === schermNr) document.getElementById('week').innerHTML = html;
+    const html = await weekHtml(titels, leesAfleveringen());
+    if (nr !== schermNr) return;
+    document.getElementById('week').innerHTML = html;
+    // Daarna (hooguit één keer per dag) de afleveringen bijwerken en de week opnieuw tekenen.
+    const stand = await werkAfleveringenBij(titels, vandaag(), haalAfleveringen);
+    if (nr === schermNr) document.getElementById('week').innerHTML = await weekHtml(titels, stand);
     return;
   }
 
@@ -625,6 +642,10 @@ async function toonVandaag() {
         : '<section class="welkom"><p class="zacht">Je lijst is nog leeg. Zoek een film of serie om te beginnen.</p><a class="hoofdknop" href="#/films">Zoek een titel</a></section>'
     }
     ${verder.length ? `<section class="vandaag-blok"><h2 class="vak-kop">Verder kijken</h2><div id="verder">${verder.map(verderKaart).join('')}</div></section>` : ''}
+    <section class="vandaag-blok" id="afleveringen-blok"${afleveringenHtml(titels, leesAfleveringen()) ? '' : ' hidden'}>
+      <h2 class="vak-kop">Nieuwe afleveringen</h2>
+      <div id="afleveringen">${afleveringenHtml(titels, leesAfleveringen())}</div>
+    </section>
     <section class="vandaag-blok">
       <h2 class="vak-kop">Sport vandaag</h2>
       <div id="sport-vandaag"><p class="bezig">Ophalen…</p></div>
@@ -669,6 +690,33 @@ async function toonVandaag() {
 
   const sport = await sportVandaagHtml();
   if (nr === schermNr) document.getElementById('sport-vandaag').innerHTML = sport;
+
+  if (!leesSleutel()) return;
+  const stand = await werkAfleveringenBij(titels, vandaag(), haalAfleveringen);
+  if (nr !== schermNr) return;
+  const html = afleveringenHtml(titels, stand);
+  document.getElementById('afleveringen').innerHTML = html;
+  document.getElementById('afleveringen-blok').hidden = !html;
+}
+
+// Afleveringen van gisteren en vandaag, van series op je lijst.
+function afleveringenHtml(titels, stand) {
+  const gisteren = new Date(`${vandaag()}T12:00:00Z`);
+  gisteren.setUTCDate(gisteren.getUTCDate() - 1);
+  const g = gisteren.toISOString().slice(0, 10);
+  const lijst = afleveringenOp(titels, stand, [g, vandaag()]).reverse();
+  if (!lijst.length) return '';
+  return `<ul class="sport-vandaag">${lijst
+    .map((e) => {
+      const d = dienstVan(e.titel);
+      return `
+      <li>
+        <span class="sport-tijd dag">${e.dag === vandaag() ? 'Vandaag' : 'Gisteren'}</span>
+        <a class="sport-wat afl-link" href="#/titel/${e.titel.id}"><strong>${veilig(e.titel.titel)}</strong><span class="zacht">${afleveringKort(e)}${e.naam ? ` · ${veilig(e.naam)}` : ''}</span></a>
+        ${d ? `<span class="zender-chip mijn">${veilig(d.naam)}</span>` : ''}
+      </li>`;
+    })
+    .join('')}</ul>`;
 }
 
 // --- Films & series: Ontdekken, Wil ik zien en Gezien, met één zoekveld ---

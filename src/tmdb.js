@@ -239,3 +239,18 @@ export async function haalActeur(id) {
     rollen: naarRollen(data.combined_credits),
   };
 }
+
+// --- Nieuwe afleveringen van series ---
+
+// Uit de seriegegevens van TMDB: de laatst verschenen en de eerstvolgende aflevering.
+export function naarAfleveringen(data) {
+  const ep = (e) =>
+    e && /^\d{4}-\d{2}-\d{2}$/.test(e.air_date ?? '') && Number.isInteger(e.season_number) && Number.isInteger(e.episode_number)
+      ? { dag: e.air_date, seizoen: e.season_number, aflevering: e.episode_number, naam: typeof e.name === 'string' ? e.name : '' }
+      : null;
+  return { laatste: ep(data?.last_episode_to_air), volgende: ep(data?.next_episode_to_air), seizoenen: naarSeizoenen(data?.seasons) };
+}
+
+export async function haalAfleveringen(tmdbId) {
+  return naarAfleveringen(await vraag(`/tv/${tmdbId}`));
+}

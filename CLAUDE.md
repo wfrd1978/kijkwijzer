@@ -84,3 +84,13 @@ Gebaseerd op de schets "Kijkwijzer – schets nieuw ontwerp" en de keuzes in SPE
 | 22 | Vandaag compleet: kijktip uit je lijst bij jouw diensten, en Deze week (maandag tot en met zondag) |
 | 23 | Sport met schakelaar Voetbal · Formule 1 · Wielrennen |
 | 24 | Instellingen opgeschoond in vier blokken |
+
+Het nieuwe ontwerp is af (stap 19–24).
+
+## Stappenplan Vandaag verder inrichten
+
+| Stap | Resultaat om te testen |
+|---|---|
+| 25 | Nieuwe afleveringen van series op je lijst: op Vandaag (gisteren en vandaag) en in Deze week |
+| 26 | Op Vandaag een korte agenda "Straks deze week": de eerstvolgende sport en afleveringen |
+| 27 | Nieuws op Vandaag; eerst samen een gratis, toegestane bron kiezen |

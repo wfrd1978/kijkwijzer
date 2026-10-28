@@ -589,3 +589,7 @@ a.titel { text-decoration: none; }
 #competities-uitklap .keuzes { padding: 4px 0 12px; }
 .blok-sub { margin: 22px 0 6px; font-family: var(--kop); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
 .blok h2 + .blok-sub { margin-top: 8px; }
+
+/* Nieuwe afleveringen */
+.afl-link { color: var(--tekst); text-decoration: none; }
+.nieuw-woord { color: var(--accent); }
