@@ -104,12 +104,23 @@ export function oranjeZender(competitie) {
     : [{ naam: 'NOS', zeker: true }];
 }
 
+// Landen in het Nederlands (TheSportsDB geeft Engelse namen).
+const LANDEN = {
+  Netherlands: 'Nederland', Germany: 'Duitsland', Belgium: 'België', France: 'Frankrijk', Spain: 'Spanje', Italy: 'Italië',
+  England: 'Engeland', Scotland: 'Schotland', Wales: 'Wales', Ireland: 'Ierland', 'Northern Ireland': 'Noord-Ierland',
+  Greece: 'Griekenland', Poland: 'Polen', Portugal: 'Portugal', Denmark: 'Denemarken', Norway: 'Noorwegen', Sweden: 'Zweden',
+  Finland: 'Finland', Iceland: 'IJsland', Austria: 'Oostenrijk', Switzerland: 'Zwitserland', Croatia: 'Kroatië', Serbia: 'Servië',
+  Hungary: 'Hongarije', 'Czech Republic': 'Tsjechië', Czechia: 'Tsjechië', Turkey: 'Turkije', Romania: 'Roemenië', Ukraine: 'Oekraïne',
+  Bosnia: 'Bosnië', 'Bosnia and Herzegovina': 'Bosnië en Herzegovina', Malta: 'Malta', Lithuania: 'Litouwen', Gibraltar: 'Gibraltar',
+  Brazil: 'Brazilië', Argentina: 'Argentinië', 'United States': 'Verenigde Staten', USA: 'Verenigde Staten', Mexico: 'Mexico', Japan: 'Japan',
+};
+
 export async function haalOranje({ fetcher = fetch } = {}) {
   const antwoord = await fetcher('https://www.thesportsdb.com/api/v1/json/123/eventsnext.php?id=133905');
   if (!antwoord.ok) throw new Error(`TheSportsDB gaf ${antwoord.status}`);
   const e = (await antwoord.json()).events?.[0];
   if (!e?.strTimestamp) return null;
-  const nl = (naam) => (naam === 'Netherlands' ? 'Nederland' : naam);
+  const nl = (naam) => LANDEN[naam] ?? naam;
   return {
     start: `${e.strTimestamp.replace(/Z?$/, '')}Z`,
     thuis: nl(e.strHomeTeam),

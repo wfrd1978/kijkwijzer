@@ -12,7 +12,8 @@ import {
 import { uitnodigingTekst, deel } from './delen.js';
 import { weekDagen, weekTekst } from './vandaag.js';
 import { kanaalVoor } from './espn.js';
-import { vanVandaag, ruimOudeDagenOp } from './dagcache.js';
+import { haalExtraWedstrijden, alBekend, EXTRA_ZENDERS } from './beker.js';
+import { vanVandaag, ruimOudeDagenOp, dagSleutel } from './dagcache.js';
 import { nieuwVoorJou, GENRE_NAMEN } from './nieuw.js';
 import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
@@ -603,7 +604,7 @@ async function sportItems(dagen) {
   const items = [];
   if (schema) {
     for (const w of mijnWedstrijden(schema.wedstrijden, leesVoetbalKeuzes()).filter((x) => op.has(nlDagVan(x)))) {
-      const c = COMPETITIES[w.competitie];
+      const c = competitieVan(w);
       items.push({ dag: nlDagVan(w), start: w.start, tijd: aftrap(w.start), naam: `${w.thuis.naam} – ${w.uit.naam}`, sub: c.naam, zenders: zendersVan(w, kanalen), soort: 'voetbal', thuis: w.thuis, uit: w.uit, mijnClub: [w.thuis.id, w.uit.id].some((id) => leesVoetbalKeuzes().clubs.includes(id)) });
     }
   }
@@ -634,7 +635,7 @@ async function sportVandaagHtml() {
   if (!items.length) return '<p class="leeg-klein">Geen sport vandaag bij jouw keuzes. <a href="#/sport">Bekijk het schema</a></p>';
   // Speelt een van je clubs vandaag, dan die wedstrijd groot bovenaan.
   const club = schema ? volgendeVanMijnClub(schema.wedstrijden, leesVoetbalKeuzes()) : null;
-  const kaart = club && nlDagVan(club) === vandaag() ? wedstrijdKaart(club, zendersVan(club, kanalen), mijn, `Jouw club · ${COMPETITIES[club.competitie].naam}`) : '';
+  const kaart = club && nlDagVan(club) === vandaag() ? wedstrijdKaart(club, zendersVan(club, kanalen), mijn, `Jouw club · ${competitieVan(club).naam}`) : '';
   // De uitgelichte wedstrijd niet nog een keer in de lijst.
   const rest = kaart ? items.filter((x) => !(x.start === club.start && x.naam === `${club.thuis.naam} – ${club.uit.naam}`)) : items;
   return `${kaart}${rest.length ? `<ul class="sport-vandaag">${rest
@@ -1571,8 +1572,59 @@ function haalKlaargezet(naam) {
   });
 }
 
-function haalVoetbal() {
+// Het schema van football-data, aangevuld met andere wedstrijden van je clubs (beker, Europa League).
+async function haalVoetbal() {
+  const schema = await haalKlaargezet('voetbal');
+  if (!schema) return null;
+  const extra = (leesExtra()?.wedstrijden ?? []).filter((w) => !alBekend(w, schema.wedstrijden));
+  return extra.length ? { ...schema, wedstrijden: [...schema.wedstrijden, ...extra].sort((a, b) => a.start.localeCompare(b.start)) } : schema;
+}
+
+// Alleen het schema van football-data (voor het kiezen van clubs per competitie).
+function haalVoetbalSchema() {
   return haalKlaargezet('voetbal');
+}
+
+const EXTRA = 'extraWedstrijden';
+function leesExtra() {
+  try {
+    return JSON.parse(localStorage.getItem(EXTRA) || 'null');
+  } catch {
+    return null;
+  }
+}
+
+// Eén keer per dag (op de achtergrond) de eerstvolgende wedstrijd van elk van je clubs bij
+// TheSportsDB opvragen, voor wat football-data gratis niet heeft, zoals de beker.
+async function werkExtraWedstrijdenBij() {
+  const keuzes = leesVoetbalKeuzes();
+  const sleutel = `${dagSleutel()}|${keuzes.clubs.join(',')}`;
+  if (!keuzes.clubs.length || leesExtra()?.sleutel === sleutel) return;
+  const schema = await haalVoetbalSchema();
+  if (!schema) return;
+  const ploegen = new Map(schema.wedstrijden.flatMap((w) => [w.thuis, w.uit]).filter((p) => p.id).map((p) => [p.id, p]));
+  const clubs = keuzes.clubs.map((id) => ploegen.get(id)).filter(Boolean);
+  let koppelingen = {};
+  try {
+    koppelingen = JSON.parse(localStorage.getItem('clubKoppelingen') || '{}');
+  } catch {
+    koppelingen = {};
+  }
+  const uit = await haalExtraWedstrijden(clubs, koppelingen);
+  try {
+    localStorage.setItem('clubKoppelingen', JSON.stringify(uit.koppelingen));
+    // Niet helemaal gelukt (bijvoorbeeld te veel vragen tegelijk): de volgende keer opnieuw proberen.
+    localStorage.setItem(EXTRA, JSON.stringify({ sleutel: uit.compleet ? sleutel : '', wedstrijden: uit.wedstrijden }));
+  } catch {
+    return;
+  }
+  // Staat er net een sportscherm open, dan bijwerken.
+  if (uit.wedstrijden.length && (document.getElementById('sport-vandaag') || document.getElementById('voetbal') || document.getElementById('week'))) route();
+}
+
+// Naam en zenders van de competitie van een wedstrijd (ook voor de aanvullende wedstrijden).
+function competitieVan(w) {
+  return COMPETITIES[w.competitie] ?? { naam: w.competitieNaam ?? 'Overige wedstrijd', kort: w.competitieNaam ?? '', zenders: EXTRA_ZENDERS[w.competitieNaam] ?? [] };
 }
 
 // De volgende interland van Oranje, één keer per dag.
@@ -1596,7 +1648,7 @@ async function haalEspn() {
 
 // De zenders van een wedstrijd; bij de Eredivisie met het precieze ESPN-kanaal als dat bekend is.
 function zendersVan(w, kanalen) {
-  const c = COMPETITIES[w.competitie];
+  const c = competitieVan(w);
   const kanaal = w.competitie === 'DED' ? kanaalVoor(w, kanalen, nlDagVan(w), aftrap(w.start)) : '';
   return kanaal ? c.zenders.map((z) => (z.naam === 'ESPN' ? { ...z, kanaal } : z)) : c.zenders;
 }
@@ -1649,7 +1701,7 @@ async function toonVoetbal(nr, mijn) {
   const kanalen = await haalEspn();
   if (!vak()) return;
   const rij = (w) => {
-    const c = COMPETITIES[w.competitie];
+    const c = competitieVan(w);
     const zenders = zendersVan(w, kanalen);
     const mijnClub = (p) => keuzes.clubs.includes(p.id);
     return `
@@ -1666,7 +1718,7 @@ async function toonVoetbal(nr, mijn) {
   const zichtbaar = dagen.filter(inWeek);
   const uitgelicht = volgendeVanMijnClub(schema.wedstrijden, keuzes);
   vak().innerHTML = `
-    ${uitgelicht ? wedstrijdKaart(uitgelicht, zendersVan(uitgelicht, kanalen), mijn, `Jouw club · ${COMPETITIES[uitgelicht.competitie].naam}`) : ''}
+    ${uitgelicht ? wedstrijdKaart(uitgelicht, zendersVan(uitgelicht, kanalen), mijn, `Jouw club · ${competitieVan(uitgelicht).naam}`) : ''}
     ${oranjeHtml}
     <div class="keuzes week-keuze" id="voetbal-week">
       <button class="keuze${voetbalWeek === 'deze' ? ' actief' : ''}" data-week="deze">Deze week</button>
@@ -1691,7 +1743,7 @@ async function toonVoetbal(nr, mijn) {
             .join('')
         : `<p class="leeg">Geen wedstrijden ${voetbalWeek === 'deze' ? 'meer deze week' : 'volgende week'} bij jouw keuzes.</p>`
     }
-    <p class="bron">Tijden in Nederlandse tijd. Schema van football-data.org, bijgewerkt ${veilig(new Date(schema.op).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }))}. Oranje via TheSportsDB. Zenders gecontroleerd in ${veilig(VOETBAL_GECONTROLEERD)}; Premier League en Bundesliga gaan mogelijk naar Videoland.</p>`;
+    <p class="bron">Tijden in Nederlandse tijd. Schema van football-data.org (bekerwedstrijden en dergelijke van je clubs via TheSportsDB), bijgewerkt ${veilig(new Date(schema.op).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }))}. Oranje via TheSportsDB. Zenders gecontroleerd in ${veilig(VOETBAL_GECONTROLEERD)}; Premier League en Bundesliga gaan mogelijk naar Videoland.</p>`;
   document.getElementById('voetbal-week').addEventListener('click', (e) => {
     const knop = e.target.closest('[data-week]');
     if (!knop || knop.dataset.week === voetbalWeek) return;
@@ -2100,7 +2152,7 @@ async function toonTitel(id, { naarSterren = false } = {}) {
 // --- Instellingen ---
 
 async function toonClubsKeuze(nr) {
-  const schema = await haalVoetbal();
+  const schema = await haalVoetbalSchema();
   const vak = nr === schermNr ? document.getElementById('clubs-keuze') : null;
   if (!vak) return;
   if (!schema) {
@@ -2603,6 +2655,8 @@ setTimeout(async () => {
   await vulActeursAan();
   await controleerNieuw();
 }, 3000);
+// Bekerwedstrijden en dergelijke van je clubs: los daarvan, want TheSportsDB wil rustig gevraagd worden.
+setTimeout(werkExtraWedstrijdenBij, 1500);
 
 window.addEventListener('hashchange', () => {
   binnenApp = true;

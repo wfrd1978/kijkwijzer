@@ -20,7 +20,7 @@ if (!SLEUTEL) {
 const dag = (d) => d.toISOString().slice(0, 10);
 const van = new Date(Date.now() - 86400000);
 const tot = new Date(Date.now() + DAGEN_VOORUIT * 86400000);
-const ploeg = (t) => ({ id: t?.id ?? null, naam: t?.shortName || t?.name || 'Nog onbekend', logo: t?.crest ?? '' });
+const ploeg = (t) => ({ id: t?.id ?? null, naam: t?.shortName || t?.name || 'Nog onbekend', vol: t?.name ?? '', logo: t?.crest ?? '' });
 
 const wedstrijden = [];
 let gelukt = 0;
