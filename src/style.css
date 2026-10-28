@@ -551,3 +551,29 @@ a.titel { text-decoration: none; }
 .dag-samenvatting { font-size: 0.85rem; color: var(--zacht); }
 .dag-samenvatting strong { color: var(--accent); font-weight: 700; }
 .dag-blok .wedstrijd:last-child { border-bottom: 0; }
+
+/* --- Vandaag: keuze dag/week, kijktip en Deze week --- */
+.vandaag-keuze { margin: -4px 0 4px; }
+.kijktip { position: relative; display: block; height: 170px; border-radius: 14px; overflow: hidden; background: var(--vlak); color: #fff; text-decoration: none; }
+.kijktip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.kijktip-tekst {
+  position: absolute; inset: 0; padding: 16px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
+  background: linear-gradient(to top, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0.15) 70%);
+}
+.kijktip-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--goud); }
+.kijktip-tekst strong { font-family: var(--kop); font-weight: 800; font-size: 1.9rem; line-height: 1; text-transform: uppercase; }
+.kijktip-tekst span:last-child { font-size: 0.85rem; color: #e2ded6; }
+#kijktip .link-knop { padding: 10px 0 0; color: var(--zacht); font-size: 0.9rem; }
+.vandaag-blok + .nieuw-melding { margin-top: 24px; }
+
+.week { list-style: none; margin: 8px 0 0; padding: 0; }
+.week-dag { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--lijn); }
+.week-dag.voorbij { opacity: 0.5; }
+.week-dag.is-vandaag { background: var(--vlak); margin: 0 -16px; padding: 12px 16px; }
+.week-datum { width: 40px; flex: none; display: flex; flex-direction: column; align-items: center; font-family: var(--kop); }
+.week-datum span { font-weight: 700; font-size: 0.85rem; text-transform: uppercase; color: var(--zacht); }
+.week-datum strong { font-weight: 800; font-size: 1.6rem; line-height: 1; }
+.is-vandaag .week-datum span, .is-vandaag .week-datum strong { color: var(--accent); }
+.week-wat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; justify-content: center; font-size: 0.92rem; }
+.week-regel { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.week-regel .zender-chip { flex: none; }

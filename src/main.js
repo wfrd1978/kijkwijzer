@@ -10,6 +10,7 @@ import {
   perDag, weekStart, aftrap, dagNaam, haalOranje,
 } from './voetbal.js';
 import { uitnodigingTekst, deel } from './delen.js';
+import { kiesKijktips, weekDagen, weekTekst } from './vandaag.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
 import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
@@ -471,36 +472,45 @@ function verderKaart(t) {
     </div>`;
 }
 
-// Alles wat vandaag op tv of bij een stream is aan voetbal, Formule 1 en wielrennen dat jij volgt.
-async function sportVandaagHtml() {
-  const mijn = leesSportzenders();
-  const dag = vandaag();
+// Alles aan voetbal, Formule 1 en wielrennen dat jij volgt, op de gevraagde dagen ('jjjj-mm-dd').
+async function sportItems(dagen) {
+  const op = new Set(dagen);
   const [schema, f1, oranje] = await Promise.all([haalVoetbal(), haalF1().catch(() => null), haalOranje().catch(() => null)]);
   const items = [];
   if (schema) {
-    for (const w of mijnWedstrijden(schema.wedstrijden, leesVoetbalKeuzes()).filter((x) => nlDagVan(x) === dag)) {
+    for (const w of mijnWedstrijden(schema.wedstrijden, leesVoetbalKeuzes()).filter((x) => op.has(nlDagVan(x)))) {
       const c = COMPETITIES[w.competitie];
-      items.push({ start: w.start, tijd: aftrap(w.start), naam: `${w.thuis.naam} – ${w.uit.naam}`, sub: c.naam, zenders: c.zenders });
+      items.push({ dag: nlDagVan(w), start: w.start, tijd: aftrap(w.start), naam: `${w.thuis.naam} – ${w.uit.naam}`, sub: c.naam, zenders: c.zenders });
     }
   }
-  if (oranje && nlDagVan(oranje) === dag) {
-    items.push({ start: oranje.start, tijd: aftrap(oranje.start), naam: `${oranje.thuis} – ${oranje.uit}`, sub: oranje.competitie, zenders: oranje.zenders });
+  if (oranje && op.has(nlDagVan(oranje))) {
+    items.push({ dag: nlDagVan(oranje), start: oranje.start, tijd: aftrap(oranje.start), naam: `${oranje.thuis} – ${oranje.uit}`, sub: oranje.competitie, zenders: oranje.zenders });
   }
   for (const r of f1?.races ?? []) {
-    for (const s of r.sessies.filter((x) => nlDagVan(x) === dag)) {
-      items.push({ start: s.start, tijd: s.metTijd ? aftrap(s.start) : '', naam: `${s.naam} · ${r.naam}`, sub: 'Formule 1', zenders: [{ naam: F1_ZENDERS.live, zeker: true }] });
+    for (const s of r.sessies.filter((x) => op.has(nlDagVan(x)))) {
+      items.push({ dag: nlDagVan(s), start: s.start, tijd: s.metTijd ? aftrap(s.start) : '', naam: `${s.naam} · ${r.naam}`, sub: 'Formule 1', zenders: [{ naam: F1_ZENDERS.live, zeker: true }] });
     }
   }
-  for (const k of WIELRENNEN.koersen.filter((x) => x.van <= dag && (x.tot ?? x.van) >= dag)) {
-    items.push({ start: '', tijd: '', naam: k.naam, sub: `Wielrennen · ${k.soort}`, zenders: k.zenders });
+  for (const dag of dagen) {
+    for (const k of WIELRENNEN.koersen.filter((x) => x.van <= dag && (x.tot ?? x.van) >= dag)) {
+      items.push({ dag, start: `${dag}T00:00`, tijd: '', naam: k.naam, sub: `Wielrennen · ${k.soort}`, zenders: k.zenders });
+    }
   }
+  return items.sort((a, b) => a.start.localeCompare(b.start));
+}
+
+// Eén zender per regel: liefst een van jouw zenders.
+function eenZender(zenders, mijn) {
+  return zenders.find((z) => mijn.includes(z.naam)) ?? zenders[0] ?? null;
+}
+
+async function sportVandaagHtml() {
+  const mijn = leesSportzenders();
+  const items = await sportItems([vandaag()]);
   if (!items.length) return '<p class="leeg-klein">Geen sport vandaag bij jouw keuzes. <a href="#/sport">Bekijk het schema</a></p>';
-  items.sort((a, b) => a.start.localeCompare(b.start));
-  // Eén zender per regel: liefst een van jouw zenders.
-  const zender = (zenders) => zenders.find((z) => mijn.includes(z.naam)) ?? zenders[0];
   return `<ul class="sport-vandaag">${items
     .map((x) => {
-      const z = x.zenders.length ? zender(x.zenders) : null;
+      const z = eenZender(x.zenders, mijn);
       return `
       <li>
         <span class="sport-tijd${x.tijd ? '' : ' dag'}">${x.tijd ? veilig(x.tijd) : 'Hele dag'}</span>
@@ -511,11 +521,66 @@ async function sportVandaagHtml() {
     .join('')}</ul>`;
 }
 
+// Deze week: maandag tot en met zondag, per dag wat jij volgt. Afgelopen dagen staan grijs.
+async function weekHtml() {
+  const mijn = leesSportzenders();
+  const dagen = weekDagen(vandaag());
+  const items = await sportItems(dagen);
+  const regels = dagen.map((dag) => {
+    const d = new Date(`${dag}T12:00:00Z`);
+    const wat = items.filter((x) => x.dag === dag);
+    return `
+      <li class="week-dag${dag < vandaag() ? ' voorbij' : ''}${dag === vandaag() ? ' is-vandaag' : ''}">
+        <div class="week-datum">
+          <span>${d.toLocaleDateString('nl-NL', { weekday: 'short', timeZone: 'UTC' }).slice(0, 2)}</span>
+          <strong>${d.getUTCDate()}</strong>
+        </div>
+        <div class="week-wat">${
+          wat.length
+            ? wat
+                .map((x) => {
+                  const z = eenZender(x.zenders, mijn);
+                  return `<div class="week-regel"><span>${x.tijd ? `<strong>${veilig(x.tijd)}</strong> ` : ''}${veilig(x.naam)} <span class="zacht">· ${veilig(x.sub)}</span></span>${z ? zenderChip(z, mijn, true) : ''}</div>`;
+                })
+                .join('')
+            : '<span class="zacht">Geen sport bij jouw keuzes</span>'
+        }</div>
+      </li>`;
+  });
+  return `<ul class="week">${regels.join('')}</ul>
+    <p class="bron">Alleen wat jij volgt in Sport: je clubs en competities, Oranje, Formule 1 en wielrennen. Tijden in Nederlandse tijd.</p>`;
+}
+
+// De kijktip: iets van je eigen lijst dat je vanavond bij een van je diensten kunt kijken.
+function kijktipHtml(tips, i) {
+  if (!tips.length) return '';
+  const { titel: t, dienst } = tips[i % tips.length];
+  const beeld = veiligeUrl(posterUrl(t.achtergrond || t.poster, t.achtergrond ? 'w780' : 'w342'));
+  return `
+    <a class="kijktip" href="#/titel/${t.id}">
+      ${beeld ? `<img src="${beeld}" alt="" loading="lazy" />` : ''}
+      <div class="kijktip-tekst">
+        <span class="kijktip-label">${t.nieuwBij?.length ? 'Nieuw' : 'Uit je lijst'} · bij ${veilig(dienst.naam)}</span>
+        <strong>${veilig(t.titel)}</strong>
+        <span>${soortJaar(t)}</span>
+      </div>
+    </a>
+    ${tips.length > 1 ? '<button class="link-knop" id="andere-tip">Andere tip</button>' : ''}`;
+}
+
+let vandaagWeergave = 'dag';
+let tipNr = 0;
+
 async function toonVandaag() {
   const nr = schermNr;
   const titels = await alleTitels();
   if (nr !== schermNr) return;
-  const kop = schermKop('Vandaag', new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }));
+  const week = vandaagWeergave === 'week';
+  const dagen = weekDagen(vandaag());
+  const kop = schermKop(
+    week ? 'Deze week' : 'Vandaag',
+    week ? weekTekst(dagen) : new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
+  );
   if (!leesSleutel() && !titels.length) {
     app.innerHTML = `
       ${kop}
@@ -525,10 +590,34 @@ async function toonVandaag() {
       </section>`;
     return;
   }
+  const keuze = `
+    <div class="keuzes vandaag-keuze" id="vandaag-keuze">
+      <button class="keuze${week ? '' : ' actief'}" data-w="dag">Vandaag</button>
+      <button class="keuze${week ? ' actief' : ''}" data-w="week">Deze week</button>
+    </div>`;
+  const koppelKeuze = () =>
+    document.getElementById('vandaag-keuze').addEventListener('click', (e) => {
+      const knop = e.target.closest('[data-w]');
+      if (!knop || knop.dataset.w === vandaagWeergave) return;
+      vandaagWeergave = knop.dataset.w;
+      schermNr += 1;
+      toonVandaag();
+    });
+
+  if (week) {
+    app.innerHTML = `${kop}${keuze}<div id="week"><p class="bezig">Ophalen…</p></div>`;
+    koppelKeuze();
+    const html = await weekHtml();
+    if (nr === schermNr) document.getElementById('week').innerHTML = html;
+    return;
+  }
+
   const verder = titels.filter((t) => t.soort === 'serie' && t.status !== 'Gezien' && t.voortgang);
+  const heeftDiensten = Object.values(leesKeuzes()).includes('abonnement');
+  const tips = kiesKijktips(titels, leesKeuzes(), vandaag());
   app.innerHTML = `
     ${kop}
-    ${nieuwHtml(titels)}
+    ${keuze}
     ${titels.length && moetHerinneren(titels.length) ? herinneringHtml() : ''}
     ${
       titels.length
@@ -540,8 +629,22 @@ async function toonVandaag() {
       <h2 class="vak-kop">Sport vandaag</h2>
       <div id="sport-vandaag"><p class="bezig">Ophalen…</p></div>
     </section>
+    ${
+      tips.length
+        ? `<section class="vandaag-blok"><h2 class="vak-kop">Kijktip voor vanavond</h2><div id="kijktip">${kijktipHtml(tips, tipNr)}</div></section>`
+        : titels.length && !heeftDiensten
+          ? '<section class="vandaag-blok"><h2 class="vak-kop">Kijktip voor vanavond</h2><p class="leeg-klein">Kies in <a href="#/instellingen">Instellingen</a> welke diensten je hebt, dan krijg je hier een tip uit je eigen lijst.</p></section>'
+          : ''
+    }
+    ${nieuwHtml(titels)}
   `;
+  koppelKeuze();
 
+  document.getElementById('kijktip')?.addEventListener('click', (e) => {
+    if (!e.target.closest('#andere-tip')) return;
+    tipNr += 1;
+    document.getElementById('kijktip').innerHTML = kijktipHtml(tips, tipNr);
+  });
   document.getElementById('verder')?.addEventListener('click', async (e) => {
     const knop = e.target.closest('[data-volgende]');
     if (!knop) return;
@@ -1111,11 +1214,11 @@ async function toonVoetbal(nr, mijn) {
       zichtbaar.length
         ? zichtbaar
             .map((d, i) => {
-              // Per dag inklapbaar: de eerste dag staat open, de rest toont alleen een samenvatting.
+              // Per dag inklapbaar: deze week staat de eerste dag open, volgende week begint alles dicht.
               const clubs = [...new Set(d.wedstrijden.flatMap((w) => [w.thuis, w.uit]).filter((p) => keuzes.clubs.includes(p.id)).map((p) => p.naam))];
               const aantal = d.wedstrijden.length === 1 ? '1 wedstrijd' : `${d.wedstrijden.length} wedstrijden`;
               return `
-              <details class="dag-blok"${i === 0 ? ' open' : ''}>
+              <details class="dag-blok"${i === 0 && voetbalWeek === 'deze' ? ' open' : ''}>
                 <summary>
                   <span class="label sport-label">${veilig(dagNaam(d.dag, vandaag()))}</span>
                   <span class="dag-samenvatting">${aantal}${clubs.length ? ` · met <strong>${clubs.map(veilig).join(', ')}</strong>` : ''}</span>
