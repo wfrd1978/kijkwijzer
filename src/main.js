@@ -696,13 +696,13 @@ async function toonVandaag() {
       <h2 class="vak-kop">Sport vandaag</h2>
       <div id="sport-vandaag"><p class="bezig">Ophalen…</p></div>
     </section>
+    <section class="vandaag-blok" id="npo-blok" hidden>
+      <h2 class="vak-kop">Vanavond op de NPO</h2>
+      <div id="npo"></div>
+    </section>
     <section class="vandaag-blok" id="straks-blok" hidden>
       <h2 class="vak-kop">Deze week</h2>
       <div id="straks"></div>
-    </section>
-    <section class="vandaag-blok" id="npo-blok" hidden>
-      <h2 class="vak-kop">Vanavond op NPO</h2>
-      <div id="npo"></div>
     </section>
     ${nieuwHtml(titels)}
   `;
@@ -766,7 +766,7 @@ async function toonVandaag() {
   await tekenStraks(stand);
 }
 
-// Vanavond op NPO: één grote tip (iets van je lijst gaat voor), en nog twee kleinere.
+// Vanavond op de NPO: één grote tip (iets van je lijst gaat voor), en nog twee kleinere.
 function npoHtml(avond) {
   const [tip, ...rest] = avond;
   const beeld = veiligeUrl(tip.beeld);
@@ -1996,7 +1996,7 @@ async function toonInstellingen() {
       </details>
 
       <h3 class="blok-sub">Tv-tips</h3>
-      <p>Wat zie je graag op tv? Daar stemt Vanavond op NPO de tips op af. Nieuws en jeugdprogramma's worden nooit een tip.</p>
+      <p>Wat zie je graag op tv? Daar stemt Vanavond op de NPO de tips op af. Nieuws en jeugdprogramma's worden nooit een tip.</p>
       <details class="uitklap" id="tv-genres-uitklap">
         <summary><span class="uitklap-kop">Genres</span><span class="zacht uitklap-stand" id="tv-genres-stand">${veilig(tvStand('genres'))}</span></summary>
         <div class="keuzes" id="tv-genres">${Object.entries(TV_GENRES)
