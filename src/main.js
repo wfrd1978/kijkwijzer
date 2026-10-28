@@ -562,10 +562,9 @@ function dienstVan(t) {
   return t.diensten ? verdeelDiensten(t.diensten, leesKeuzes()).bijJou[0] ?? null : null;
 }
 
-async function weekHtml(titels, stand) {
-  const mijn = leesSportzenders();
-  const dagen = weekDagen(vandaag());
-  const items = [
+// Alles wat jij volgt op deze dagen: sport, wat van je lijst op NPO komt, en nieuwe afleveringen.
+async function agendaItems(titels, stand, dagen) {
+  return [
     ...(await sportItems(dagen)),
     // Nieuwe afleveringen staan bovenaan hun dag.
     // Wat van je Wil ik zien deze week op NPO komt.
@@ -576,6 +575,19 @@ async function weekHtml(titels, stand) {
       dag: e.dag, start: `${e.dag}T00:00`, tijd: '', naam: `${e.titel.titel} ${afleveringKort(e)}`, sub: 'Nieuwe aflevering', zenders: [], dienst: dienstVan(e.titel), nieuw: true,
     })),
   ].sort((a, b) => a.start.localeCompare(b.start));
+}
+
+// Eén regel in de agenda: tijd (of 'Nieuw'), wat, en rechts de zender of dienst.
+function agendaRegel(x, mijn) {
+  const z = eenZender(x.zenders, mijn);
+  const rechts = x.nieuw ? (x.dienst ? `<span class="zender-chip mijn">${veilig(x.dienst.naam)}</span>` : '') : z ? zenderChip(z, mijn, true) : '';
+  return `<div class="week-regel"><span>${x.tijd ? `<strong>${veilig(x.tijd)}</strong> ` : x.nieuw ? '<strong class="nieuw-woord">Nieuw</strong> ' : ''}${veilig(x.naam)} <span class="zacht">· ${veilig(x.sub)}</span></span>${rechts}</div>`;
+}
+
+async function weekHtml(titels, stand) {
+  const mijn = leesSportzenders();
+  const dagen = weekDagen(vandaag());
+  const items = await agendaItems(titels, stand, dagen);
   const regels = dagen.map((dag) => {
     const d = new Date(`${dag}T12:00:00Z`);
     const wat = items.filter((x) => x.dag === dag);
@@ -587,19 +599,35 @@ async function weekHtml(titels, stand) {
         </div>
         <div class="week-wat">${
           wat.length
-            ? wat
-                .map((x) => {
-                  const z = eenZender(x.zenders, mijn);
-                  const rechts = x.nieuw ? (x.dienst ? `<span class="zender-chip mijn">${veilig(x.dienst.naam)}</span>` : '') : z ? zenderChip(z, mijn, true) : '';
-                  return `<div class="week-regel"><span>${x.tijd ? `<strong>${veilig(x.tijd)}</strong> ` : x.nieuw ? '<strong class="nieuw-woord">Nieuw</strong> ' : ''}${veilig(x.naam)} <span class="zacht">· ${veilig(x.sub)}</span></span>${rechts}</div>`;
-                })
-                .join('')
+            ? wat.map((x) => agendaRegel(x, mijn)).join('')
             : '<span class="zacht">Niets bij jouw keuzes</span>'
         }</div>
       </li>`;
   });
   return `<ul class="week">${regels.join('')}</ul>
     <p class="bron">Alleen wat jij volgt: nieuwe afleveringen van series op je lijst, en in Sport je clubs en competities, Oranje, Formule 1 en wielrennen. Tijden in Nederlandse tijd; afleveringen volgens TMDB.</p>`;
+}
+
+// Straks deze week: de eerstvolgende vijf dingen die je volgt, van morgen tot een week vooruit.
+async function strakHtmlVoor(titels, stand) {
+  const mijn = leesSportzenders();
+  const dagen = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(`${vandaag()}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + i + 1);
+    return d.toISOString().slice(0, 10);
+  });
+  const items = (await agendaItems(titels, stand, dagen)).slice(0, 5);
+  if (!items.length) return '';
+  const dagKort = (dag) => {
+    const morgen = dagen[0];
+    if (dag === morgen) return 'Morgen';
+    return new Date(`${dag}T12:00:00Z`).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
+  };
+  return `
+    <ul class="straks">${items
+      .map((x) => `<li><span class="straks-dag">${veilig(dagKort(x.dag))}</span>${agendaRegel(x, mijn)}</li>`)
+      .join('')}</ul>
+    <button class="link-knop" id="hele-week">Bekijk de hele week</button>`;
 }
 
 // De kijktip: iets van je eigen lijst dat je vanavond bij een van je diensten kunt kijken.
@@ -688,6 +716,10 @@ async function toonVandaag() {
       <h2 class="vak-kop">Sport vandaag</h2>
       <div id="sport-vandaag"><p class="bezig">Ophalen…</p></div>
     </section>
+    <section class="vandaag-blok" id="straks-blok" hidden>
+      <h2 class="vak-kop">Straks deze week</h2>
+      <div id="straks"></div>
+    </section>
     ${
       tips.length
         ? `<section class="vandaag-blok"><h2 class="vak-kop">Kijktip voor vanavond</h2><div id="kijktip">${kijktipHtml(tips, tipNr)}</div></section>`
@@ -733,6 +765,19 @@ async function toonVandaag() {
   const sport = await sportVandaagHtml();
   if (nr === schermNr) document.getElementById('sport-vandaag').innerHTML = sport;
 
+  const tekenStraks = async (stand) => {
+    const html = await strakHtmlVoor(titels, stand);
+    if (nr !== schermNr) return;
+    document.getElementById('straks').innerHTML = html;
+    document.getElementById('straks-blok').hidden = !html;
+    document.getElementById('hele-week')?.addEventListener('click', () => {
+      vandaagWeergave = 'week';
+      schermNr += 1;
+      toonVandaag();
+    });
+  };
+  await tekenStraks(leesAfleveringen());
+
   const npo = await haalNpo();
   const avond = npo ? vanavond(npo.programmas, titels, new Date(), leesTvVoorkeuren()) : [];
   if (nr === schermNr && avond.length) {
@@ -750,6 +795,7 @@ async function toonVandaag() {
   const html = afleveringenHtml(titels, stand);
   document.getElementById('afleveringen').innerHTML = html;
   document.getElementById('afleveringen-blok').hidden = !html;
+  await tekenStraks(stand);
 }
 
 // Vanavond op NPO: één grote tip (iets van je lijst gaat voor), en nog twee kleinere.

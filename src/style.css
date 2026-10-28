@@ -614,3 +614,11 @@ button.afl-link { border: 0; background: none; padding: 0; text-align: left; fon
 .npo-detail .tweede-knop { margin-top: 0; }
 .bevestig-waar { text-align: left; }
 .verborgen-diensten a { color: var(--accent); }
+
+/* Straks deze week */
+.straks { list-style: none; margin: 0; padding: 4px 14px; border-radius: 14px; background: var(--vlak); }
+.straks li { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--lijn); font-size: 0.92rem; }
+.straks li:last-child { border-bottom: 0; }
+.straks-dag { width: 58px; flex: none; font-family: var(--kop); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--zacht); }
+.straks .week-regel { flex: 1; min-width: 0; }
+#straks .link-knop { padding: 10px 0 0; color: var(--zacht); font-size: 0.9rem; }
