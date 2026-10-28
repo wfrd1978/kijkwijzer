@@ -622,3 +622,8 @@ button.afl-link { border: 0; background: none; padding: 0; text-align: left; fon
 .straks-dag { width: 58px; flex: none; font-family: var(--kop); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--zacht); }
 .straks .week-regel { flex: 1; min-width: 0; }
 #straks .link-knop { padding: 10px 0 0; color: var(--zacht); font-size: 0.9rem; }
+
+/* Vier knoppen onderin: labels op één regel */
+.balk { padding: 5px; }
+.balk a { padding: 7px 2px; gap: 3px; }
+.balk a span { white-space: nowrap; font-size: 0.68rem; letter-spacing: -0.01em; }

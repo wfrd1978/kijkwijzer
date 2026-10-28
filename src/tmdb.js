@@ -254,3 +254,28 @@ export function naarAfleveringen(data) {
 export async function haalAfleveringen(tmdbId) {
   return naarAfleveringen(await vraag(`/tv/${tmdbId}`));
 }
+
+// --- Nieuw voor jou ---
+
+// De genres (TMDB-nummers) van één film of serie.
+export async function haalGenres(soort, tmdbId) {
+  const data = await vraag(`/${TMDB_SOORT[soort]}/${tmdbId}`);
+  return (data.genres ?? []).map((g) => g.id).filter(Number.isInteger);
+}
+
+// Recent verschenen films of series bij jouw diensten, eventueel alleen in de genres die je graag ziet.
+// Nieuws, praatprogramma's, soaps en kinderseries vallen weg.
+export async function haalNieuwOpDiensten(soort, ids, genres, vanaf) {
+  const s = TMDB_SOORT[soort];
+  const data = await vraag(`/discover/${s}`, {
+    ...dienstenParams(ids),
+    ...(genres.length ? { with_genres: genres.join('|') } : {}),
+    ...(s === 'movie' ? { 'primary_release_date.gte': vanaf } : { 'first_air_date.gte': vanaf, without_genres: '10762,10763,10766,10767' }),
+  });
+  return (data.results ?? [])
+    .map((r) => {
+      const t = naarTitel(r, s);
+      return t && { ...t, genreIds: (r.genre_ids ?? []).filter(Number.isInteger), achtergrond: r.backdrop_path ?? '' };
+    })
+    .filter(Boolean);
+}

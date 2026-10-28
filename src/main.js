@@ -1,7 +1,7 @@
 import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
-import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur, haalAfleveringen } from './tmdb.js';
+import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur, haalAfleveringen, haalGenres, haalNieuwOpDiensten } from './tmdb.js';
 import { kiesFavorieten, combineerTips } from './tips.js';
 import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, ZENDER_GIDS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
 import { WIELRENNEN, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
@@ -11,6 +11,7 @@ import {
 } from './voetbal.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { weekDagen, weekTekst } from './vandaag.js';
+import { nieuwVoorJou, GENRE_NAMEN } from './nieuw.js';
 import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
@@ -621,40 +622,45 @@ async function weekHtml(titels, stand) {
     <p class="bron">Alleen wat jij volgt: nieuwe afleveringen van series op je lijst, en in Sport je clubs en competities, Oranje, Formule 1 en wielrennen. Tijden in Nederlandse tijd; afleveringen volgens TMDB.</p>`;
 }
 
-// Deze week (op Vandaag): de eerstvolgende vijf dingen die je volgt, van morgen tot een week vooruit.
-async function strakHtmlVoor(titels, stand) {
-  const mijn = leesSportzenders();
-  const dagen = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(`${vandaag()}T12:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + i + 1);
-    return d.toISOString().slice(0, 10);
-  });
-  const items = (await agendaItems(titels, stand, dagen)).slice(0, 5);
-  if (!items.length) return '';
-  const dagKort = (dag) => {
-    const morgen = dagen[0];
-    if (dag === morgen) return 'Morgen';
-    return new Date(`${dag}T12:00:00Z`).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
-  };
-  return `
-    <ul class="straks">${items
-      .map((x) => `<li><span class="straks-dag">${veilig(dagKort(x.dag))}</span>${agendaRegel(x, mijn)}</li>`)
-      .join('')}</ul>
-    <button class="link-knop" id="hele-week">Bekijk de hele week</button>`;
+// --- Deze week: eigen scherm, maandag tot en met zondag ---
+
+async function toonWeek() {
+  const nr = schermNr;
+  const titels = await alleTitels();
+  if (nr !== schermNr) return;
+  app.innerHTML = `${schermKop('Deze week', weekTekst(weekDagen(vandaag())))}<div id="week"><p class="bezig">Ophalen…</p></div>`;
+  const html = await weekHtml(titels, leesAfleveringen());
+  if (nr !== schermNr) return;
+  document.getElementById('week').innerHTML = html;
+  // Daarna (hooguit één keer per dag) de afleveringen bijwerken en de week opnieuw tekenen.
+  if (!leesSleutel()) return;
+  const stand = await werkAfleveringenBij(titels, vandaag(), haalAfleveringen);
+  if (nr === schermNr) document.getElementById('week').innerHTML = await weekHtml(titels, stand);
 }
 
-let vandaagWeergave = 'dag';
+// --- Vandaag ---
+
+// Nieuw voor jou: één recent verschenen film of serie bij jouw diensten, in jouw smaak.
+function nieuwVoorJouHtml(t) {
+  const beeld = veiligeUrl(posterUrl(t.achtergrond || t.poster, t.achtergrond ? 'w780' : 'w342'));
+  const genres = (t.genreIds ?? []).map((g) => GENRE_NAMEN[g]).filter(Boolean).slice(0, 2);
+  return `
+    <button class="kijktip" id="nieuw-voor-jou-tip">
+      ${beeld ? `<img src="${beeld}" alt="" loading="lazy" />` : ''}
+      <div class="kijktip-tekst">
+        <span class="kijktip-label">Nieuw bij jouw diensten${genres.length ? ` · ${veilig(genres.join(', '))}` : ''}</span>
+        <strong>${veilig(t.titel)}</strong>
+        <span>${soortJaar(t)}</span>
+      </div>
+    </button>
+    <p class="bron">Elke dag een andere tip, gekozen op de genres van wat je hoog waardeert en wilt zien.</p>`;
+}
 
 async function toonVandaag() {
   const nr = schermNr;
   const titels = await alleTitels();
   if (nr !== schermNr) return;
-  const week = vandaagWeergave === 'week';
-  const dagen = weekDagen(vandaag());
-  const kop = schermKop(
-    week ? 'Deze week' : 'Vandaag',
-    week ? weekTekst(dagen) : new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
-  );
+  const kop = schermKop('Vandaag', new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }));
   if (!leesSleutel() && !titels.length) {
     app.innerHTML = `
       ${kop}
@@ -664,36 +670,11 @@ async function toonVandaag() {
       </section>`;
     return;
   }
-  const keuze = `
-    <div class="keuzes vandaag-keuze" id="vandaag-keuze">
-      <button class="keuze${week ? '' : ' actief'}" data-w="dag">Vandaag</button>
-      <button class="keuze${week ? ' actief' : ''}" data-w="week">Deze week</button>
-    </div>`;
-  const koppelKeuze = () =>
-    document.getElementById('vandaag-keuze').addEventListener('click', (e) => {
-      const knop = e.target.closest('[data-w]');
-      if (!knop || knop.dataset.w === vandaagWeergave) return;
-      vandaagWeergave = knop.dataset.w;
-      schermNr += 1;
-      toonVandaag();
-    });
-
-  if (week) {
-    app.innerHTML = `${kop}${keuze}<div id="week"><p class="bezig">Ophalen…</p></div>`;
-    koppelKeuze();
-    const html = await weekHtml(titels, leesAfleveringen());
-    if (nr !== schermNr) return;
-    document.getElementById('week').innerHTML = html;
-    // Daarna (hooguit één keer per dag) de afleveringen bijwerken en de week opnieuw tekenen.
-    const stand = await werkAfleveringenBij(titels, vandaag(), haalAfleveringen);
-    if (nr === schermNr) document.getElementById('week').innerHTML = await weekHtml(titels, stand);
-    return;
-  }
 
   const verder = titels.filter((t) => t.soort === 'serie' && t.status !== 'Gezien' && t.voortgang);
+  const eigen = eigenDiensten();
   app.innerHTML = `
     ${kop}
-    ${keuze}
     ${titels.length && moetHerinneren(titels.length) ? herinneringHtml() : ''}
     ${
       titels.length
@@ -713,13 +694,16 @@ async function toonVandaag() {
       <h2 class="vak-kop">Vanavond op de NPO</h2>
       <div id="npo"></div>
     </section>
-    <section class="vandaag-blok" id="straks-blok" hidden>
-      <h2 class="vak-kop">Deze week</h2>
-      <div id="straks"></div>
-    </section>
+    ${
+      leesSleutel()
+        ? `<section class="vandaag-blok" id="nieuw-voor-jou-blok"${eigen.length ? ' hidden' : ''}>
+             <h2 class="vak-kop">Nieuw voor jou</h2>
+             <div id="nieuw-voor-jou">${eigen.length ? '' : '<p class="leeg-klein">Kies in <a href="#/instellingen">Instellingen</a> welke streamingdiensten je hebt, dan krijg je hier elke dag een nieuwe film of serie in jouw smaak.</p>'}</div>
+           </section>`
+        : ''
+    }
     ${nieuwHtml(titels)}
   `;
-  koppelKeuze();
 
   document.getElementById('verder')?.addEventListener('click', async (e) => {
     const knop = e.target.closest('[data-volgende]');
@@ -746,19 +730,6 @@ async function toonVandaag() {
   const sport = await sportVandaagHtml();
   if (nr === schermNr) document.getElementById('sport-vandaag').innerHTML = sport;
 
-  const tekenStraks = async (stand) => {
-    const html = await strakHtmlVoor(titels, stand);
-    if (nr !== schermNr) return;
-    document.getElementById('straks').innerHTML = html;
-    document.getElementById('straks-blok').hidden = !html;
-    document.getElementById('hele-week')?.addEventListener('click', () => {
-      vandaagWeergave = 'week';
-      schermNr += 1;
-      toonVandaag();
-    });
-  };
-  await tekenStraks(leesAfleveringen());
-
   const npo = await haalNpo();
   const avond = npo ? vanavond(npo.programmas, titels, new Date(), leesTvVoorkeuren()) : [];
   if (nr === schermNr && avond.length) {
@@ -771,12 +742,22 @@ async function toonVandaag() {
   }
 
   if (!leesSleutel()) return;
+  if (eigen.length) {
+    const tip = await nieuwVoorJou({ titels, diensten: eigen, dag: vandaag(), haalGenres, haalNieuw: haalNieuwOpDiensten }).catch(() => null);
+    if (nr === schermNr && tip) {
+      document.getElementById('nieuw-voor-jou').innerHTML = nieuwVoorJouHtml(tip);
+      document.getElementById('nieuw-voor-jou-blok').hidden = false;
+      document.getElementById('nieuw-voor-jou-tip').addEventListener('click', () =>
+        toonBevestigen(tip, null, { naam: 'Vandaag', toon: () => toonVandaag() })
+      );
+    }
+  }
+
   const stand = await werkAfleveringenBij(titels, vandaag(), haalAfleveringen);
   if (nr !== schermNr) return;
   const html = afleveringenHtml(titels, stand);
   document.getElementById('afleveringen').innerHTML = html;
   document.getElementById('afleveringen-blok').hidden = !html;
-  await tekenStraks(stand);
 }
 
 // Vanavond op de NPO: één grote tip (iets van je lijst gaat voor), en nog twee kleinere.
@@ -2304,10 +2285,11 @@ async function route() {
     history.replaceState(null, '', '#/films');
   }
   const plek =
-    { '#/films': 'films', '#/sport': 'sport', '#/instellingen': 'instellingen' }[location.hash] || (titelId || acteurId ? 'films' : 'vandaag');
+    { '#/films': 'films', '#/week': 'week', '#/sport': 'sport', '#/instellingen': 'instellingen' }[location.hash] || (titelId || acteurId ? 'films' : 'vandaag');
   document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === plek));
   if (plek === 'instellingen') toonInstellingen();
   else if (plek === 'sport') toonSport();
+  else if (plek === 'week') toonWeek();
   else if (titelId) toonTitel(Number(titelId[1]));
   else if (acteurId) toonActeur(Number(acteurId[1]));
   else if (plek === 'films') toonFilms();
