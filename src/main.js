@@ -1596,10 +1596,20 @@ function leesExtra() {
 
 // Eén keer per dag (op de achtergrond) de eerstvolgende wedstrijd van elk van je clubs bij
 // TheSportsDB opvragen, voor wat football-data gratis niet heeft, zoals de beker.
+let extraBezig = false;
 async function werkExtraWedstrijdenBij() {
   const keuzes = leesVoetbalKeuzes();
   const sleutel = `${dagSleutel()}|${keuzes.clubs.join(',')}`;
-  if (!keuzes.clubs.length || leesExtra()?.sleutel === sleutel) return;
+  if (extraBezig || !keuzes.clubs.length || leesExtra()?.sleutel === sleutel) return;
+  extraBezig = true;
+  try {
+    await extraOphalen(keuzes, sleutel);
+  } finally {
+    extraBezig = false;
+  }
+}
+
+async function extraOphalen(keuzes, sleutel) {
   const schema = await haalVoetbalSchema();
   if (!schema) return;
   const ploegen = new Map(schema.wedstrijden.flatMap((w) => [w.thuis, w.uit]).filter((p) => p.id).map((p) => [p.id, p]));
@@ -1614,12 +1624,22 @@ async function werkExtraWedstrijdenBij() {
   try {
     localStorage.setItem('clubKoppelingen', JSON.stringify(uit.koppelingen));
     // Niet helemaal gelukt (bijvoorbeeld te veel vragen tegelijk): de volgende keer opnieuw proberen.
-    localStorage.setItem(EXTRA, JSON.stringify({ sleutel: uit.compleet ? sleutel : '', wedstrijden: uit.wedstrijden }));
+    localStorage.setItem(EXTRA, JSON.stringify({ sleutel: uit.compleet ? sleutel : '', wedstrijden: uit.wedstrijden, op: new Date().toISOString(), gelukt: uit.gelukt, clubs: clubs.length }));
   } catch {
     return;
   }
   // Staat er net een sportscherm open, dan bijwerken.
-  if (uit.wedstrijden.length && (document.getElementById('sport-vandaag') || document.getElementById('voetbal') || document.getElementById('week'))) route();
+  if ((document.getElementById('sport-vandaag') || document.getElementById('voetbal') || document.getElementById('week'))) route();
+}
+
+// Hoe het aanvullen met beker en Europa League ervoor staat, zodat je ziet of het is gelukt.
+function extraTekst() {
+  const x = leesExtra();
+  if (extraBezig) return 'Beker en Europa League van je clubs: wordt nu opgehaald…';
+  if (!x?.op) return 'Beker en Europa League van je clubs: nog niet opgehaald.';
+  const tijd = new Date(x.op).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
+  const deels = x.clubs && x.gelukt < x.clubs ? ` (${x.gelukt} van ${x.clubs} clubs; de rest volgt bij de volgende keer openen)` : '';
+  return `Beker en Europa League van je clubs via TheSportsDB, bijgewerkt ${tijd}${deels}.`;
 }
 
 // Naam en zenders van de competitie van een wedstrijd (ook voor de aanvullende wedstrijden).
@@ -1630,7 +1650,7 @@ function competitieVan(w) {
 // De volgende interland van Oranje, één keer per dag.
 async function haalOranjeVanDaag() {
   // Ook 'geen interland gepland' onthouden, zodat het niet steeds opnieuw wordt gevraagd.
-  const x = await vanVandaag('oranje', async () => ({ wedstrijd: await haalOranje() }));
+  const x = await vanVandaag('oranje-nl', async () => ({ wedstrijd: await haalOranje() }));
   return x?.wedstrijd ?? null;
 }
 
@@ -1743,7 +1763,8 @@ async function toonVoetbal(nr, mijn) {
             .join('')
         : `<p class="leeg">Geen wedstrijden ${voetbalWeek === 'deze' ? 'meer deze week' : 'volgende week'} bij jouw keuzes.</p>`
     }
-    <p class="bron">Tijden in Nederlandse tijd. Schema van football-data.org (bekerwedstrijden en dergelijke van je clubs via TheSportsDB), bijgewerkt ${veilig(new Date(schema.op).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }))}. Oranje via TheSportsDB. Zenders gecontroleerd in ${veilig(VOETBAL_GECONTROLEERD)}; Premier League en Bundesliga gaan mogelijk naar Videoland.</p>`;
+    <p class="bron">${extraTekst()}</p>
+    <p class="bron">Tijden in Nederlandse tijd. Schema van football-data.org, bijgewerkt ${veilig(new Date(schema.op).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }))}. Oranje via TheSportsDB. Zenders gecontroleerd in ${veilig(VOETBAL_GECONTROLEERD)}; Premier League en Bundesliga gaan mogelijk naar Videoland.</p>`;
   document.getElementById('voetbal-week').addEventListener('click', (e) => {
     const knop = e.target.closest('[data-week]');
     if (!knop || knop.dataset.week === voetbalWeek) return;
@@ -2656,7 +2677,9 @@ setTimeout(async () => {
   await controleerNieuw();
 }, 3000);
 // Bekerwedstrijden en dergelijke van je clubs: los daarvan, want TheSportsDB wil rustig gevraagd worden.
+// Ook als de app terug in beeld komt (op de iPhone start hij dan niet opnieuw op).
 setTimeout(werkExtraWedstrijdenBij, 1500);
+document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && werkExtraWedstrijdenBij());
 
 window.addEventListener('hashchange', () => {
   binnenApp = true;

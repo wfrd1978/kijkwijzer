@@ -87,21 +87,30 @@ export async function haalExtraWedstrijden(clubs, koppelingen = {}, fetcher = fe
   const vraag = async (pad) => {
     if (!eerste && wacht) await new Promise((klaar) => setTimeout(klaar, wacht));
     eerste = false;
-    const antwoord = await fetcher(`${BASIS}/${pad}`);
+    // Te veel vragen achter elkaar: even wachten en het één keer opnieuw proberen. In de browser komt
+    // die melding zonder toestemmingskop binnen en lijkt hij op 'geen verbinding', dus ook dan.
+    const probeer = () => fetcher(`${BASIS}/${pad}`).catch((fout) => ({ ok: false, status: 0, fout }));
+    let antwoord = await probeer();
+    if ((antwoord.status === 429 || antwoord.status === 0) && wacht) {
+      await new Promise((klaar) => setTimeout(klaar, 30000));
+      antwoord = await probeer();
+    }
+    if (antwoord.fout) throw antwoord.fout;
     if (!antwoord.ok) throw new Error(`TheSportsDB gaf ${antwoord.status}`);
     return antwoord.json();
   };
   const wedstrijden = [];
-  let compleet = true;
+  let gelukt = 0;
+  // Gaat het bij één club mis, dan door met de volgende (alleen bij geen internet heeft dat geen zin).
   for (const club of clubs) {
     try {
       await voorClub(club);
-    } catch {
-      compleet = false;
-      break;
+      gelukt += 1;
+    } catch (fout) {
+      if (fout instanceof TypeError) break; // geen verbinding
     }
   }
-  return { wedstrijden, koppelingen, compleet };
+  return { wedstrijden, koppelingen, compleet: gelukt === clubs.length, gelukt };
 
   async function voorClub(club) {
     let teamId = koppelingen[club.id];
