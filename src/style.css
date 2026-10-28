@@ -581,3 +581,11 @@ a.titel { text-decoration: none; }
 /* --- Sport met schakelaar --- */
 .sport-blok + .sport-blok { margin-top: 0; padding-top: 0; border-top: 0; }
 #sport-tabs + .sport-tip { margin: 0 0 12px; }
+
+/* --- Instellingen in vier blokken --- */
+.instellingen { display: flex; flex-direction: column; }
+.instellingen.zonder-sleutel .blok:last-child { order: -1; margin-top: 0; padding-top: 0; border-top: 0; } /* eerst de sleutel instellen */
+.instellingen.zonder-sleutel .blok:first-child { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--lijn); }
+#competities-uitklap .keuzes { padding: 4px 0 12px; }
+.blok-sub { margin: 22px 0 6px; font-family: var(--kop); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+.blok h2 + .blok-sub { margin-top: 8px; }

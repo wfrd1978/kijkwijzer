@@ -1737,6 +1737,11 @@ function backupTekst() {
 
 const aantalTekst = (n) => (n === 1 ? '1 titel' : `${n} titels`);
 
+function competitiesStand() {
+  const alles = leesVoetbalKeuzes().alles.map((c) => COMPETITIES[c]?.kort).filter(Boolean);
+  return alles.length ? alles.join(', ') : 'Alleen je clubs';
+}
+
 async function toonInstellingen() {
   const nr = schermNr;
   const sleutel = leesSleutel();
@@ -1745,6 +1750,47 @@ async function toonInstellingen() {
   app.innerHTML = `
     <header class="kop">${terugKnop('#/')}</header>
     <header class="kop"><h1>Instellingen</h1></header>
+    <div class="instellingen${sleutel ? '' : ' zonder-sleutel'}">
+
+    <section class="blok">
+      <h2>Wat ik heb en volg</h2>
+      <h3 class="blok-sub">Streamingdiensten</h3>
+      <p>Kies per streamingdienst: <b>Abonnement</b> als je hem hebt, <b>Tonen</b> om hem bij een titel te zien, of <b>Verbergen</b> als hij je niet interesseert.</p>
+      ${
+        sleutel
+          ? `<details class="uitklap" id="diensten-uitklap">
+               <summary><span class="uitklap-kop">Diensten aanpassen</span><span class="zacht uitklap-stand" id="diensten-stand">${veilig(dienstenStand())}</span></summary>
+               <div id="diensten-keuze"><p class="zacht">Diensten ophalen…</p></div>
+             </details>`
+          : '<p class="zacht">Stel eerst hierboven je TMDB-sleutel in.</p>'
+      }
+      ${
+        sleutel
+          ? `<p class="zacht klein">Eén keer per dag kijkt de app of titels op Wil ik zien nieuw bij je abonnementen te zien zijn. Je ziet dat op Vandaag.</p>
+             <button class="tweede-knop" id="nieuw-nu">Nu controleren</button>
+             <p class="zacht klein" id="nieuw-uitkomst" hidden></p>`
+          : ''
+      }
+
+      <h3 class="blok-sub">Voetbal</h3>
+      <p>Je ziet in Sport altijd de wedstrijden van je clubs, in elke competitie. Wil je van een competitie álle wedstrijden zien, zet hem dan aan.</p>
+      <details class="uitklap" id="competities-uitklap">
+        <summary><span class="uitklap-kop">Hele competities</span><span class="zacht uitklap-stand" id="competities-stand">${veilig(competitiesStand())}</span></summary>
+        <div class="keuzes" id="voetbal-alles">${Object.entries(COMPETITIES)
+          .map(([c, x]) => `<button class="keuze${leesVoetbalKeuzes().alles.includes(c) ? ' actief' : ''}" data-competitie="${c}">Alles ${veilig(x.naam)}</button>`)
+          .join('')}</div>
+      </details>
+      <details class="uitklap" id="clubs-uitklap">
+        <summary><span class="uitklap-kop">Clubs kiezen</span><span class="zacht uitklap-stand" id="clubs-stand">${leesVoetbalKeuzes().clubs.length ? `${leesVoetbalKeuzes().clubs.length} gekozen` : 'Nog geen clubs gekozen'}</span></summary>
+        <div id="clubs-keuze"><p class="zacht">Clubs ophalen…</p></div>
+      </details>
+
+      <h3 class="blok-sub">Sportzenders</h3>
+      <p>Welke zenders en diensten heb je? Dan laat Sport zien wat jij live kunt volgen. NOS valt onder de gewone NPO-zenders.</p>
+      <div class="keuzes" id="sportzenders">${SPORTZENDERS.map(
+        (z) => `<button class="keuze${leesSportzenders().includes(z) ? ' actief' : ''}" data-zender="${z}" aria-pressed="${leesSportzenders().includes(z)}">${z}</button>`
+      ).join('')}</div>
+    </section>
 
     <section class="blok">
       <h2>Backup</h2>
@@ -1759,46 +1805,6 @@ async function toonInstellingen() {
     </section>
 
     <section class="blok">
-      <h2>Mijn diensten</h2>
-      <p>Kies per streamingdienst: <b>Abonnement</b> als je hem hebt, <b>Tonen</b> om hem bij een titel te zien, of <b>Verbergen</b> als hij je niet interesseert.</p>
-      ${
-        sleutel
-          ? `<details class="uitklap" id="diensten-uitklap">
-               <summary><span class="uitklap-kop">Diensten aanpassen</span><span class="zacht uitklap-stand" id="diensten-stand">${veilig(dienstenStand())}</span></summary>
-               <div id="diensten-keuze"><p class="zacht">Diensten ophalen…</p></div>
-             </details>`
-          : '<p class="zacht">Stel eerst hieronder je TMDB-sleutel in.</p>'
-      }
-      ${
-        sleutel
-          ? `<p class="zacht klein">Eén keer per dag kijkt de app of titels op Wil ik zien nieuw bij je abonnementen te zien zijn. Je ziet dat bovenaan Mijn lijst.</p>
-             <button class="tweede-knop" id="nieuw-nu">Nu controleren</button>
-             <p class="zacht klein" id="nieuw-uitkomst" hidden></p>`
-          : ''
-      }
-    </section>
-
-    <section class="blok">
-      <h2>Mijn voetbal</h2>
-      <p>Je ziet in Sport altijd de wedstrijden van je clubs, in elke competitie. Wil je van een competitie álle wedstrijden zien, zet hem dan aan.</p>
-      <div class="keuzes" id="voetbal-alles">${Object.entries(COMPETITIES)
-        .map(([c, x]) => `<button class="keuze${leesVoetbalKeuzes().alles.includes(c) ? ' actief' : ''}" data-competitie="${c}">Alles ${veilig(x.naam)}</button>`)
-        .join('')}</div>
-      <details class="uitklap" id="clubs-uitklap">
-        <summary><span class="uitklap-kop">Clubs kiezen</span><span class="zacht uitklap-stand" id="clubs-stand">${leesVoetbalKeuzes().clubs.length ? `${leesVoetbalKeuzes().clubs.length} gekozen` : 'Nog geen clubs gekozen'}</span></summary>
-        <div id="clubs-keuze"><p class="zacht">Clubs ophalen…</p></div>
-      </details>
-    </section>
-
-    <section class="blok">
-      <h2>Mijn sportzenders</h2>
-      <p>Welke zenders en diensten heb je? Dan laat Sport zien wat jij live kunt volgen. NOS valt onder de gewone NPO-zenders.</p>
-      <div class="keuzes" id="sportzenders">${SPORTZENDERS.map(
-        (z) => `<button class="keuze${leesSportzenders().includes(z) ? ' actief' : ''}" data-zender="${z}" aria-pressed="${leesSportzenders().includes(z)}">${z}</button>`
-      ).join('')}</div>
-    </section>
-
-    <section class="blok">
       <h2>Weergave</h2>
       <div class="keuzes" id="weergave">
         ${Object.entries(WEERGAVEN)
@@ -1809,7 +1815,8 @@ async function toonInstellingen() {
     </section>
 
     <section class="blok">
-      <h2>TMDB-sleutel</h2>
+      <h2>Sleutel &amp; over</h2>
+      <h3 class="blok-sub">TMDB-sleutel</h3>
       ${
         sleutel
           ? `<p>Je sleutel is ingesteld en staat alleen op deze telefoon.</p>
@@ -1824,13 +1831,10 @@ async function toonInstellingen() {
                <button class="hoofdknop" type="submit">Bewaar sleutel</button>
              </form>`
       }
-    </section>
-
-    <section class="blok">
-      <h2>Over</h2>
       ${BRON}
       <p class="versie">Versie van ${__VERSIE__}</p>
     </section>
+    </div>
   `;
 
   // De lijst met diensten pas ophalen als je het blok openklapt.
@@ -1855,7 +1859,7 @@ async function toonInstellingen() {
       n === null
         ? 'Kies eerst hierboven bij Diensten aanpassen welke abonnementen je hebt.'
         : n
-          ? `${n === 1 ? '1 titel is' : `${n} titels zijn`} nieuw bij je diensten. Kijk bovenaan Mijn lijst.`
+          ? `${n === 1 ? '1 titel is' : `${n} titels zijn`} nieuw bij je diensten. Kijk op Vandaag.`
           : 'Niets nieuws: je titels op Wil ik zien staan nog bij dezelfde diensten.';
   });
 
@@ -1865,6 +1869,7 @@ async function toonInstellingen() {
     knop.classList.toggle('actief');
     const k = leesVoetbalKeuzes();
     zetVoetbalKeuzes({ ...k, alles: [...document.querySelectorAll('#voetbal-alles .actief')].map((x) => x.dataset.competitie) });
+    document.getElementById('competities-stand').textContent = competitiesStand();
   });
   document.getElementById('clubs-uitklap').addEventListener('toggle', (e) => e.target.open && toonClubsKeuze(nr), { once: true });
 
