@@ -593,3 +593,7 @@ a.titel { text-decoration: none; }
 /* Nieuwe afleveringen */
 .afl-link { color: var(--tekst); text-decoration: none; }
 .nieuw-woord { color: var(--accent); }
+
+/* Toevoegen: Wil ik zien of Al gezien */
+.toevoeg-knoppen { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 24px; }
+.toevoeg-knoppen .hoofdknop, .toevoeg-knoppen .tweede-knop { margin: 0; width: 100%; }

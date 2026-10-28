@@ -421,15 +421,31 @@ function toonBevestigen(t, alOpLijst, terug = { naam: 'Films & series', toon: ()
       ${
         alOpLijst
           ? `<div class="dubbel"><p>${veilig(dubbelTekst(alOpLijst))}</p><a class="tweede-knop" href="#/titel/${alOpLijst.id}">Open op mijn lijst</a></div>`
-          : '<button class="hoofdknop" id="toevoegen">Zet op mijn lijst</button>'
+          : `<div class="toevoeg-knoppen">
+               <button class="hoofdknop" data-toevoegen="Wil ik zien">+ Wil ik zien</button>
+               <button class="tweede-knop" data-toevoegen="Gezien">✓ Al gezien</button>
+             </div>`
       }
     </section>
   `;
   document.getElementById('terug').addEventListener('click', terug.toon);
-  document.getElementById('toevoegen')?.addEventListener('click', async (e) => {
-    e.currentTarget.disabled = true;
-    const { nieuw } = await titelToevoegen(t);
-    melding(nieuw ? 'Op je lijst gezet' : 'Stond al op je lijst');
+  // Meteen kiezen: nog kijken, of al gezien (dan met de datum van vandaag, en sterren geven kan meteen).
+  document.querySelector('.toevoeg-knoppen')?.addEventListener('click', async (e) => {
+    const knop = e.target.closest('[data-toevoegen]');
+    if (!knop) return;
+    document.querySelectorAll('[data-toevoegen]').forEach((b) => (b.disabled = true));
+    const { titel, nieuw } = await titelToevoegen(t);
+    if (!nieuw) {
+      melding('Stond al op je lijst');
+      terug.toon();
+      return;
+    }
+    if (knop.dataset.toevoegen === 'Gezien') {
+      await titelBijwerken(titel.id, statusWijziging(titel, 'Gezien'));
+      melding('Op Gezien gezet', { tekst: 'Geef sterren', actie: () => (location.hash = `#/titel/${titel.id}`) });
+    } else {
+      melding('Op Wil ik zien gezet');
+    }
     terug.toon();
   });
 }
@@ -441,7 +457,7 @@ function rasterHtml(titels, opLijst, onder = (t) => (t.jaar ? veilig(t.jaar) : '
       (t, i) => `
       <li><button class="raster-titel" data-i="${i}">
         ${posterHtml(t, 'poster-raster')}
-        ${opLijst.has(titelSleutel(t)) ? '<span class="raster-label">Op je lijst</span>' : ''}
+        ${opLijst.has(titelSleutel(t)) ? `<span class="raster-label">${veilig(opLijst.get(titelSleutel(t)).status ?? 'Op je lijst')}</span>` : ''}
         <strong>${veilig(t.titel)}</strong>
         <span>${onder(t)}</span>
       </button></li>`
