@@ -32,10 +32,10 @@ Adres van de app: https://wfrd1978.github.io/kijkwijzer/
 
 ## Gedeelde versie (voor familie en vrienden)
 
-- Adres: https://wfrd1978.github.io/kijkwijzer/deel/ — dezelfde app, gebouwd met `VITE_EDITIE=deel` uit de git-tag `stabiel`.
+- Adres: https://wfrd1978.github.io/kijkwijzer/deel/ — dezelfde app, gebouwd met `VITE_EDITIE=deel` uit de commit die in het bestand `STABIEL` staat.
 - Eigen opslag: database `kijkwijzer-deel` en voorvoegsel `deel:` voor alles in localStorage (zie `src/editie.js`), een eigen service worker en eigen cache. Zo raakt de lijst van de eigenaar nooit vermengd met die van de gedeelde versie, ook niet op dezelfde telefoon.
 - Ieder gebruikt een eigen, gratis TMDB-sleutel; de stap-voor-stap-uitleg staat in Instellingen.
-- De tag `stabiel` gaat alleen vooruit als de eigenaar zegt dat iets goed werkt: `git tag -f stabiel <commit>`, `git push -f origin stabiel`, daarna de workflow opnieuw starten. Wat in de eigen app nog wordt uitgeprobeerd, komt dus niet vanzelf bij anderen.
+- `STABIEL` gaat alleen vooruit als de eigenaar zegt dat iets goed werkt: zet de gewenste commit-hash in het bestand en commit dat (bericht bijvoorbeeld "Gedeelde versie bijgewerkt"). Wat in de eigen app nog wordt uitgeprobeerd, komt dus niet vanzelf bij anderen. (Een git-tag kan vanuit de werkomgeving niet worden gepusht; daarom een bestand.)
 - Niets in de gedeelde versie mag naar de eigenaar verwijzen (regel 8 hieronder geldt hier extra).
 
 ## Werkafspraken
