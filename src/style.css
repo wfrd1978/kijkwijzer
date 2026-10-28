@@ -612,3 +612,5 @@ button.afl-link { border: 0; background: none; padding: 0; text-align: left; fon
 .npo-detail .koers-zenders { margin-top: 4px; }
 .npo-detail .hoofdknop { margin-top: 12px; }
 .npo-detail .tweede-knop { margin-top: 0; }
+.bevestig-waar { text-align: left; }
+.verborgen-diensten a { color: var(--accent); }

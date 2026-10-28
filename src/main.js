@@ -409,6 +409,7 @@ async function toonResultaten() {
 
 // Eén zoekresultaat groot, met de knop om hem op je lijst te zetten.
 // Staat hij er al op, dan zie je dat (met wanneer je hem zag) en kun je hem openen.
+toonBevestigen.nr = 0;
 function toonBevestigen(t, alOpLijst, terug = { naam: 'Films & series', toon: () => toonFilms() }) {
   window.scrollTo(0, 0);
   app.innerHTML = `
@@ -430,6 +431,22 @@ function toonBevestigen(t, alOpLijst, terug = { naam: 'Films & series', toon: ()
     </section>
   `;
   document.getElementById('terug').addEventListener('click', terug.toon);
+  // Waar kijken, ook al voordat je hem op je lijst zet.
+  if (leesSleutel()) {
+    const sectie = Object.assign(document.createElement('section'), { className: 'waar bevestig-waar' });
+    sectie.innerHTML = '<p class="label">Waar kijken in Nederland</p><div id="bevestig-diensten" class="diensten"><p class="zacht">Ophalen…</p></div>';
+    document.querySelector('.bevestig').append(sectie);
+    const nr = ++toonBevestigen.nr;
+    haalDiensten(t.soort, t.tmdbId)
+      .then((diensten) => {
+        const vak = document.getElementById('bevestig-diensten');
+        if (vak && nr === toonBevestigen.nr) vak.innerHTML = dienstenHtml({ ...t, diensten, dienstenOp: vandaag() });
+      })
+      .catch(() => {
+        const vak = document.getElementById('bevestig-diensten');
+        if (vak) vak.innerHTML = '<p class="zacht">Ophalen lukt nu niet.</p>';
+      });
+  }
   // Meteen kiezen: nog kijken, of al gezien (dan met de datum van vandaag, en sterren geven kan meteen).
   document.querySelector('.toevoeg-knoppen')?.addEventListener('click', async (e) => {
     const knop = e.target.closest('[data-toevoegen]');
@@ -1145,6 +1162,14 @@ function bijJouHtml(lijst, titel) {
     </div>`;
 }
 
+// Diensten die je in Instellingen hebt verborgen, met naam: zo is duidelijk waarom ze hier ontbreken.
+function verborgenHtml(d, alleenDaar) {
+  const keuzes = leesKeuzes();
+  const namen = [...new Map([...d.abonnement, ...d.gratis, ...d.huren, ...d.kopen].filter((x) => keuzeVan(keuzes, x.id) === 'verbergen').map((x) => [x.id, x.naam])).values()];
+  if (!namen.length) return '';
+  return `<p class="zacht klein verborgen-diensten">${alleenDaar ? 'Alleen te zien bij' : 'Ook bij'} ${veilig(namen.join(', '))}: ${namen.length === 1 ? 'die dienst heb' : 'die diensten heb'} je verborgen in <a href="#/instellingen">Instellingen</a>.</p>`;
+}
+
 // De bewaarde diensten van een titel; 'bezig' als er net nieuwe worden opgehaald.
 function dienstenHtml(titel, bezig = false) {
   if (!titel.dienstenOp) return `<p class="zacht">${bezig ? 'Ophalen…' : 'Nog niet bekend. Open deze titel met internet om het op te halen.'}</p>`;
@@ -1161,7 +1186,7 @@ function dienstenHtml(titel, bezig = false) {
     ${dienstRij('Gratis', v.gratis)}
     ${dienstRij('Huren', v.huren)}
     ${dienstRij('Kopen', v.kopen)}
-    ${!rest && !v.bijJou.length && v.verborgen ? '<p class="zacht">Alleen te zien bij diensten die je hebt verborgen.</p>' : ''}
+    ${verborgenHtml(d, !rest && !v.bijJou.length)}
     ${datum}
     ${link ? `<a class="alle-opties" href="${link}" target="_blank" rel="noopener">Alle opties en links ↗</a>` : ''}
     ${JUSTWATCH}`;
