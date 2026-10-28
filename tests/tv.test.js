@@ -49,11 +49,11 @@ describe('lijstOpNpo en npoLink', () => {
 
 describe('voorkeuren', () => {
   it('genre en omroep die je graag ziet, wegen zwaarder', () => {
-    const doc = p(21, 'Doc', ['Documentaire'], { omroepen: ['EO'] });
+    const doc = p(21, 'Doc', ['Documentaire'], { omroepen: ['VPRO'] });
     const drama = p(21, 'Drama', ['Serie', 'Drama'], { omroepen: ['MAX'] });
     expect(tipScore(drama)).toBeGreaterThan(tipScore(doc));
     expect(tipScore(doc, { genres: ['documentaire'], omroepen: [] })).toBeGreaterThan(tipScore(drama, { genres: ['documentaire'], omroepen: [] }));
-    expect(tipScore(doc, { genres: [], omroepen: ['EO'] })).toBeGreaterThan(tipScore(drama, { genres: [], omroepen: ['EO'] }));
+    expect(tipScore(doc, { genres: [], omroepen: ['VPRO'] })).toBeGreaterThan(tipScore(drama, { genres: [], omroepen: ['VPRO'] }));
   });
   it('een quiz wordt alleen een tip als je hem graag ziet; nieuws nooit', () => {
     expect(tipScore(p(21, 'Quiz', ['Informatief', 'Spel/quiz']))).toBe(0);
@@ -61,12 +61,12 @@ describe('voorkeuren', () => {
     expect(tipScore(p(20, 'Journaal', ['Nieuws/actualiteiten'], { omroepen: ['NOS'] }), { genres: [], omroepen: ['NOS'] })).toBe(0);
   });
   it('omroepen uit de gids', () => {
-    expect(omroepenIn([{ omroepen: ['VPRO', 'EO'] }, { omroepen: ['EO'] }, {}])).toEqual(['EO', 'VPRO']);
+    expect(omroepenIn([{ omroepen: ['VPRO', 'NTR'] }, { omroepen: ['VPRO'] }, {}])).toEqual(['NTR', 'VPRO']);
   });
 });
 
 describe('omroepnamen', () => {
   it('Ongehoord NL in plaats van de volledige verenigingsnaam', () => {
-    expect(metKorteNamen([{ omroepen: ['Omroepvereniging Ongehoord Nederland', 'EO'] }])[0].omroepen).toEqual(['Ongehoord NL', 'EO']);
+    expect(metKorteNamen([{ omroepen: ['Omroepvereniging Ongehoord Nederland', 'VPRO'] }])[0].omroepen).toEqual(['Ongehoord NL', 'VPRO']);
   });
 });

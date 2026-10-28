@@ -110,6 +110,8 @@ Lijsten of tips delen met anderen (één titel delen om samen te kijken zit al i
 
 ## Risico's en afspraken
 
+- **Controle oktober 2026 (beveiliging en privacy).** Onafhankelijk gecontroleerd: geen persoonsgegevens of sleutels in de openbare data, ook niet in de volledige git-geschiedenis; alle commits op het noreply-adres. Verbeterd: webadressen worden door de browser ontleed en geëscaped (een gemanipuleerde backup kan geen eigen opmaak of links meer in de app zetten; logo's en links van diensten uit een backup worden streng gecontroleerd), de app stuurt zijn eigen adres niet meer mee naar andere diensten (no-referrer), de toegestane bronnen voor gegevens en plaatjes zijn beperkt tot TMDB, Jolpica, TheSportsDB, football-data (emblemen) en NPO (beelden), de GitHub-onderdelen zijn vastgezet op een vaste versie, en testafbeeldingen kunnen niet meer in de repository komen.
+
 - **Dataverlies:** Safari kan gegevens van websites wissen die je lang niet opent. Daarom: app op het beginscherm zetten (dan geldt dat niet) én regelmatig backuppen. De app herinnert je als de laatste backup ouder is dan 14 dagen.
 - **De sleutel:** de TMDB-sleutel staat op de telefoon en is in principe zichtbaar voor wie je ontgrendelde telefoon heeft. Het is een gratis sleutel waarmee je alleen gegevens kunt lezen; dat risico is acceptabel. Hij staat nooit in de code op GitHub.
 - **Nederlandse teksten:** niet elke titel heeft een Nederlandse beschrijving. Dan toont de app de Engelse.

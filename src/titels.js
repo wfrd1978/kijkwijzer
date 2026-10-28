@@ -121,9 +121,9 @@ function schoneDiensten(d) {
     Array.isArray(l)
       ? l
           .filter((x) => x && Number.isInteger(x.id) && typeof x.naam === 'string')
-          .map((x) => ({ id: x.id, naam: x.naam, logo: typeof x.logo === 'string' ? x.logo : '' }))
+          .map((x) => ({ id: x.id, naam: x.naam, logo: /^\/[\w.-]+$/.test(x.logo ?? '') ? x.logo : '' }))
       : [];
-  return { abonnement: lijst(d.abonnement), gratis: lijst(d.gratis), huren: lijst(d.huren), kopen: lijst(d.kopen), link: typeof d.link === 'string' ? d.link : '' };
+  return { abonnement: lijst(d.abonnement), gratis: lijst(d.gratis), huren: lijst(d.huren), kopen: lijst(d.kopen), link: /^https:\/\/www\.themoviedb\.org\/[\w./?=&%-]*$/.test(d.link ?? '') ? d.link : '' };
 }
 
 const geheel = (n, min, max) => Number.isInteger(n) && n >= min && n <= max;

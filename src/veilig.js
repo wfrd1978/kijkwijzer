@@ -11,7 +11,14 @@ export function veilig(tekst) {
 }
 
 // Alleen gewone webadressen, plaatjes op het toestel en ingebakken plaatjes als poster.
+// Het adres wordt door de browser zelf ontleed en opnieuw opgebouwd, zodat er geen
+// aanhalingstekens of haakjes in blijven staan die uit een attribuut kunnen breken.
 export function veiligeUrl(url) {
   const u = String(url ?? '');
-  return /^(https:\/\/|blob:|data:image\/)/i.test(u) ? u : '';
+  if (!/^(https:\/\/|blob:|data:image\/)/i.test(u)) return '';
+  try {
+    return veilig(new URL(u).href);
+  } catch {
+    return '';
+  }
 }

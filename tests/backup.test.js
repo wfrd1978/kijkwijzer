@@ -68,3 +68,14 @@ describe('leesBackup', () => {
     await expect(leesBackup(bestand({ app: 'kijkwijzer', versie: 1, titels: [{ titel: '' }] }))).rejects.toThrow();
   });
 });
+
+describe('kwaadaardige backup', () => {
+  it('laat geen eigen adressen of opmaak door via logo en link van diensten', () => {
+    const t = normaliseerTitel({
+      tmdbId: 1, soort: 'film', titel: 'X', dienstenOp: '2026-10-28',
+      diensten: { abonnement: [{ id: 8, naam: 'Netflix', logo: 'https://x"><meta http-equiv=refresh content=0>' }], gratis: [], huren: [], kopen: [], link: 'https://kwaadaardig.example/"><b>' },
+    });
+    expect(t.diensten.abonnement[0].logo).toBe('');
+    expect(t.diensten.link).toBe('');
+  });
+});

@@ -14,3 +14,12 @@ describe('soortSleutel', () => {
     expect(soortSleutel('0123456789abcdef')).toBe(null);
   });
 });
+
+import { veiligeUrl } from '../src/veilig.js';
+describe('veiligeUrl', () => {
+  it('kan niet uit een attribuut breken', () => {
+    expect(veiligeUrl('https://x.nl/"><meta>')).not.toMatch(/["<>]/);
+    expect(veiligeUrl('javascript:alert(1)')).toBe('');
+    expect(veiligeUrl('https://image.tmdb.org/t/p/w185/a.jpg')).toBe('https://image.tmdb.org/t/p/w185/a.jpg');
+  });
+});

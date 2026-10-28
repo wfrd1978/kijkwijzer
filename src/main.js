@@ -825,7 +825,7 @@ function toonNpo(p) {
         ${p.leeftijd && p.leeftijd !== 'ALL' ? `<span class="zender-chip">${veilig(p.leeftijd)}+</span>` : ''}
       </div>
       ${p.titelOpLijst ? `<p class="reden">Staat op je lijst bij Wil ik zien.</p>` : ''}
-      <a class="hoofdknop" href="${veiligeUrl(bezig ? p.live : npoLink(p))}" target="_blank" rel="noopener">${bezig ? `Kijk nu live op ${veilig(p.zender)}` : 'Bekijk op NPO Start'}</a>
+      <a class="hoofdknop" href="${veiligeUrl(bezig ? p.live : npoLink(p))}" target="_blank" rel="noopener noreferrer">${bezig ? `Kijk nu live op ${veilig(p.zender)}` : 'Bekijk op NPO Start'}</a>
       ${p.titelOpLijst ? `<a class="tweede-knop" href="#/titel/${p.titelOpLijst.id}">Open op mijn lijst</a>` : '<button class="tweede-knop" id="npo-zoek">Zoek en zet op mijn lijst</button>'}
     </section>`;
   document.getElementById('terug').addEventListener('click', () => toonVandaag());
@@ -1180,7 +1180,7 @@ function bijJouHtml(lijst, titel) {
         .map((d) => {
           const link = veiligeUrl(doorklikLink(d, titel.titel));
           return link
-            ? `<li><a class="dienst eigen" href="${link}" target="_blank" rel="noopener">${logoHtml(d)}Kijk op ${veilig(d.naam)} ↗</a></li>`
+            ? `<li><a class="dienst eigen" href="${link}" target="_blank" rel="noopener noreferrer">${logoHtml(d)}Kijk op ${veilig(d.naam)} ↗</a></li>`
             : `<li class="dienst eigen">${logoHtml(d)}${veilig(d.naam)}</li>`;
         })
         .join('')}</ul>
@@ -1214,7 +1214,7 @@ function dienstenHtml(titel, bezig = false) {
     ${dienstRij('Kopen', v.kopen)}
     ${verborgenHtml(d, !rest && !v.bijJou.length)}
     ${datum}
-    ${link ? `<a class="alle-opties" href="${link}" target="_blank" rel="noopener">Alle opties en links ↗</a>` : ''}
+    ${link ? `<a class="alle-opties" href="${link}" target="_blank" rel="noopener noreferrer">Alle opties en links ↗</a>` : ''}
     ${JUSTWATCH}`;
 }
 
@@ -1253,7 +1253,7 @@ function extraHtml(titel) {
                <span class="trailer-tekst">Trailer</span>
              </button>
            </div>
-           <a class="trailer-link" href="${trailer}" target="_blank" rel="noopener">Open in YouTube ↗</a>`
+           <a class="trailer-link" href="${trailer}" target="_blank" rel="noopener noreferrer">Open in YouTube ↗</a>`
         : ''
     }
     ${
@@ -1345,7 +1345,7 @@ function zenderChip(z, mijn, kort = false) {
   const klasse = `zender-chip${mijn.includes(z.naam) ? ' mijn' : ''}`;
   const gids = ZENDER_GIDS[z.naam];
   return gids
-    ? `<a class="${klasse} met-gids" href="${veiligeUrl(gids)}" target="_blank" rel="noopener" aria-label="${veilig(z.naam)}: bekijk in de gids op welk kanaal">${tekst} ›</a>`
+    ? `<a class="${klasse} met-gids" href="${veiligeUrl(gids)}" target="_blank" rel="noopener noreferrer" aria-label="${veilig(z.naam)}: bekijk in de gids op welk kanaal">${tekst} ›</a>`
     : `<span class="${klasse}">${tekst}</span>`;
 }
 
@@ -2136,7 +2136,7 @@ async function toonInstellingen() {
              <p class="zacht sleutel-kort">${soortSleutel(sleutel) === 'token' ? 'Read Access Token' : 'API Key'} · eindigt op ${veilig(sleutel.slice(-4))}</p>
              <button class="tweede-knop" id="sleutel-test">Test de sleutel</button>
              <button class="link-knop" id="sleutel-weg">Sleutel verwijderen</button>`
-          : `<p>Kijkwijzer haalt titels, posters en streaminginformatie op bij TMDB. Daarvoor heb je een gratis sleutel nodig. Je vindt hem op <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a>.</p>
+          : `<p>Kijkwijzer haalt titels, posters en streaminginformatie op bij TMDB. Daarvoor heb je een gratis sleutel nodig. Je vindt hem op <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">themoviedb.org/settings/api</a>.</p>
              <p class="zacht">De sleutel blijft op deze telefoon en gaat nergens anders heen dan naar TMDB.</p>
              <form id="sleutel-form">
                <textarea id="sleutel-veld" rows="3" placeholder="Plak hier je API Key of Read Access Token" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
