@@ -36,7 +36,7 @@ describe('statusWijziging', () => {
     expect(statusWijziging({ kijkdatum: '2025-01-02' }, 'Gezien', nu)).toEqual({ status: 'Gezien' });
   });
   it('verandert bij andere statussen alleen de status', () => {
-    expect(statusWijziging({ kijkdatum: '' }, 'Bezig', nu)).toEqual({ status: 'Bezig' });
+    expect(statusWijziging({ kijkdatum: '' }, 'Wil ik zien', nu)).toEqual({ status: 'Wil ik zien' });
   });
 });
 
@@ -52,7 +52,7 @@ describe('vandaag en datumTekst', () => {
 
 const lijst = [
   { titel: 'Amélie', origineel: "Le Fabuleux Destin d'Amélie Poulain", soort: 'film', status: 'Gezien', sterren: 5, kijkdatum: '2024-03-01', notitie: '', toegevoegdOp: '2026-01-01T00:00:00Z' },
-  { titel: 'Thuis', origineel: '', soort: 'serie', status: 'Bezig', sterren: 0, kijkdatum: '', notitie: 'Tip van de buren', toegevoegdOp: '2026-03-01T00:00:00Z' },
+  { titel: 'Thuis', origineel: '', soort: 'serie', status: 'Wil ik zien', sterren: 0, kijkdatum: '', notitie: 'Tip van de buren', toegevoegdOp: '2026-03-01T00:00:00Z' },
   { titel: 'Dune', origineel: 'Dune', soort: 'film', status: 'Wil ik zien', sterren: 0, kijkdatum: '', notitie: '', toegevoegdOp: '2026-02-01T00:00:00Z' },
   { titel: 'Borgen', origineel: 'Borgen', soort: 'serie', status: 'Gezien', sterren: 5, kijkdatum: '2025-06-01', notitie: '', toegevoegdOp: '2025-12-01T00:00:00Z' },
 ];
@@ -142,5 +142,18 @@ describe('voortgang bij series', () => {
     const basis = { tmdbId: 1, soort: 'serie', titel: 'Borgen', extraOp: '2026-10-28', seizoenen: [{ nr: 1, afleveringen: 10 }, { nr: -1, afleveringen: 2 }] };
     expect(normaliseerTitel({ ...basis, voortgang: { seizoen: 2, aflevering: 5 } })).toMatchObject({ voortgang: { seizoen: 2, aflevering: 5 }, seizoenen: [{ nr: 1, afleveringen: 10 }] });
     expect(normaliseerTitel({ ...basis, voortgang: { seizoen: 'x' } }).voortgang).toBeUndefined();
+  });
+});
+
+describe('status Bezig bestaat niet meer', () => {
+  it('kent alleen Wil ik zien en Gezien', () => {
+    expect(STATUSSEN).toEqual(['Wil ik zien', 'Gezien']);
+  });
+  it('een oude backup met Bezig wordt Wil ik zien, met behoud van de voortgang', () => {
+    const basis = { tmdbId: 1, soort: 'serie', titel: 'Borgen', status: 'Bezig' };
+    expect(normaliseerTitel({ ...basis, voortgang: { seizoen: 2, aflevering: 5 } })).toMatchObject({ status: 'Wil ik zien', voortgang: { seizoen: 2, aflevering: 5 } });
+    expect(normaliseerTitel(basis)).toMatchObject({ status: 'Wil ik zien', voortgang: { seizoen: 1, aflevering: 0 } });
+    expect(normaliseerTitel({ ...basis, soort: 'film' })).toMatchObject({ status: 'Wil ik zien' });
+    expect(normaliseerTitel({ ...basis, soort: 'film' }).voortgang).toBeUndefined();
   });
 });

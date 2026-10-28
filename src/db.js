@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import { nieuweTitel } from './titels.js';
+import { nieuweTitel, zonderBezig } from './titels.js';
 
 // Je lijst staat in IndexedDB op het toestel zelf.
 export const db = new Dexie('kijkwijzer');
@@ -8,6 +8,16 @@ db.version(1).stores({
   // Elke film of serie maar één keer: de combinatie soort + TMDB-nummer is uniek.
   titels: '++id, &[soort+tmdbId], toegevoegdOp, status',
 });
+
+// Versie 2 (oktober 2026): de status 'Bezig' bestaat niet meer. Eenmalig, bij het openen van de app;
+// alleen de status verandert (en een serie krijgt een voortgang), verder blijft alles zoals het was.
+db.version(2)
+  .stores({ titels: '++id, &[soort+tmdbId], toegevoegdOp, status' })
+  .upgrade((tx) =>
+    tx.table('titels').toCollection().modify((t) => {
+      Object.assign(t, zonderBezig(t));
+    })
+  );
 
 // Vraag de browser om de opslag niet zomaar op te ruimen.
 export async function vraagBlijvendeOpslag() {

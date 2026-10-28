@@ -252,9 +252,9 @@ function titelRegel(t, zoek = '', { status = true } = {}) {
         ${posterHtml(t)}
         <div class="titel-tekst">
           <span class="regel">
-            ${status || t.status === 'Bezig' ? `<span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>` : ''}
+            ${status ? `<span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>` : ''}
             ${t.sterren ? `<span class="sterren-klein" aria-label="${t.sterren} sterren">${sterrenTekst(t.sterren)}</span>` : ''}
-            ${t.soort === 'serie' && t.status === 'Bezig' && voortgangKort(t.voortgang) ? `<span class="voortgang-kort">${voortgangKort(t.voortgang)}</span>` : ''}
+            ${t.soort === 'serie' && t.status !== 'Gezien' && voortgangKort(t.voortgang) ? `<span class="voortgang-kort">${voortgangKort(t.voortgang)}</span>` : ''}
             ${t.nieuwBij?.length ? `<span class="nieuw-label">Nieuw bij ${veilig(t.nieuwBij.map((d) => d.naam).join(' en '))}</span>` : ''}
           </span>
           <strong>${veilig(t.titel)}</strong>
@@ -525,7 +525,7 @@ async function toonVandaag() {
       </section>`;
     return;
   }
-  const verder = titels.filter((t) => t.soort === 'serie' && t.status === 'Bezig');
+  const verder = titels.filter((t) => t.soort === 'serie' && t.status !== 'Gezien' && t.voortgang);
   app.innerHTML = `
     ${kop}
     ${nieuwHtml(titels)}
@@ -571,8 +571,7 @@ async function toonVandaag() {
 // --- Films & series: Ontdekken, Wil ik zien en Gezien, met één zoekveld ---
 
 const FILMS_TABS = { ontdekken: 'Ontdekken', wil: 'Wil ik zien', gezien: 'Gezien' };
-// Tot stap 21 hoort 'Bezig' nog bij Wil ik zien.
-const LIJST_STATUSSEN = { wil: ['Wil ik zien', 'Bezig'], gezien: ['Gezien'] };
+const LIJST_STATUSSEN = { wil: ['Wil ik zien'], gezien: ['Gezien'] };
 let filmsTab = onthoud('filmsTab', 'wil', Object.keys(FILMS_TABS));
 let filmsZoek = '';
 
@@ -1340,17 +1339,17 @@ async function toonTitel(id) {
     const knop = e.target.closest('.keuze');
     if (!knop || knop.dataset.s === titel.status) return;
     const wijziging = statusWijziging(titel, knop.dataset.s);
-    if (titel.soort === 'serie' && knop.dataset.s === 'Bezig' && !titel.voortgang) wijziging.voortgang = beginVoortgang();
     await bewaar(wijziging);
     tekenStatus();
     tekenDatum();
     tekenVoortgang();
   });
 
-  // Waar ben je? Alleen bij series die je aan het kijken bent.
+  // Waar ben je? Bij series die je nog niet helemaal gezien hebt. Vink je een aflevering af,
+  // dan staat de serie op Vandaag bij Verder kijken.
   const tekenVoortgang = () => {
     const vak = document.getElementById('voortgang');
-    if (titel.soort !== 'serie' || titel.status !== 'Bezig') {
+    if (titel.soort !== 'serie' || titel.status === 'Gezien') {
       vak.innerHTML = '';
       return;
     }
@@ -1385,10 +1384,16 @@ async function toonTitel(id) {
             ? `<select id="v-aflevering">${opties(0, dit.afleveringen, v.aflevering)}</select>`
             : `<input id="v-aflevering" type="number" inputmode="numeric" min="0" value="${v.aflevering}" />`
         }</label>
-      </div>`;
+      </div>
+      ${titel.voortgang ? '<button class="link-knop" id="niet-verder">Niet meer bij Verder kijken</button>' : ''}`;
     document.getElementById('volgende')?.addEventListener('click', async () => {
       await bewaar({ voortgang: volgende });
       tekenVoortgang();
+    });
+    document.getElementById('niet-verder')?.addEventListener('click', async () => {
+      await bewaar({ voortgang: undefined }); // Dexie haalt een veld met undefined weg
+      tekenVoortgang();
+      melding('Staat niet meer bij Verder kijken');
     });
     document.getElementById('naar-gezien')?.addEventListener('click', async () => {
       await bewaar(statusWijziging(titel, 'Gezien'));

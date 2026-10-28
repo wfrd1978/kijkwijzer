@@ -1,6 +1,13 @@
 // Regels voor titels op je lijst, los van de opslag (zodat ze makkelijk te testen zijn).
 
-export const STATUSSEN = ['Wil ik zien', 'Bezig', 'Gezien'];
+export const STATUSSEN = ['Wil ik zien', 'Gezien'];
+
+// Tot oktober 2026 bestond ook de status 'Bezig'. Zo'n titel wordt 'Wil ik zien';
+// een serie houdt (of krijgt) een voortgang, zodat hij bij Verder kijken staat.
+export function zonderBezig(t) {
+  if (t.status !== 'Bezig') return t;
+  return { ...t, status: 'Wil ik zien', ...(t.soort === 'serie' && !t.voortgang ? { voortgang: beginVoortgang() } : {}) };
+}
 
 // Van een zoekresultaat naar een titel op je lijst. Nieuwe titels staan op 'Wil ik zien'.
 export function nieuweTitel(t, nu = new Date()) {
@@ -141,6 +148,7 @@ function schoneActeurs(l) {
 // verkeerde gegevens worden leeg. Zonder titel, TMDB-nummer of soort: een fout.
 export function normaliseerTitel(t) {
   if (!t || typeof t !== 'object') throw new Error('Ongeldige titel in de backup.');
+  t = zonderBezig(t);
   const titel = typeof t.titel === 'string' ? t.titel.trim() : '';
   if (!titel || !Number.isInteger(t.tmdbId) || !SOORT_TITEL.includes(t.soort)) {
     throw new Error('Er staat een onvolledige titel in de backup.');
