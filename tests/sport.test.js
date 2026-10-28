@@ -40,3 +40,14 @@ describe('nlTijd', () => {
     expect(nlTijd({ start: '2026-11-08T12:00:00Z', metTijd: false })).toBe('zo 8 nov');
   });
 });
+
+describe('ZENDER_GIDS', () => {
+  it('linkt alleen naar veilige adressen van bekende sportzenders', async () => {
+    const { ZENDER_GIDS, SPORTZENDERS } = await import('../src/sport.js');
+    for (const [naam, url] of Object.entries(ZENDER_GIDS)) {
+      expect(SPORTZENDERS).toContain(naam);
+      expect(url).toMatch(/^https:\/\//);
+    }
+    expect(ZENDER_GIDS['Ziggo Sport']).toContain('programmagids');
+  });
+});

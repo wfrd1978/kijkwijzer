@@ -3,7 +3,7 @@ import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
 import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur } from './tmdb.js';
 import { kiesFavorieten, combineerTips } from './tips.js';
-import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
+import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, ZENDER_GIDS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
 import { WIELRENNEN, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
 import {
   COMPETITIES, VOETBAL_GECONTROLEERD, leesVoetbalKeuzes, zetVoetbalKeuzes, mijnWedstrijden, ploegenPerCompetitie,
@@ -505,7 +505,7 @@ async function sportVandaagHtml() {
       <li>
         <span class="sport-tijd${x.tijd ? '' : ' dag'}">${x.tijd ? veilig(x.tijd) : 'Hele dag'}</span>
         <div class="sport-wat"><strong>${veilig(x.naam)}</strong><span class="zacht">${veilig(x.sub)}</span></div>
-        ${z ? `<span class="zender-chip${mijn.includes(z.naam) ? ' mijn' : ''}">${veilig(z.naam)}${z.zeker ? '' : '?'}</span>` : ''}
+        ${z ? zenderChip(z, mijn, true) : ''}
       </li>`;
     })
     .join('')}</ul>`;
@@ -997,6 +997,16 @@ async function verversExtra(titel, bewaar, nr) {
 
 // --- Sport ---
 
+// Label met de zender. Tik erop en je ziet in de gids van die zender op welk kanaal het komt.
+function zenderChip(z, mijn, kort = false) {
+  const tekst = `${veilig(z.naam)}${z.zeker ? '' : kort ? '?' : ' (onder voorbehoud)'}`;
+  const klasse = `zender-chip${mijn.includes(z.naam) ? ' mijn' : ''}`;
+  const gids = ZENDER_GIDS[z.naam];
+  return gids
+    ? `<a class="${klasse} met-gids" href="${veiligeUrl(gids)}" target="_blank" rel="noopener" aria-label="${veilig(z.naam)}: bekijk in de gids op welk kanaal">${tekst} ›</a>`
+    : `<span class="${klasse}">${tekst}</span>`;
+}
+
 function wielrennenHtml(mijn) {
   const komend = komendeKoersen(WIELRENNEN.koersen, vandaag());
   if (!komend.length) return '<p class="leeg">De kalender voor het volgende seizoen volgt.</p>';
@@ -1011,7 +1021,7 @@ function wielrennenHtml(mijn) {
         </div>
         <strong>${veilig(k.naam)}</strong>
         <div class="koers-zenders">${k.zenders
-          .map((z) => `<span class="zender-chip${mijn.includes(z.naam) ? ' mijn' : ''}">${veilig(z.naam)}${z.zeker ? '' : ' (onder voorbehoud)'}</span>`)
+          .map((z) => zenderChip(z, mijn))
           .join('')}</div>
         ${kijk === 'ja' ? '<span class="koers-kijk">Jij kunt live kijken</span>' : kijk === 'misschien' ? '<span class="koers-kijk misschien">Misschien bij jouw zenders</span>' : kijk === 'nee' ? '<span class="koers-kijk nee">Niet bij jouw zenders</span>' : ''}
         ${k.noot ? `<span class="zacht koers-noot">${veilig(k.noot)}</span>` : ''}
@@ -1037,7 +1047,7 @@ let voetbalWeek = 'deze';
 
 function zenderChips(zenders, mijn) {
   return zenders
-    .map((z) => `<span class="zender-chip${mijn.includes(z.naam) ? ' mijn' : ''}">${veilig(z.naam)}${z.zeker ? '' : ' (onder voorbehoud)'}</span>`)
+    .map((z) => zenderChip(z, mijn))
     .join('');
 }
 

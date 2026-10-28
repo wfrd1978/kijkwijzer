@@ -539,3 +539,4 @@ a.titel { text-decoration: none; }
 .sport-wat strong { font-size: 0.98rem; }
 .sport-wat span { font-size: 0.8rem; }
 .leeg-klein { margin: 0; padding: 14px; border-radius: 14px; border: 1px solid var(--lijn); color: var(--zacht); font-size: 0.92rem; }
+.zender-chip.met-gids { text-decoration: none; }

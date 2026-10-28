@@ -90,6 +90,16 @@ export async function haalF1({ fetcher = fetch } = {}) {
 export const SPORTZENDERS = ['NOS', 'ESPN', 'Viaplay', 'Ziggo Sport', 'HBO Max'];
 const MIJN_ZENDERS = 'sportzenders';
 
+// Waar je ziet op welk kanaal iets komt (bij Ziggo Sport: kanaal 1 tot en met 6).
+// De zenders geven dat niet vrij als gegevens, dus de app linkt naar hun eigen gids of sportpagina.
+// ESPN Nederland heeft geen openbare gids. Gecontroleerd in oktober 2026.
+export const ZENDER_GIDS = {
+  'Ziggo Sport': 'https://www.ziggosport.nl/programmagids/',
+  Viaplay: 'https://viaplay.com/nl-nl/sport',
+  NOS: 'https://nos.nl/live',
+  'HBO Max': 'https://www.hbomax.com/nl/nl/sports',
+};
+
 export function leesSportzenders() {
   try {
     const l = JSON.parse(localStorage.getItem(MIJN_ZENDERS) || '[]');
