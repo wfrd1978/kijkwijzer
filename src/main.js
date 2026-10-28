@@ -431,8 +431,21 @@ function toonBevestigen(t, alOpLijst, terug = { naam: 'Films & series', toon: ()
     </section>
   `;
   document.getElementById('terug').addEventListener('click', terug.toon);
-  // Waar kijken, ook al voordat je hem op je lijst zet.
+  // Waar kijken, trailer en acteurs, ook al voordat je hem op je lijst zet.
   if (leesSleutel()) {
+    const extraVak = Object.assign(document.createElement('div'), { id: 'extra', className: 'bevestig-extra' });
+    document.querySelector('.bevestig').append(extraVak);
+    let extra = null;
+    extraVak.addEventListener('click', (e) => {
+      if (e.target.closest('#trailer-start') && extra?.trailer) speelTrailer(extra.trailer);
+    });
+    const extraNr = toonBevestigen.nr + 1;
+    haalTrailerEnActeurs(t.soort, t.tmdbId)
+      .then((x) => {
+        extra = x;
+        if (extraNr === toonBevestigen.nr && document.body.contains(extraVak)) extraVak.innerHTML = extraHtml({ ...t, ...x });
+      })
+      .catch(() => {});
     const sectie = Object.assign(document.createElement('section'), { className: 'waar bevestig-waar' });
     sectie.innerHTML = '<p class="label">Waar kijken in Nederland</p><div id="bevestig-diensten" class="diensten"><p class="zacht">Ophalen…</p></div>';
     document.querySelector('.bevestig').append(sectie);
@@ -1277,7 +1290,8 @@ async function verversExtra(titel, bewaar, nr) {
   if (!leesSleutel()) return;
   // Titels van vóór de voorplaat (zonder 'achtergrond') worden één keer extra bijgewerkt.
   // Series van vóór stap 15 (zonder seizoenen) ook.
-  const compleet = 'achtergrond' in titel && (titel.soort !== 'serie' || 'seizoenen' in titel);
+  // Zonder acteurs (bijvoorbeeld omdat TMDB ze eerder even niet gaf) opnieuw proberen, hooguit één keer per dag.
+  const compleet = 'achtergrond' in titel && (titel.soort !== 'serie' || 'seizoenen' in titel) && (titel.acteurs?.length || titel.extraOp === vandaag());
   if (titel.extraOp && compleet && dagenSinds(new Date(titel.extraOp)) < EXTRA_VERVERS_DAGEN) return;
   try {
     await bewaar({ ...(await haalTrailerEnActeurs(titel.soort, titel.tmdbId)), extraOp: vandaag() });
@@ -2314,7 +2328,8 @@ vraagBlijvendeOpslag();
 // Alleen deze gegevens worden toegevoegd; je eigen status, sterren en notities blijven zoals ze zijn.
 async function vulActeursAan() {
   if (!leesSleutel()) return;
-  const zonder = (await alleTitels()).filter((t) => !t.extraOp);
+  // Ook titels waarbij de acteurs eerder leeg bleven (hooguit één keer per dag opnieuw).
+  const zonder = (await alleTitels()).filter((t) => !t.extraOp || (!t.acteurs?.length && t.extraOp !== vandaag()));
   for (const t of zonder.slice(0, 100)) {
     try {
       await titelBijwerken(t.id, { ...(await haalTrailerEnActeurs(t.soort, t.tmdbId)), extraOp: vandaag() });
