@@ -249,26 +249,82 @@ function maakVeegbaar(lijst, onVerwijder) {
   });
 }
 
-function titelRegel(t, zoek = '', { status = true } = {}) {
+function titelRegel(t, zoek = '', { status = true, acties = false } = {}) {
   const acteur = gevondenActeur(t, zoek);
+  // In de eigen lijst: bij Wil ik zien een knop 'Gezien', bij Gezien de sterren om aan te tikken.
+  const actie = !acties
+    ? ''
+    : t.status === 'Gezien'
+      ? `<span class="lijst-sterren" role="group" aria-label="Sterren">${[1, 2, 3, 4, 5]
+          .map((n) => `<span class="lijst-ster${t.sterren >= n ? ' aan' : ''}" data-actie="ster" data-n="${n}" role="button" aria-label="${n} ${n === 1 ? 'ster' : 'sterren'}">★</span>`)
+          .join('')}</span>`
+      : '<span class="regel-knop" data-actie="gezien" role="button">✓ Gezien</span>';
   return `
       <li class="veeg" data-id="${t.id}">
         <button class="veeg-actie" tabindex="-1">Verwijder</button>
-        <a class="titel" href="#/titel/${t.id}${t.status === 'Gezien' && !t.sterren ? '/sterren' : ''}">
+        <a class="titel" href="#/titel/${t.id}">
         ${posterHtml(t)}
         <div class="titel-tekst">
           <span class="regel">
             ${status ? `<span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>` : ''}
-            ${t.sterren ? `<span class="sterren-klein" aria-label="${t.sterren} sterren">${sterrenTekst(t.sterren)}</span>` : ''}
+            ${t.sterren && !acties ? `<span class="sterren-klein" aria-label="${t.sterren} sterren">${sterrenTekst(t.sterren)}</span>` : ''}
             ${t.soort === 'serie' && t.status !== 'Gezien' && voortgangKort(t.voortgang) ? `<span class="voortgang-kort">${voortgangKort(t.voortgang)}</span>` : ''}
             ${t.nieuwBij?.length ? `<span class="nieuw-label">Nieuw bij ${veilig(t.nieuwBij.map((d) => d.naam).join(' en '))}</span>` : ''}
           </span>
           <strong>${veilig(t.titel)}</strong>
           <span>${soortJaar(t)}</span>
           ${acteur ? `<span class="met-acteur">Met ${veilig(acteur)}</span>` : ''}
-          ${t.status === 'Gezien' && !t.sterren ? '<span class="geef-sterren">☆☆☆☆☆ Geef sterren</span>' : ''}
+          ${actie}
         </div>
       </a></li>`;
+}
+
+// --- Sterren geven, meteen na 'Gezien' ---
+
+// Een venster onderin: 'Hoeveel sterren?'. Bewaart de keuze en geeft het aantal (0 = later).
+function vraagSterren(titel) {
+  return new Promise((klaar) => {
+    document.getElementById('sterren-venster')?.remove();
+    const venster = Object.assign(document.createElement('div'), { id: 'sterren-venster', className: 'venster' });
+    venster.innerHTML = `
+      <div class="venster-vlak" role="dialog" aria-modal="true" aria-labelledby="venster-kop">
+        <p class="venster-label">Gezien</p>
+        <h2 id="venster-kop">${veilig(titel.titel)}</h2>
+        <p class="zacht">Wat vond je ervan?</p>
+        <div class="sterren venster-sterren">${[1, 2, 3, 4, 5]
+          .map((n) => `<button class="ster" data-n="${n}" aria-label="${n} ${n === 1 ? 'ster' : 'sterren'}">★</button>`)
+          .join('')}</div>
+        <button class="link-knop" data-n="0">Later</button>
+      </div>`;
+    document.body.append(venster);
+    const sterren = venster.querySelectorAll('.venster-sterren .ster');
+    // Bij aanwijzen of aantikken lichten de sterren tot daar op.
+    const licht = (n) => sterren.forEach((b) => b.classList.toggle('aan', Number(b.dataset.n) <= n));
+    venster.addEventListener('pointerover', (e) => e.target.closest('.ster') && licht(Number(e.target.closest('.ster').dataset.n)));
+    venster.addEventListener('click', async (e) => {
+      const knop = e.target.closest('[data-n]');
+      if (!knop && e.target !== venster) return;
+      const n = knop ? Number(knop.dataset.n) : 0;
+      if (n) {
+        licht(n);
+        await titelBijwerken(titel.id, { sterren: n });
+        titel.sterren = n;
+        await new Promise((x) => setTimeout(x, 250)); // even laten zien wat je koos
+      }
+      venster.remove();
+      klaar(n);
+    });
+  });
+}
+
+// Een titel op Gezien zetten (met de datum van vandaag) en meteen om sterren vragen.
+async function zetOpGezien(titel) {
+  const wijziging = statusWijziging(titel, 'Gezien');
+  await titelBijwerken(titel.id, wijziging);
+  Object.assign(titel, wijziging);
+  const n = await vraagSterren(titel);
+  melding(n ? `${titel.titel}: ${n} ${n === 1 ? 'ster' : 'sterren'}` : 'Op Gezien gezet');
+  return n;
 }
 
 // --- Nieuw bij jouw diensten ---
@@ -493,8 +549,7 @@ function toonBevestigen(t, alOpLijst, terug = { naam: 'Mijn lijst', toon: () => 
       return;
     }
     if (knop.dataset.toevoegen === 'Gezien') {
-      await titelBijwerken(titel.id, statusWijziging(titel, 'Gezien'));
-      melding('Op Gezien gezet', { tekst: 'Geef sterren', actie: () => (location.hash = `#/titel/${titel.id}/sterren`) });
+      await zetOpGezien(titel);
     } else {
       melding('Op Wil ik zien gezet');
     }
@@ -549,20 +604,20 @@ async function sportItems(dagen) {
   if (schema) {
     for (const w of mijnWedstrijden(schema.wedstrijden, leesVoetbalKeuzes()).filter((x) => op.has(nlDagVan(x)))) {
       const c = COMPETITIES[w.competitie];
-      items.push({ dag: nlDagVan(w), start: w.start, tijd: aftrap(w.start), naam: `${w.thuis.naam} – ${w.uit.naam}`, sub: c.naam, zenders: zendersVan(w, kanalen) });
+      items.push({ dag: nlDagVan(w), start: w.start, tijd: aftrap(w.start), naam: `${w.thuis.naam} – ${w.uit.naam}`, sub: c.naam, zenders: zendersVan(w, kanalen), soort: 'voetbal', thuis: w.thuis, uit: w.uit, mijnClub: [w.thuis.id, w.uit.id].some((id) => leesVoetbalKeuzes().clubs.includes(id)) });
     }
   }
   if (oranje && op.has(nlDagVan(oranje))) {
-    items.push({ dag: nlDagVan(oranje), start: oranje.start, tijd: aftrap(oranje.start), naam: `${oranje.thuis} – ${oranje.uit}`, sub: oranje.competitie, zenders: oranje.zenders });
+    items.push({ dag: nlDagVan(oranje), start: oranje.start, tijd: aftrap(oranje.start), naam: `${oranje.thuis} – ${oranje.uit}`, sub: oranje.competitie, zenders: oranje.zenders, soort: 'oranje' });
   }
   for (const r of f1?.races ?? []) {
     for (const s of r.sessies.filter((x) => op.has(nlDagVan(x)))) {
-      items.push({ dag: nlDagVan(s), start: s.start, tijd: s.metTijd ? aftrap(s.start) : '', naam: `${s.naam} · ${r.naam}`, sub: 'Formule 1', zenders: [{ naam: F1_ZENDERS.live, zeker: true }] });
+      items.push({ dag: nlDagVan(s), start: s.start, tijd: s.metTijd ? aftrap(s.start) : '', naam: `${s.naam} · ${r.naam}`, sub: 'Formule 1', zenders: [{ naam: F1_ZENDERS.live, zeker: true }], soort: 'f1', sessie: s.naam });
     }
   }
   for (const dag of dagen) {
     for (const k of WIELRENNEN.koersen.filter((x) => x.van <= dag && (x.tot ?? x.van) >= dag)) {
-      items.push({ dag, start: `${dag}T00:00`, tijd: '', naam: k.naam, sub: `Wielrennen · ${k.soort}`, zenders: k.zenders });
+      items.push({ dag, start: `${dag}T00:00`, tijd: '', naam: k.naam, sub: `Wielrennen · ${k.soort}`, zenders: k.zenders, soort: 'wiel' });
     }
   }
   return items.sort((a, b) => a.start.localeCompare(b.start));
@@ -608,43 +663,81 @@ async function agendaItems(titels, stand, dagen) {
     // Nieuwe afleveringen staan bovenaan hun dag.
     // Wat van je Wil ik zien deze week op NPO komt.
     ...lijstOpNpo((await haalNpo())?.programmas ?? [], titels, dagen).map((p) => ({
-      dag: nlDagVan(p), start: p.start, tijd: aftrap(p.start), naam: p.titel, sub: 'Van je lijst', zenders: [], dienst: { naam: p.zender }, nieuw: true,
+      dag: nlDagVan(p), start: p.start, tijd: aftrap(p.start), naam: p.titel, sub: p.aflevering || 'Van je lijst', zenders: [], dienst: { naam: p.zender }, nieuw: true, soort: 'npo', beeld: p.beeld,
     })),
     ...afleveringenOp(titels, stand, dagen).map((e) => ({
-      dag: e.dag, start: `${e.dag}T00:00`, tijd: '', naam: `${e.titel.titel} ${afleveringKort(e)}`, sub: 'Nieuwe aflevering', zenders: [], dienst: dienstVan(e.titel), nieuw: true,
+      dag: e.dag, start: `${e.dag}T00:00`, tijd: '', naam: e.titel.titel, sub: `Nieuwe aflevering · ${afleveringKort(e)}${e.naam ? ` · ${e.naam}` : ''}`, zenders: [], dienst: dienstVan(e.titel), nieuw: true, soort: 'serie', titel: e.titel,
     })),
   ].sort((a, b) => a.start.localeCompare(b.start));
 }
 
-// Eén regel in de agenda: tijd (of 'Nieuw'), wat, en rechts de zender of dienst.
+// Het beeldje vooraan een regel in de week: emblemen, een poster, of een getekend icoon.
+function agendaBeeld(x) {
+  if (x.soort === 'voetbal') return `<span class="agenda-beeld duo">${embleem(x.thuis)}${embleem(x.uit)}</span>`;
+  if (x.soort === 'serie') {
+    const poster = veiligeUrl(posterUrl(x.titel.poster, 'w92'));
+    return poster ? `<img class="agenda-beeld poster" src="${poster}" alt="" loading="lazy" />` : '<span class="agenda-beeld icoon serie">▶</span>';
+  }
+  if (x.soort === 'npo') {
+    const beeld = veiligeUrl(x.beeld);
+    return beeld ? `<img class="agenda-beeld npo" src="${beeld}" alt="" loading="lazy" />` : '<span class="agenda-beeld icoon npo">NPO</span>';
+  }
+  if (x.soort === 'f1') return '<span class="agenda-beeld icoon f1" aria-hidden="true"></span>';
+  if (x.soort === 'wiel') return '<span class="agenda-beeld icoon wiel">🚴</span>';
+  if (x.soort === 'oranje') return '<span class="agenda-beeld icoon oranje">NL</span>';
+  return '<span class="agenda-beeld icoon"></span>';
+}
+
+// Eén regel in de week: beeldje, tijd, wat, en rechts de zender of dienst.
 function agendaRegel(x, mijn) {
   const z = eenZender(x.zenders, mijn);
   const rechts = x.nieuw ? (x.dienst ? `<span class="zender-chip mijn">${veilig(x.dienst.naam)}</span>` : '') : z ? zenderChip(z, mijn, true) : '';
-  return `<div class="week-regel"><span>${x.tijd ? `<strong>${veilig(x.tijd)}</strong> ` : x.nieuw ? '<strong class="nieuw-woord">Nieuw</strong> ' : ''}${veilig(x.naam)} <span class="zacht">· ${veilig(x.sub)}</span></span>${rechts}</div>`;
+  return `
+    <li class="agenda-regel${x.mijnClub ? ' mijn-club-regel' : ''}">
+      ${agendaBeeld(x)}
+      <div class="agenda-wat">
+        <span class="agenda-tijd">${x.tijd ? veilig(x.tijd) : x.nieuw ? '<span class="nieuw-woord">Nieuw</span>' : 'Hele dag'}</span>
+        <strong>${veilig(x.naam)}</strong>
+        <span class="zacht">${veilig(x.sub)}</span>
+      </div>
+      ${rechts}
+    </li>`;
 }
 
 async function weekHtml(titels, stand) {
   const mijn = leesSportzenders();
   const dagen = weekDagen(vandaag());
-  const items = await agendaItems(titels, stand, dagen);
-  const regels = dagen.map((dag) => {
+  // In het weekoverzicht bij de Formule 1 alleen wat telt: kwalificatie, sprint en race.
+  const items = (await agendaItems(titels, stand, dagen)).filter((x) => x.soort !== 'f1' || !/^Vrije training/.test(x.sessie));
+  const voorbij = dagen.filter((d) => d < vandaag());
+  const telling = [
+    [items.filter((x) => x.soort === 'voetbal' || x.soort === 'oranje').length, 'wedstrijd', 'wedstrijden'],
+    [items.filter((x) => x.soort === 'serie').length, 'nieuwe aflevering', 'nieuwe afleveringen'],
+    [items.filter((x) => x.soort === 'npo').length, 'keer op NPO', 'keer op NPO'],
+    [items.filter((x) => x.soort === 'f1' || x.soort === 'wiel').length, 'race of koers', 'races en koersen'],
+  ].filter(([n]) => n);
+  const dagKop = (dag) => {
     const d = new Date(`${dag}T12:00:00Z`);
-    const wat = items.filter((x) => x.dag === dag);
-    return `
-      <li class="week-dag${dag < vandaag() ? ' voorbij' : ''}${dag === vandaag() ? ' is-vandaag' : ''}">
-        <div class="week-datum">
-          <span>${d.toLocaleDateString('nl-NL', { weekday: 'short', timeZone: 'UTC' }).slice(0, 2)}</span>
-          <strong>${d.getUTCDate()}</strong>
-        </div>
-        <div class="week-wat">${
-          wat.length
-            ? wat.map((x) => agendaRegel(x, mijn)).join('')
-            : '<span class="zacht">Niets bij jouw keuzes</span>'
-        }</div>
-      </li>`;
-  });
-  return `<ul class="week">${regels.join('')}</ul>
-    <p class="bron">Alleen wat jij volgt: nieuwe afleveringen van series op je lijst, en in Sport je clubs en competities, Oranje, Formule 1 en wielrennen. Tijden in Nederlandse tijd; afleveringen volgens TMDB.</p>`;
+    const naam = d.toLocaleDateString('nl-NL', { weekday: 'long', timeZone: 'UTC' });
+    const datum = d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+    const morgen = dagNaam(dag, vandaag()) === 'Morgen';
+    return `<div class="weekdag-kop"><h2>${veilig(naam)}</h2><span class="zacht">${veilig(datum)}</span>${dag === vandaag() ? '<span class="weekdag-label">Vandaag</span>' : morgen ? '<span class="weekdag-label stil">Morgen</span>' : ''}</div>`;
+  };
+  const kaarten = dagen
+    .filter((d) => d >= vandaag())
+    .map((dag) => {
+      const wat = items.filter((x) => x.dag === dag);
+      return `
+        <section class="weekdag${dag === vandaag() ? ' is-vandaag' : ''}${wat.length ? '' : ' rustig'}">
+          ${dagKop(dag)}
+          ${wat.length ? `<ul class="agenda">${wat.map((x) => agendaRegel(x, mijn)).join('')}</ul>` : '<p class="zacht weekdag-leeg">Rustige dag: niets bij jouw keuzes.</p>'}
+        </section>`;
+    });
+  return `
+    ${telling.length ? `<div class="week-telling">${telling.map(([n, een, meer]) => `<span><strong>${n}</strong> ${n === 1 ? een : meer}</span>`).join('')}</div>` : ''}
+    ${voorbij.length ? `<p class="week-voorbij zacht">${voorbij.length === 1 ? 'Maandag is' : `Maandag tot en met ${new Date(`${voorbij.at(-1)}T12:00:00Z`).toLocaleDateString('nl-NL', { weekday: 'long', timeZone: 'UTC' })} zijn`} voorbij.</p>` : ''}
+    ${kaarten.join('')}
+    <p class="bron">Alleen wat jij volgt: nieuwe afleveringen en NPO-uitzendingen van titels op je lijst, en in Sport je clubs en competities, Oranje, Formule 1 (kwalificatie en race) en wielrennen. Tijden in Nederlandse tijd; afleveringen volgens TMDB.</p>`;
 }
 
 // --- Deze week: eigen scherm, maandag tot en met zondag ---
@@ -897,13 +990,18 @@ function afleveringenHtml(titels, stand) {
 
 // --- Mijn lijst: Wil ik zien, Gezien en Ontdekken, met één zoekveld ---
 
-const FILMS_TABS = { wil: 'Wil ik zien', gezien: 'Gezien', ontdekken: 'Ontdekken' };
+const FILMS_TABS = { wil: 'Wil ik zien', gezien: 'Gezien' };
 const LIJST_STATUSSEN = { wil: ['Wil ik zien'], gezien: ['Gezien'] };
 let filmsTab = onthoud('filmsTab', 'wil', Object.keys(FILMS_TABS));
 let filmsZoek = '';
 
-function toonLijstTab(vak, welke, titels) {
+function toonLijstTab(vak, welke, titels, naWijziging) {
   vak.innerHTML = `
+    <p class="lijst-uitleg">${
+      welke === 'wil'
+        ? 'Wat je nog wilt zien. Gezien? Tik op <b>✓ Gezien</b> en geef meteen sterren.'
+        : 'Wat je hebt gezien. Tik op de sterren om je oordeel te geven of te veranderen.'
+    }</p>
     <div class="lijst-regel">
       <label class="sorteer">Toon
         <select id="soort">${Object.entries(SOORTEN).map(([k, v]) => `<option value="${k}"${k === soort ? ' selected' : ''}>${v}</option>`).join('')}</select>
@@ -918,17 +1016,38 @@ function toonLijstTab(vak, welke, titels) {
   const teken = () => {
     const zichtbaar = sorteerTitels(filterTitels(titels, { soort }).filter((t) => LIJST_STATUSSEN[welke].includes(t.status)), sortering);
     document.getElementById('lijst').innerHTML = zichtbaar.length
-      ? zichtbaar.map((t) => titelRegel(t, '', { status: false })).join('')
+      ? zichtbaar.map((t) => titelRegel(t, '', { status: false, acties: true })).join('')
       : `<li class="leeg">${
           soort !== 'alle'
             ? `Geen ${SOORTEN[soort].toLowerCase()} bij ${FILMS_TABS[welke]}.`
             : welke === 'wil'
-              ? 'Nog niets op Wil ik zien. Zoek hierboven een titel, of kijk bij Ontdekken.'
-              : 'Nog niets gezien. Zet een titel op Gezien via de titelpagina.'
+              ? 'Nog niets op Wil ik zien. Zoek hierboven een film of serie, of kijk bij Ontdek iets nieuws.'
+              : 'Nog niets gezien. Tik bij Wil ik zien op ✓ Gezien, of kies Al gezien als je iets toevoegt.'
         }</li>`;
     document.getElementById('aantal').textContent = aantalTekst(zichtbaar.length);
   };
   teken();
+
+  // De knoppen in een regel: niet de titel openen, maar meteen doen.
+  document.getElementById('lijst').addEventListener('click', async (e) => {
+    const knop = e.target.closest('[data-actie]');
+    if (!knop) return;
+    e.preventDefault();
+    const t = titels.find((x) => x.id === Number(knop.closest('.veeg').dataset.id));
+    if (!t) return;
+    if (knop.dataset.actie === 'ster') {
+      const n = Number(knop.dataset.n);
+      const sterren = t.sterren === n ? 0 : n; // nog een keer op dezelfde ster haalt het oordeel weg
+      await titelBijwerken(t.id, { sterren });
+      t.sterren = sterren;
+      knop.parentElement.querySelectorAll('.lijst-ster').forEach((x) => x.classList.toggle('aan', Number(x.dataset.n) <= sterren));
+      return;
+    }
+    if (knop.dataset.actie === 'gezien') {
+      await zetOpGezien(t);
+      naWijziging?.();
+    }
+  });
 
   maakVeegbaar(document.getElementById('lijst'), async (li) => {
     const id = Number(li.dataset.id);
@@ -961,7 +1080,7 @@ function toonLijstTab(vak, welke, titels) {
   });
 }
 
-async function toonFilms({ terugNaarPlek = false } = {}) {
+async function toonFilms() {
   const nr = schermNr;
   const titels = await alleTitels();
   if (nr !== schermNr) return;
@@ -969,10 +1088,11 @@ async function toonFilms({ terugNaarPlek = false } = {}) {
     ${schermKop('Mijn lijst', aantalTekst(titels.length) + ' · films en series')}
     <form class="films-zoek" id="films-zoek-form" role="search">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-      <input id="films-zoek" type="search" placeholder="Zoek in je lijst of vind iets nieuws" autocomplete="off" enterkeyhint="search" value="${veilig(filmsZoek)}" aria-label="Zoek een film, serie of acteur" />
+      <input id="films-zoek" type="search" placeholder="Zoek of voeg een film of serie toe" autocomplete="off" enterkeyhint="search" value="${veilig(filmsZoek)}" aria-label="Zoek een film, serie of acteur" />
     </form>
+    <a class="ontdek-link" id="ontdek-link" href="#/ontdekken"><span>Ontdek iets nieuws</span><span class="zacht">Trending en tips ›</span></a>
     <div class="segment" id="films-tabs" role="tablist">${Object.entries(FILMS_TABS)
-      .map(([k, naam]) => `<button role="tab" aria-selected="${k === filmsTab}" data-tab="${k}">${naam}${k in LIJST_STATUSSEN ? ` <span class="tab-aantal">${titels.filter((t) => LIJST_STATUSSEN[k].includes(t.status)).length}</span>` : ''}</button>`)
+      .map(([k, naam]) => `<button role="tab" aria-selected="${k === filmsTab}" data-tab="${k}">${naam} <span class="tab-aantal" data-aantal="${k}">${titels.filter((t) => LIJST_STATUSSEN[k].includes(t.status)).length}</span></button>`)
       .join('')}</div>
     <div id="films-vak"></div>
   `;
@@ -990,11 +1110,19 @@ async function toonFilms({ terugNaarPlek = false } = {}) {
         ? ''
         : `<p class="leeg">Niets gevonden in je lijst. Om ook nieuwe titels te zoeken, plak eerst je TMDB-sleutel in <a href="#/instellingen">Instellingen</a>.</p>`;
   };
+  // Na 'Gezien' in de lijst: aantallen op de tabbladen bijwerken en de lijst opnieuw tekenen.
+  const naWijziging = () => {
+    for (const k of Object.keys(FILMS_TABS)) {
+      document.querySelector(`[data-aantal="${k}"]`).textContent = titels.filter((t) => LIJST_STATUSSEN[k].includes(t.status)).length;
+    }
+    toonLijstTab(vak, filmsTab, titels, naWijziging);
+  };
   const tekenVak = () => {
-    segment.hidden = Boolean(filmsZoek.trim());
-    if (filmsZoek.trim()) tekenZoek();
-    else if (filmsTab === 'ontdekken') toonOntdekken({ terugNaarPlek });
-    else toonLijstTab(vak, filmsTab, titels);
+    const zoekt = Boolean(filmsZoek.trim());
+    segment.hidden = zoekt;
+    document.getElementById('ontdek-link').hidden = zoekt;
+    if (zoekt) tekenZoek();
+    else toonLijstTab(vak, filmsTab, titels, naWijziging);
   };
   tekenVak();
   if (filmsZoek.trim() && leesSleutel()) {
@@ -1019,6 +1147,7 @@ async function toonFilms({ terugNaarPlek = false } = {}) {
     }
     tekenZoek();
     segment.hidden = true;
+    document.getElementById('ontdek-link').hidden = true;
     if (leesSleutel()) wacht = setTimeout(() => zoek(filmsZoek), 400);
   });
   document.getElementById('films-zoek-form').addEventListener('submit', (e) => {
@@ -1033,13 +1162,19 @@ async function toonFilms({ terugNaarPlek = false } = {}) {
     filmsTab = knop.dataset.tab;
     bewaarKeuze('filmsTab', filmsTab);
     segment.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === filmsTab)));
-    schermNr += 1; // wat Ontdekken nog aan het ophalen was, mag niet meer tekenen
-    terugNaarPlek = false;
     tekenVak();
   });
 }
 
-// --- Ontdekken ---
+// --- Ontdekken: eigen scherm, bereikbaar vanuit Mijn lijst ---
+
+function toonOntdekScherm({ terugNaarPlek = false } = {}) {
+  app.innerHTML = `
+    <header class="kop">${terugKnop('#/films', 'Mijn lijst')}</header>
+    ${schermKop('Ontdekken', 'Iets nieuws om te kijken')}
+    <div id="films-vak"></div>`;
+  toonOntdekken({ terugNaarPlek });
+}
 
 const ONTDEK_SOORTEN = { film: 'Films', serie: 'Series' };
 const ONTDEK_BRONNEN = { trending: 'Trending', diensten: 'Bij mijn diensten', tips: 'Tips voor mij' };
@@ -1167,7 +1302,7 @@ async function toonOntdekken({ terugNaarPlek = false } = {}) {
       knop.addEventListener('click', () => {
         ontdekScroll = window.scrollY;
         const t = stand.titels[Number(knop.dataset.i)];
-        toonBevestigen(t, opLijst.get(titelSleutel(t)), { naam: 'Ontdekken', toon: () => toonFilms({ terugNaarPlek: true }) });
+        toonBevestigen(t, opLijst.get(titelSleutel(t)), { naam: 'Ontdekken', toon: () => toonOntdekScherm({ terugNaarPlek: true }) });
       })
     );
     document.getElementById('meer')?.addEventListener('click', async (e) => {
@@ -1734,37 +1869,44 @@ async function toonTitel(id, { naarSterren = false } = {}) {
       <p>${soortJaar(titel)}${titel.origineel && titel.origineel !== titel.titel ? ` · ${veilig(titel.origineel)}` : ''}</p>
       ${titel.beschrijving ? `<p class="beschrijving">${veilig(titel.beschrijving)}</p>` : ''}
 
-      <div id="extra">${extraHtml(titel)}</div>
+      <div class="mijn-blok">
+        <p class="label">Op mijn lijst</p>
+        <div class="keuzes" id="statussen">
+          ${STATUSSEN.map((s) => `<button class="keuze" data-s="${s}">${s === 'Gezien' ? '✓ Gezien' : s}</button>`).join('')}
+        </div>
+        <div id="voortgang"></div>
+
+        <div id="gezien-deel">
+          <p class="label">Mijn oordeel</p>
+          <div class="sterren" id="sterren" role="radiogroup" aria-label="Sterren"></div>
+
+          <p class="label">Gezien op</p>
+          <div class="datum-regel">
+            <input type="date" id="kijkdatum" value="${veilig(titel.kijkdatum)}" max="${vandaag()}" aria-label="Kijkdatum" />
+            <button class="link-knop" id="datum-weg"${titel.kijkdatum ? '' : ' hidden'}>Wissen</button>
+          </div>
+          <p class="zacht datum-tekst" id="datum-tekst">${titel.kijkdatum ? veilig(datumTekst(titel.kijkdatum)) : 'Nog niet ingevuld'}</p>
+        </div>
+
+        <p class="label">Notitie</p>
+        <textarea id="notitie" rows="3" placeholder="Bijvoorbeeld: tip van …, of wat je ervan vond">${veilig(titel.notitie)}</textarea>
+        <p class="opgeslagen" id="opgeslagen">&nbsp;</p>
+      </div>
 
       <p class="label">Waar kijken</p>
       <div id="diensten" class="diensten">${dienstenHtml(titel, true)}</div>
 
-      <p class="label">Status</p>
-      <div class="keuzes" id="statussen">
-        ${STATUSSEN.map((s) => `<button class="keuze" data-s="${s}">${s}</button>`).join('')}
-      </div>
-      <div id="voortgang"></div>
-
-      <p class="label">Mijn oordeel</p>
-      <div class="sterren" id="sterren" role="radiogroup" aria-label="Sterren"></div>
-
-      <p class="label">Gezien op</p>
-      <div class="datum-regel">
-        <input type="date" id="kijkdatum" value="${veilig(titel.kijkdatum)}" max="${vandaag()}" aria-label="Kijkdatum" />
-        <button class="link-knop" id="datum-weg"${titel.kijkdatum ? '' : ' hidden'}>Wissen</button>
-      </div>
-      <p class="zacht datum-tekst" id="datum-tekst">${titel.kijkdatum ? veilig(datumTekst(titel.kijkdatum)) : 'Nog niet ingevuld'}</p>
-
-      <p class="label">Notitie</p>
-      <textarea id="notitie" rows="4" placeholder="Bijvoorbeeld: tip van …, of wat je ervan vond">${veilig(titel.notitie)}</textarea>
-      <p class="opgeslagen" id="opgeslagen">&nbsp;</p>
+      <div id="extra">${extraHtml(titel)}</div>
 
       <button class="verwijder" id="verwijder">Verwijder van mijn lijst</button>
     </section>
   `;
 
-  const tekenStatus = () =>
+  // Sterren en kijkdatum horen bij Gezien; bij Wil ik zien blijven ze uit beeld.
+  const tekenStatus = () => {
     document.querySelectorAll('#statussen .keuze').forEach((k) => k.classList.toggle('actief', k.dataset.s === titel.status));
+    document.getElementById('gezien-deel').hidden = titel.status !== 'Gezien';
+  };
   const tekenSterren = () => {
     document.getElementById('sterren').innerHTML = [1, 2, 3, 4, 5]
       .map(
@@ -1798,6 +1940,8 @@ async function toonTitel(id, { naarSterren = false } = {}) {
     tekenStatus();
     tekenDatum();
     tekenVoortgang();
+    // Net op Gezien gezet: de sterren staan er nu, meteen in beeld.
+    if (titel.status === 'Gezien' && !titel.sterren) document.getElementById('sterren').scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 
   // Waar ben je? Bij series die je nog niet helemaal gezien hebt. Vink je een aflevering af,
@@ -2413,19 +2557,17 @@ async function route() {
   const titelId = location.hash.match(/^#\/titel\/(\d+)(\/sterren)?$/);
   const acteurId = location.hash.match(/^#\/acteur\/(\d+)$/);
   // Oude adressen (van voor de nieuwe indeling) komen uit bij Mijn lijst.
-  if (location.hash === '#/zoek' || location.hash === '#/ontdekken') {
-    if (location.hash === '#/ontdekken') filmsTab = 'ontdekken';
-    history.replaceState(null, '', '#/films');
-  }
+  if (location.hash === '#/zoek') history.replaceState(null, '', '#/films');
   const plek =
-    { '#/films': 'films', '#/week': 'week', '#/sport': 'sport', '#/instellingen': 'instellingen', '#/instellingen/backup': 'instellingen' }[location.hash] || (titelId || acteurId ? 'films' : 'vandaag');
-  document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === plek));
+    { '#/films': 'films', '#/ontdekken': 'ontdekken', '#/week': 'week', '#/sport': 'sport', '#/instellingen': 'instellingen', '#/instellingen/backup': 'instellingen' }[location.hash] || (titelId || acteurId ? 'films' : 'vandaag');
+  document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === (plek === 'ontdekken' ? 'films' : plek)));
   if (plek === 'instellingen') toonInstellingen().then(() => location.hash === '#/instellingen/backup' && document.getElementById('backup-blok')?.scrollIntoView());
   else if (plek === 'sport') toonSport();
   else if (plek === 'week') toonWeek();
   else if (titelId) toonTitel(Number(titelId[1]), { naarSterren: Boolean(titelId[2]) });
   else if (acteurId) toonActeur(Number(acteurId[1]));
   else if (plek === 'films') toonFilms();
+  else if (plek === 'ontdekken') toonOntdekScherm();
   else toonVandaag();
 }
 
