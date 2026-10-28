@@ -540,3 +540,14 @@ a.titel { text-decoration: none; }
 .sport-wat span { font-size: 0.8rem; }
 .leeg-klein { margin: 0; padding: 14px; border-radius: 14px; border: 1px solid var(--lijn); color: var(--zacht); font-size: 0.92rem; }
 .zender-chip.met-gids { text-decoration: none; }
+
+/* Voetbal per dag inklapbaar */
+.dag-blok { border-bottom: 1px solid var(--lijn); }
+.dag-blok summary { list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 14px 28px 12px 0; cursor: pointer; position: relative; }
+.dag-blok summary::-webkit-details-marker { display: none; }
+.dag-blok summary::after { content: '›'; position: absolute; right: 6px; top: 12px; font-size: 1.3rem; color: var(--zacht); transition: transform 0.2s; }
+.dag-blok[open] summary::after { transform: rotate(90deg); }
+.dag-blok summary .label.sport-label { margin: 0; }
+.dag-samenvatting { font-size: 0.85rem; color: var(--zacht); }
+.dag-samenvatting strong { color: var(--accent); font-weight: 700; }
+.dag-blok .wedstrijd:last-child { border-bottom: 0; }

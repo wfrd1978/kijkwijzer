@@ -1110,7 +1110,19 @@ async function toonVoetbal(nr, mijn) {
     ${
       zichtbaar.length
         ? zichtbaar
-            .map((d) => `<p class="label sport-label">${veilig(dagNaam(d.dag, vandaag()))}</p><ul class="wedstrijden">${d.wedstrijden.map(rij).join('')}</ul>`)
+            .map((d, i) => {
+              // Per dag inklapbaar: de eerste dag staat open, de rest toont alleen een samenvatting.
+              const clubs = [...new Set(d.wedstrijden.flatMap((w) => [w.thuis, w.uit]).filter((p) => keuzes.clubs.includes(p.id)).map((p) => p.naam))];
+              const aantal = d.wedstrijden.length === 1 ? '1 wedstrijd' : `${d.wedstrijden.length} wedstrijden`;
+              return `
+              <details class="dag-blok"${i === 0 ? ' open' : ''}>
+                <summary>
+                  <span class="label sport-label">${veilig(dagNaam(d.dag, vandaag()))}</span>
+                  <span class="dag-samenvatting">${aantal}${clubs.length ? ` · met <strong>${clubs.map(veilig).join(', ')}</strong>` : ''}</span>
+                </summary>
+                <ul class="wedstrijden">${d.wedstrijden.map(rij).join('')}</ul>
+              </details>`;
+            })
             .join('')
         : `<p class="leeg">Geen wedstrijden ${voetbalWeek === 'deze' ? 'meer deze week' : 'volgende week'} bij jouw keuzes.</p>`
     }
