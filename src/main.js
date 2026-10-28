@@ -558,9 +558,14 @@ function eenZender(zenders, mijn) {
 
 async function sportVandaagHtml() {
   const mijn = leesSportzenders();
-  const items = await sportItems([vandaag()]);
+  const [items, schema, kanalen] = await Promise.all([sportItems([vandaag()]), haalVoetbal(), haalEspn()]);
   if (!items.length) return '<p class="leeg-klein">Geen sport vandaag bij jouw keuzes. <a href="#/sport">Bekijk het schema</a></p>';
-  return `<ul class="sport-vandaag">${items
+  // Speelt een van je clubs vandaag, dan die wedstrijd groot bovenaan.
+  const club = schema ? volgendeVanMijnClub(schema.wedstrijden, leesVoetbalKeuzes()) : null;
+  const kaart = club && nlDagVan(club) === vandaag() ? wedstrijdKaart(club, zendersVan(club, kanalen), mijn, `Jouw club · ${COMPETITIES[club.competitie].naam}`) : '';
+  // De uitgelichte wedstrijd niet nog een keer in de lijst.
+  const rest = kaart ? items.filter((x) => !(x.start === club.start && x.naam === `${club.thuis.naam} – ${club.uit.naam}`)) : items;
+  return `${kaart}${rest.length ? `<ul class="sport-vandaag">${rest
     .map((x) => {
       const z = eenZender(x.zenders, mijn);
       return `
@@ -570,7 +575,7 @@ async function sportVandaagHtml() {
         ${z ? zenderChip(z, mijn, true) : ''}
       </li>`;
     })
-    .join('')}</ul>`;
+    .join('')}</ul>` : ''}`;
 }
 
 // Deze week: maandag tot en met zondag, per dag wat jij volgt. Afgelopen dagen staan grijs.
@@ -1301,6 +1306,39 @@ async function verversExtra(titel, bewaar, nr) {
 
 // --- Sport ---
 
+// --- Beeld bij sport ---
+
+// Het clubembleem uit het voetbalschema (football-data), of de eerste letter als dat er niet is.
+function embleem(p, klasse = 'embleem') {
+  const url = veiligeUrl(p.logo);
+  return url ? `<img class="${klasse}" src="${url}" alt="" loading="lazy" />` : `<span class="${klasse} embleem-leeg" aria-hidden="true">${veilig(p.naam.slice(0, 1))}</span>`;
+}
+
+// Grote kaart voor één wedstrijd, in de stijl van Vanavond op de NPO: beide emblemen groot in beeld.
+function wedstrijdKaart(w, zenders, mijn, label) {
+  const z = eenZender(zenders, mijn);
+  const wanneer = [dagNaam(nlDagVan(w), vandaag()), aftrap(w.start), z ? z.kanaal || z.naam : ''].filter(Boolean).join(' · ');
+  return `
+    <div class="sportkaart voetbalkaart">
+      <div class="sportkaart-beeld">${embleem(w.thuis, 'embleem-groot')}<span class="sportkaart-tegen">–</span>${embleem(w.uit, 'embleem-groot')}</div>
+      <div class="kijktip-tekst">
+        <span class="kijktip-label">${veilig(label)}</span>
+        <strong>${veilig(w.thuis.naam)} – ${veilig(w.uit.naam)}</strong>
+        <span>${veilig(wanneer)}</span>
+      </div>
+    </div>`;
+}
+
+// De eerstvolgende wedstrijd van een van je clubs (nog niet afgelopen).
+function volgendeVanMijnClub(wedstrijden, keuzes, nu = new Date()) {
+  return (
+    wedstrijden
+      .filter((w) => w.status !== 'FINISHED' && new Date(w.start).getTime() + 2 * 3600000 > nu.getTime())
+      .filter((w) => keuzes.clubs.includes(w.thuis.id) || keuzes.clubs.includes(w.uit.id))
+      .sort((a, b) => a.start.localeCompare(b.start))[0] ?? null
+  );
+}
+
 // Label met de zender. Tik erop en je ziet in de gids van die zender op welk kanaal het komt.
 function zenderChip(z, mijn, kort = false) {
   const tekst = `${veilig(z.kanaal || z.naam)}${z.zeker ? '' : kort ? '?' : ' (onder voorbehoud)'}`;
@@ -1310,6 +1348,14 @@ function zenderChip(z, mijn, kort = false) {
     ? `<a class="${klasse} met-gids" href="${veiligeUrl(gids)}" target="_blank" rel="noopener" aria-label="${veilig(z.naam)}: bekijk in de gids op welk kanaal">${tekst} ›</a>`
     : `<span class="${klasse}">${tekst}</span>`;
 }
+
+// Getekende bergen (eigen tekening, geen foto) als achtergrond voor de koerskaart.
+const BERGEN = `<svg class="sportkaart-tekening" viewBox="0 0 400 190" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  <path d="M0 150 L70 70 L110 110 L170 30 L230 105 L270 75 L330 130 L400 60 L400 190 L0 190 Z" fill="#2a2d34" />
+  <path d="M0 175 L60 120 L120 160 L190 95 L250 150 L320 110 L400 160 L400 190 L0 190 Z" fill="#1d1f24" />
+  <path d="M150 52 L170 30 L190 54 L180 50 L170 60 L160 50 Z" fill="#f3f1ec" opacity="0.8" />
+  <path d="M0 186 C80 170 140 182 210 172 S330 160 400 176" stroke="#ff4d3d" stroke-width="3" fill="none" stroke-dasharray="10 8" />
+</svg>`;
 
 function wielrennenHtml(mijn) {
   const komend = komendeKoersen(WIELRENNEN.koersen, vandaag());
@@ -1331,9 +1377,18 @@ function wielrennenHtml(mijn) {
         ${k.noot ? `<span class="zacht koers-noot">${veilig(k.noot)}</span>` : ''}
       </li>`;
   };
+  const [eerst] = komend;
   return `
     ${tussenseizoen ? `<p class="zacht sport-uitleg">Het wegseizoen zit erop. Dit is de kalender voor ${WIELRENNEN.seizoen}.</p>` : ''}
-    <ul class="koersen">${komend.map(regel).join('')}</ul>
+    <div class="sportkaart koerskaart">
+      ${BERGEN}
+      <div class="kijktip-tekst">
+        <span class="kijktip-label">Eerstvolgende koers · ${veilig(eerst.soort)}</span>
+        <strong>${veilig(eerst.naam)}</strong>
+        <span>${veilig(koersDatum(eerst))} · ${veilig(eerst.zenders.map((z) => z.naam).join(', '))}</span>
+      </div>
+    </div>
+    <ul class="koersen">${komend.slice(1).map(regel).join('')}</ul>
     <p class="bron">Data: UCI WorldTour-kalender ${WIELRENNEN.seizoen}. Zenders gecontroleerd in ${veilig(WIELRENNEN.gecontroleerd)}; uitzendrechten kunnen nog veranderen.</p>`;
 }
 
@@ -1401,7 +1456,7 @@ async function toonVoetbal(nr, mijn) {
   if (!vak()) return;
   const keuzes = leesVoetbalKeuzes();
   const oranjeHtml = oranje
-    ? `<div class="oranje">
+    ? `<div class="oranje oranjekaart">
          <span class="koers-soort">Oranje · volgende interland</span>
          <strong>${veilig(oranje.thuis)} – ${veilig(oranje.uit)}</strong>
          <span class="zacht">${veilig(dagNaam(nlDagVan(oranje), vandaag()))} · ${veilig(aftrap(oranje.start))} · ${veilig(oranje.competitie)}</span>
@@ -1433,7 +1488,7 @@ async function toonVoetbal(nr, mijn) {
       <li class="wedstrijd">
         <span class="aftrap">${veilig(aftrap(w.start))}</span>
         <div class="wedstrijd-tekst">
-          <strong><span class="${mijnClub(w.thuis) ? 'mijn-club' : ''}">${veilig(w.thuis.naam)}</span> – <span class="${mijnClub(w.uit) ? 'mijn-club' : ''}">${veilig(w.uit.naam)}</span></strong>
+          <strong class="met-emblemen">${embleem(w.thuis)}<span class="${mijnClub(w.thuis) ? 'mijn-club' : ''}">${veilig(w.thuis.naam)}</span> – ${embleem(w.uit)}<span class="${mijnClub(w.uit) ? 'mijn-club' : ''}">${veilig(w.uit.naam)}</span></strong>
           <span class="zacht">${veilig(c.naam)}</span>
           <div class="koers-zenders">${zenderChips(zenders, mijn)}</div>
           ${kijkTekst(zenders, mijn)}
@@ -1441,7 +1496,9 @@ async function toonVoetbal(nr, mijn) {
       </li>`;
   };
   const zichtbaar = dagen.filter(inWeek);
+  const uitgelicht = volgendeVanMijnClub(schema.wedstrijden, keuzes);
   vak().innerHTML = `
+    ${uitgelicht ? wedstrijdKaart(uitgelicht, zendersVan(uitgelicht, kanalen), mijn, `Jouw club · ${COMPETITIES[uitgelicht.competitie].naam}`) : ''}
     ${oranjeHtml}
     <div class="keuzes week-keuze" id="voetbal-week">
       <button class="keuze${voetbalWeek === 'deze' ? ' actief' : ''}" data-week="deze">Deze week</button>

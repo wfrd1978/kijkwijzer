@@ -634,3 +634,42 @@ button.afl-link { border: 0; background: none; padding: 0; text-align: left; fon
 /* Aantal titels op de tabbladen van Mijn lijst */
 .tab-aantal { font-family: var(--schreefloos); font-size: 0.75rem; font-weight: 700; letter-spacing: 0; opacity: 0.8; }
 .geef-sterren { font-size: 0.8rem; color: var(--ster); opacity: 0.8; }
+
+/* --- Beeld bij sport: kaarten in de stijl van Vanavond op de NPO --- */
+.sportkaart { position: relative; height: 190px; border-radius: 14px; overflow: hidden; margin-bottom: 14px; color: #fff; background: #17191d; }
+.voetbalkaart {
+  background:
+    radial-gradient(circle at 22% 38%, rgb(255 77 61 / 0.35), transparent 55%),
+    radial-gradient(circle at 78% 38%, rgb(243 241 236 / 0.16), transparent 55%),
+    repeating-linear-gradient(90deg, #15301f 0 34px, #183824 34px 68px);
+}
+.sportkaart-beeld { position: absolute; inset: 14px 0 70px; display: flex; align-items: center; justify-content: center; gap: 28px; }
+.embleem-groot { width: 78px; height: 78px; object-fit: contain; filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.5)); }
+span.embleem-groot { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #2a2d34; font-family: var(--kop); font-weight: 800; font-size: 2.4rem; }
+.sportkaart-tegen { font-family: var(--kop); font-weight: 800; font-size: 2rem; opacity: 0.7; }
+.sportkaart .kijktip-tekst { background: linear-gradient(to top, rgb(0 0 0 / 0.85), transparent 60%); }
+.sportkaart-tekening { position: absolute; inset: 0; width: 100%; height: 100%; }
+.koerskaart { background: linear-gradient(180deg, #3a2028 0%, #17191d 75%); }
+.met-emblemen { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.embleem { width: 20px; height: 20px; object-fit: contain; flex: none; }
+span.embleem { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--lijn); font-size: 0.65rem; }
+.sport-vandaag.na-kaart { margin-top: 0; }
+/* Oranje: oranje kaart */
+.oranjekaart { background: linear-gradient(120deg, #ff7a00 0%, #c84f00 100%); color: #1a0d00; padding: 16px; }
+.oranjekaart .koers-soort, .oranjekaart .zacht { color: #2b1500; opacity: 0.85; }
+.oranjekaart strong { font-family: var(--kop); font-weight: 800; font-size: 1.6rem; text-transform: uppercase; line-height: 1; }
+.oranjekaart .zender-chip { border-color: rgb(0 0 0 / 0.35); color: #1a0d00; }
+.oranjekaart .koers-kijk { color: #1a0d00; }
+/* Formule 1: racestrepen en een geblokte vlag */
+.race-volgend { position: relative; overflow: hidden; color: #fff; background: #17191d; }
+.race-volgend::before {
+  content: ''; position: absolute; right: 0; top: 0; width: 170px; height: 96px; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgb(255 77 61 / 0.9) 30% 42%, transparent 42% 50%, rgb(255 77 61 / 0.55) 50% 56%, transparent 56%);
+}
+.race-volgend > * { position: relative; }
+.race-volgend::after {
+  content: ''; position: absolute; right: 0; top: 0; width: 72px; height: 48px; opacity: 0.85;
+  background: conic-gradient(#f3f1ec 25%, #0f1013 0 50%, #f3f1ec 0 75%, #0f1013 0) 0 0 / 24px 24px;
+}
+.race-volgend .zacht { color: #c9ccd3; }
+.race-volgend .sessies li { border-color: #2a2d34; }
