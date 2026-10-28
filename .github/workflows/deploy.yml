@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  # Elke ochtend (rond 05:30 Nederlandse tijd) opnieuw, voor een vers voetbalschema.
+  # Elke ochtend (rond 05:30 Nederlandse tijd) opnieuw, voor een vers voetbalschema en de NPO-gids.
   schedule:
     - cron: '17 4 * * *'
 
@@ -35,6 +35,10 @@ jobs:
         run: node scripts/voetbal.mjs
         env:
           FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
+        continue-on-error: true
+      # Avonden op NPO 1, 2 en 3 voor de kijktip op Vandaag (gids van npo.nl, zonder sleutel).
+      - name: NPO-gids ophalen
+        run: node scripts/npo.mjs
         continue-on-error: true
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3

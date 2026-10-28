@@ -11,6 +11,7 @@ import {
 } from './voetbal.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { kiesKijktips, weekDagen, weekTekst } from './vandaag.js';
+import { vanavond, lijstOpNpo, npoLink } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
@@ -550,6 +551,10 @@ async function weekHtml(titels, stand) {
   const items = [
     ...(await sportItems(dagen)),
     // Nieuwe afleveringen staan bovenaan hun dag.
+    // Wat van je Wil ik zien deze week op NPO komt.
+    ...lijstOpNpo((await haalNpo())?.programmas ?? [], titels, dagen).map((p) => ({
+      dag: nlDagVan(p), start: p.start, tijd: aftrap(p.start), naam: p.titel, sub: 'Van je lijst', zenders: [], dienst: { naam: p.zender }, nieuw: true, tv: true,
+    })),
     ...afleveringenOp(titels, stand, dagen).map((e) => ({
       dag: e.dag, start: `${e.dag}T00:00`, tijd: '', naam: `${e.titel.titel} ${afleveringKort(e)}`, sub: 'Nieuwe aflevering', zenders: [], dienst: dienstVan(e.titel), nieuw: true,
     })),
@@ -673,6 +678,10 @@ async function toonVandaag() {
           ? '<section class="vandaag-blok"><h2 class="vak-kop">Kijktip voor vanavond</h2><p class="leeg-klein">Kies in <a href="#/instellingen">Instellingen</a> welke diensten je hebt, dan krijg je hier een tip uit je eigen lijst.</p></section>'
           : ''
     }
+    <section class="vandaag-blok" id="npo-blok" hidden>
+      <h2 class="vak-kop">Vanavond op NPO</h2>
+      <div id="npo"></div>
+    </section>
     ${nieuwHtml(titels)}
   `;
   koppelKeuze();
@@ -707,12 +716,51 @@ async function toonVandaag() {
   const sport = await sportVandaagHtml();
   if (nr === schermNr) document.getElementById('sport-vandaag').innerHTML = sport;
 
+  const npo = await haalNpo();
+  const avond = npo ? vanavond(npo.programmas, titels) : [];
+  if (nr === schermNr && avond.length) {
+    document.getElementById('npo').innerHTML = npoHtml(avond);
+    document.getElementById('npo-blok').hidden = false;
+  }
+
   if (!leesSleutel()) return;
   const stand = await werkAfleveringenBij(titels, vandaag(), haalAfleveringen);
   if (nr !== schermNr) return;
   const html = afleveringenHtml(titels, stand);
   document.getElementById('afleveringen').innerHTML = html;
   document.getElementById('afleveringen-blok').hidden = !html;
+}
+
+// Vanavond op NPO: één grote tip (iets van je lijst gaat voor), en nog twee kleinere.
+function npoHtml(avond) {
+  const [tip, ...rest] = avond;
+  const beeld = veiligeUrl(tip.beeld);
+  const label = `${tip.titelOpLijst ? 'Van je lijst' : 'Tip'} · ${veilig(tip.zender)} · ${veilig(aftrap(tip.start))}`;
+  return `
+    <a class="kijktip" href="${veiligeUrl(npoLink(tip))}" target="_blank" rel="noopener">
+      ${beeld ? `<img src="${beeld}" alt="" loading="lazy" />` : ''}
+      <div class="kijktip-tekst">
+        <span class="kijktip-label">${label}</span>
+        <strong>${veilig(tip.titel)}</strong>
+        <span>${veilig(tip.aflevering || tip.omschrijving.slice(0, 90))}${tip.herhaling ? ' · herhaling' : ''}</span>
+      </div>
+    </a>
+    ${
+      rest.length
+        ? `<ul class="sport-vandaag npo-ook">${rest
+            .slice(0, 2)
+            .map(
+              (p) => `
+          <li>
+            <span class="sport-tijd">${veilig(aftrap(p.start))}</span>
+            <a class="sport-wat afl-link" href="${veiligeUrl(npoLink(p))}" target="_blank" rel="noopener"><strong>${veilig(p.titel)}</strong><span class="zacht">${veilig(p.aflevering || p.genres.slice(0, 2).join(' · '))}</span></a>
+            <span class="zender-chip">${veilig(p.zender)}</span>
+          </li>`
+            )
+            .join('')}</ul>`
+        : ''
+    }
+    <p class="bron">Uit de tv-gids van NPO. Tik om te kijken of later terug te zien op NPO Start.</p>`;
 }
 
 // Afleveringen van gisteren en vandaag, van series op je lijst.
@@ -1203,6 +1251,16 @@ function wielrennenHtml(mijn) {
 async function haalVoetbal() {
   try {
     const antwoord = await fetch(`${import.meta.env.BASE_URL}voetbal.json`, { cache: 'no-cache' });
+    return antwoord.ok ? await antwoord.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+// De avonden op NPO 1, 2 en 3 die GitHub dagelijks klaarzet. Null als het (nog) niet bestaat.
+async function haalNpo() {
+  try {
+    const antwoord = await fetch(`${import.meta.env.BASE_URL}npo.json`, { cache: 'no-cache' });
     return antwoord.ok ? await antwoord.json() : null;
   } catch {
     return null;
