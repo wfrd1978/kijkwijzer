@@ -40,16 +40,22 @@ export function keuzeVan(keuzes, id) {
   return keuzes[id] in KEUZES ? keuzes[id] : 'tonen';
 }
 
+// [betaalde versie, gratis versie die daarin zit]
+const BETAALD_OMVAT = [[/^NPO Plus/i, /^NPO Start/i]];
+
 // Verdeelt de diensten van een titel: eerst wat bij jou te zien is (abonnement of gratis bij
 // een dienst die je hebt), daarna de rest zonder de verborgen diensten.
 export function verdeelDiensten(d, keuzes) {
   const heb = (x) => keuzeVan(keuzes, x.id) === 'abonnement';
   const zichtbaar = (x) => keuzeVan(keuzes, x.id) === 'tonen';
-  const bijJou = [...d.abonnement, ...d.gratis].filter(heb).filter((x, i, l) => l.findIndex((y) => y.id === x.id) === i);
+  const alleBijJou = [...d.abonnement, ...d.gratis].filter(heb).filter((x, i, l) => l.findIndex((y) => y.id === x.id) === i);
+  // Heb je de betaalde versie van een dienst, dan is de gratis versie dubbel (NPO Plus omvat NPO Start).
+  const overbodig = (x) => BETAALD_OMVAT.some(([betaald, gratis]) => gratis.test(x.naam) && alleBijJou.some((y) => betaald.test(y.naam)));
+  const bijJou = alleBijJou.filter((x) => !overbodig(x));
   return {
     bijJou,
-    abonnement: d.abonnement.filter(zichtbaar),
-    gratis: d.gratis.filter(zichtbaar),
+    abonnement: d.abonnement.filter(zichtbaar).filter((x) => !overbodig(x)),
+    gratis: d.gratis.filter(zichtbaar).filter((x) => !overbodig(x)),
     huren: d.huren.filter((x) => !heb(x) && zichtbaar(x)),
     kopen: d.kopen.filter((x) => !heb(x) && zichtbaar(x)),
     verborgen: [...d.abonnement, ...d.gratis, ...d.huren, ...d.kopen].some((x) => keuzeVan(keuzes, x.id) === 'verbergen'),

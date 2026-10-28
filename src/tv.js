@@ -34,12 +34,21 @@ export const TV_GENRES = {
 };
 const OPSLAG = 'tvVoorkeuren';
 
+// Kortere, gangbare namen voor omroepen waarvan de gids de volledige verenigingsnaam geeft.
+const OMROEP_NAMEN = { 'Omroepvereniging Ongehoord Nederland': 'Ongehoord NL', HUMAN: 'Human' };
+export const omroepNaam = (o) => OMROEP_NAMEN[o] ?? o;
+
+// Zet de omroepnamen in de gids om naar de korte namen.
+export function metKorteNamen(programmas) {
+  return programmas.map((p) => ({ ...p, omroepen: [...new Set((p.omroepen ?? []).map(omroepNaam))] }));
+}
+
 export function leesTvVoorkeuren() {
   try {
     const v = JSON.parse(localStorage.getItem(OPSLAG) || '{}');
     return {
       genres: Array.isArray(v.genres) ? v.genres.filter((g) => g in TV_GENRES) : [],
-      omroepen: Array.isArray(v.omroepen) ? v.omroepen.filter((o) => typeof o === 'string') : [],
+      omroepen: Array.isArray(v.omroepen) ? [...new Set(v.omroepen.filter((o) => typeof o === 'string').map(omroepNaam))] : [],
     };
   } catch {
     return { genres: [], omroepen: [] };

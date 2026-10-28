@@ -83,3 +83,14 @@ describe('nieuwBijJou', () => {
     expect(nieuwBijJou({ dienstenOp: '2026-10-20', diensten: null }, { ...leeg, abonnement: [v] }, keuzes)).toEqual([]);
   });
 });
+
+describe('NPO Plus en NPO Start', () => {
+  it('met NPO Plus als abonnement staat NPO Start er niet ook nog bij', () => {
+    const d = { abonnement: [{ id: 1899, naam: 'NPO Plus' }], gratis: [{ id: 72, naam: 'NPO Start' }], huren: [], kopen: [] };
+    const met = verdeelDiensten(d, { 1899: 'abonnement', 72: 'abonnement' });
+    expect(met.bijJou.map((x) => x.naam)).toEqual(['NPO Plus']);
+    expect(met.gratis).toEqual([]);
+    const zonder = verdeelDiensten(d, { 72: 'abonnement' });
+    expect(zonder.bijJou.map((x) => x.naam)).toEqual(['NPO Start']);
+  });
+});

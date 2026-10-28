@@ -11,7 +11,7 @@ import {
 } from './voetbal.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { kiesKijktips, weekDagen, weekTekst } from './vandaag.js';
-import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn } from './tv.js';
+import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
@@ -1211,7 +1211,8 @@ function bijJouHtml(lijst, titel) {
 // Diensten die je in Instellingen hebt verborgen, met naam: zo is duidelijk waarom ze hier ontbreken.
 function verborgenHtml(d, alleenDaar) {
   const keuzes = leesKeuzes();
-  const namen = [...new Map([...d.abonnement, ...d.gratis, ...d.huren, ...d.kopen].filter((x) => keuzeVan(keuzes, x.id) === 'verbergen').map((x) => [x.id, x.naam])).values()];
+  const metPlus = verdeelDiensten(d, keuzes).bijJou.some((x) => /^NPO Plus/i.test(x.naam));
+  const namen = [...new Map([...d.abonnement, ...d.gratis, ...d.huren, ...d.kopen].filter((x) => keuzeVan(keuzes, x.id) === 'verbergen' && !(metPlus && /^NPO Start/i.test(x.naam))).map((x) => [x.id, x.naam])).values()];
   if (!namen.length) return '';
   return `<p class="zacht klein verborgen-diensten">${alleenDaar ? 'Alleen te zien bij' : 'Ook bij'} ${veilig(namen.join(', '))}: ${namen.length === 1 ? 'die dienst heb' : 'die diensten heb'} je verborgen in <a href="#/instellingen">Instellingen</a>.</p>`;
 }
@@ -1372,7 +1373,9 @@ async function haalVoetbal() {
 async function haalNpo() {
   try {
     const antwoord = await fetch(`${import.meta.env.BASE_URL}npo.json`, { cache: 'no-cache' });
-    return antwoord.ok ? await antwoord.json() : null;
+    if (!antwoord.ok) return null;
+    const npo = await antwoord.json();
+    return { ...npo, programmas: metKorteNamen(npo.programmas ?? []) };
   } catch {
     return null;
   }

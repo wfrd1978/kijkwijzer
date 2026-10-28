@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vanavond, opMijnLijst, tipScore, lijstOpNpo, npoLink, omroepenIn } from '../src/tv.js';
+import { vanavond, opMijnLijst, tipScore, lijstOpNpo, npoLink, omroepenIn, metKorteNamen } from '../src/tv.js';
 
 const p = (uur, titel, genres, extra = {}) => {
   const start = new Date(`2026-10-28T${String(uur - 1).padStart(2, '0')}:00:00Z`); // UTC+1 in oktober na de wintertijd
@@ -62,5 +62,11 @@ describe('voorkeuren', () => {
   });
   it('omroepen uit de gids', () => {
     expect(omroepenIn([{ omroepen: ['VPRO', 'EO'] }, { omroepen: ['EO'] }, {}])).toEqual(['EO', 'VPRO']);
+  });
+});
+
+describe('omroepnamen', () => {
+  it('Ongehoord NL in plaats van de volledige verenigingsnaam', () => {
+    expect(metKorteNamen([{ omroepen: ['Omroepvereniging Ongehoord Nederland', 'EO'] }])[0].omroepen).toEqual(['Ongehoord NL', 'EO']);
   });
 });
