@@ -12,6 +12,7 @@ import {
 import { uitnodigingTekst, deel } from './delen.js';
 import { weekDagen, weekTekst } from './vandaag.js';
 import { kanaalVoor } from './espn.js';
+import { vanVandaag } from './dagcache.js';
 import { nieuwVoorJou, GENRE_NAMEN } from './nieuw.js';
 import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
@@ -265,6 +266,7 @@ function titelRegel(t, zoek = '', { status = true } = {}) {
           <strong>${veilig(t.titel)}</strong>
           <span>${soortJaar(t)}</span>
           ${acteur ? `<span class="met-acteur">Met ${veilig(acteur)}</span>` : ''}
+          ${t.status === 'Gezien' && !t.sterren ? '<span class="geef-sterren">☆☆☆☆☆ Geef sterren</span>' : ''}
         </div>
       </a></li>`;
 }
@@ -412,7 +414,7 @@ async function toonResultaten() {
 // Eén zoekresultaat groot, met de knop om hem op je lijst te zetten.
 // Staat hij er al op, dan zie je dat (met wanneer je hem zag) en kun je hem openen.
 toonBevestigen.nr = 0;
-function toonBevestigen(t, alOpLijst, terug = { naam: 'Films & series', toon: () => toonFilms() }) {
+function toonBevestigen(t, alOpLijst, terug = { naam: 'Mijn lijst', toon: () => toonFilms() }) {
   window.scrollTo(0, 0);
   app.innerHTML = `
     <header class="kop"><button class="terug" id="terug">‹ ${veilig(terug.naam)}</button></header>
@@ -525,7 +527,7 @@ function verderKaart(t) {
 // Alles aan voetbal, Formule 1 en wielrennen dat jij volgt, op de gevraagde dagen ('jjjj-mm-dd').
 async function sportItems(dagen) {
   const op = new Set(dagen);
-  const [schema, f1, oranje, kanalen] = await Promise.all([haalVoetbal(), haalF1().catch(() => null), haalOranje().catch(() => null), haalEspn()]);
+  const [schema, f1, oranje, kanalen] = await Promise.all([haalVoetbal(), haalF1().catch(() => null), haalOranjeVanDaag(), haalEspn()]);
   const items = [];
   if (schema) {
     for (const w of mijnWedstrijden(schema.wedstrijden, leesVoetbalKeuzes()).filter((x) => op.has(nlDagVan(x)))) {
@@ -819,7 +821,7 @@ function toonNpo(p) {
       </div>
       ${p.titelOpLijst ? `<p class="reden">Staat op je lijst bij Wil ik zien.</p>` : ''}
       <a class="hoofdknop" href="${veiligeUrl(bezig ? p.live : npoLink(p))}" target="_blank" rel="noopener">${bezig ? `Kijk nu live op ${veilig(p.zender)}` : 'Bekijk op NPO Start'}</a>
-      ${p.titelOpLijst ? `<a class="tweede-knop" href="#/titel/${p.titelOpLijst.id}">Open op mijn lijst</a>` : '<button class="tweede-knop" id="npo-zoek">Zoek in Films & series</button>'}
+      ${p.titelOpLijst ? `<a class="tweede-knop" href="#/titel/${p.titelOpLijst.id}">Open op mijn lijst</a>` : '<button class="tweede-knop" id="npo-zoek">Zoek en zet op mijn lijst</button>'}
     </section>`;
   document.getElementById('terug').addEventListener('click', () => toonVandaag());
   document.getElementById('npo-zoek')?.addEventListener('click', () => {
@@ -849,9 +851,9 @@ function afleveringenHtml(titels, stand) {
     .join('')}</ul>`;
 }
 
-// --- Films & series: Ontdekken, Wil ik zien en Gezien, met één zoekveld ---
+// --- Mijn lijst: Wil ik zien, Gezien en Ontdekken, met één zoekveld ---
 
-const FILMS_TABS = { ontdekken: 'Ontdekken', wil: 'Wil ik zien', gezien: 'Gezien' };
+const FILMS_TABS = { wil: 'Wil ik zien', gezien: 'Gezien', ontdekken: 'Ontdekken' };
 const LIJST_STATUSSEN = { wil: ['Wil ik zien'], gezien: ['Gezien'] };
 let filmsTab = onthoud('filmsTab', 'wil', Object.keys(FILMS_TABS));
 let filmsZoek = '';
@@ -920,13 +922,13 @@ async function toonFilms({ terugNaarPlek = false } = {}) {
   const titels = await alleTitels();
   if (nr !== schermNr) return;
   app.innerHTML = `
-    ${schermKop('Films & series')}
+    ${schermKop('Mijn lijst', aantalTekst(titels.length) + ' · films en series')}
     <form class="films-zoek" id="films-zoek-form" role="search">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-      <input id="films-zoek" type="search" placeholder="Zoek film, serie of acteur" autocomplete="off" enterkeyhint="search" value="${veilig(filmsZoek)}" aria-label="Zoek film, serie of acteur" />
+      <input id="films-zoek" type="search" placeholder="Zoek in je lijst of vind iets nieuws" autocomplete="off" enterkeyhint="search" value="${veilig(filmsZoek)}" aria-label="Zoek een film, serie of acteur" />
     </form>
     <div class="segment" id="films-tabs" role="tablist">${Object.entries(FILMS_TABS)
-      .map(([k, naam]) => `<button role="tab" aria-selected="${k === filmsTab}" data-tab="${k}">${naam}</button>`)
+      .map(([k, naam]) => `<button role="tab" aria-selected="${k === filmsTab}" data-tab="${k}">${naam}${k in LIJST_STATUSSEN ? ` <span class="tab-aantal">${titels.filter((t) => LIJST_STATUSSEN[k].includes(t.status)).length}</span>` : ''}</button>`)
       .join('')}</div>
     <div id="films-vak"></div>
   `;
@@ -1082,6 +1084,15 @@ async function toonOntdekken({ terugNaarPlek = false } = {}) {
   };
 
   let stand = ontdekGeladen.get(sleutel);
+  // De eerste bladzijde blijft de hele dag bewaard, ook als je de app sluit.
+  if (!stand) {
+    const bewaard = await vanVandaag(`ontdek:${sleutel}`, () => laad(1));
+    if (nr !== schermNr) return;
+    if (bewaard?.length) {
+      stand = { titels: bewaard, pagina: 1 };
+      ontdekGeladen.set(sleutel, stand);
+    }
+  }
   if (!stand) {
     vak.innerHTML = '<p class="bezig">Ophalen…</p>';
     try {
@@ -1202,7 +1213,7 @@ function dienstenHtml(titel, bezig = false) {
     ${JUSTWATCH}`;
 }
 
-// Elke keer dat je een titel opent, worden de diensten ververst (die veranderen geregeld).
+// Bij het openen van een titel worden de diensten één keer per dag ververst (die veranderen geregeld).
 // Lukt dat niet, bijvoorbeeld zonder internet, dan blijft de laatst bekende informatie staan.
 async function verversDiensten(titel, bewaar, nr) {
   const vak = () => (nr === schermNr ? document.getElementById('diensten') : null);
@@ -1211,8 +1222,11 @@ async function verversDiensten(titel, bewaar, nr) {
     return;
   }
   try {
-    const diensten = await haalDiensten(titel.soort, titel.tmdbId);
-    await bewaar({ diensten, dienstenOp: vandaag() });
+    // Vandaag al opgehaald? Dan is dat vers genoeg.
+    if (titel.dienstenOp !== vandaag()) {
+      const diensten = await haalDiensten(titel.soort, titel.tmdbId);
+      await bewaar({ diensten, dienstenOp: vandaag() });
+    }
   } catch {
     // Geen verbinding of TMDB doet even niet mee: dan de bewaarde versie.
   }
@@ -1324,35 +1338,35 @@ function wielrennenHtml(mijn) {
 }
 
 // Het voetbalschema dat GitHub dagelijks klaarzet. Null als het (nog) niet bestaat.
-async function haalVoetbal() {
-  try {
-    const antwoord = await fetch(`${import.meta.env.BASE_URL}voetbal.json`, { cache: 'no-cache' });
-    return antwoord.ok ? await antwoord.json() : null;
-  } catch {
-    return null;
-  }
+// Een bestand dat GitHub elke ochtend klaarzet; één keer per dag opgehaald en daarna bewaard.
+function haalKlaargezet(naam) {
+  return vanVandaag(naam, async () => {
+    const antwoord = await fetch(`${import.meta.env.BASE_URL}${naam}.json`, { cache: 'no-cache' });
+    return antwoord.ok ? antwoord.json() : null;
+  });
+}
+
+function haalVoetbal() {
+  return haalKlaargezet('voetbal');
+}
+
+// De volgende interland van Oranje, één keer per dag.
+async function haalOranjeVanDaag() {
+  // Ook 'geen interland gepland' onthouden, zodat het niet steeds opnieuw wordt gevraagd.
+  const x = await vanVandaag('oranje', async () => ({ wedstrijd: await haalOranje() }));
+  return x?.wedstrijd ?? null;
 }
 
 // De avonden op NPO 1, 2 en 3 die GitHub dagelijks klaarzet. Null als het (nog) niet bestaat.
 async function haalNpo() {
-  try {
-    const antwoord = await fetch(`${import.meta.env.BASE_URL}npo.json`, { cache: 'no-cache' });
-    if (!antwoord.ok) return null;
-    const npo = await antwoord.json();
-    return { ...npo, programmas: metKorteNamen(npo.programmas ?? []) };
-  } catch {
-    return null;
-  }
+  const npo = await haalKlaargezet('npo');
+  return npo ? { ...npo, programmas: metKorteNamen(npo.programmas ?? []) } : null;
 }
 
 // Op welk ESPN-kanaal een Eredivisie-wedstrijd komt (door GitHub dagelijks klaargezet).
-let espnBelofte = null;
-function haalEspn() {
-  espnBelofte ??= fetch(`${import.meta.env.BASE_URL}espn.json`, { cache: 'no-cache' })
-    .then((r) => (r.ok ? r.json() : null))
-    .then((d) => (Array.isArray(d?.kanalen) ? d.kanalen : []))
-    .catch(() => []);
-  return espnBelofte;
+async function haalEspn() {
+  const d = await haalKlaargezet('espn');
+  return Array.isArray(d?.kanalen) ? d.kanalen : [];
 }
 
 // De zenders van een wedstrijd; bij de Eredivisie met het precieze ESPN-kanaal als dat bekend is.
@@ -1383,7 +1397,7 @@ function kijkTekst(zenders, mijn) {
 
 async function toonVoetbal(nr, mijn) {
   const vak = () => (nr === schermNr ? document.getElementById('voetbal') : null);
-  const [schema, oranje] = await Promise.all([haalVoetbal(), haalOranje().catch(() => null)]);
+  const [schema, oranje] = await Promise.all([haalVoetbal(), haalOranjeVanDaag()]);
   if (!vak()) return;
   const keuzes = leesVoetbalKeuzes();
   const oranjeHtml = oranje
@@ -2303,7 +2317,7 @@ async function route() {
   window.scrollTo(0, 0);
   const titelId = location.hash.match(/^#\/titel\/(\d+)$/);
   const acteurId = location.hash.match(/^#\/acteur\/(\d+)$/);
-  // Oude adressen (van voor de nieuwe indeling) komen uit bij Films & series.
+  // Oude adressen (van voor de nieuwe indeling) komen uit bij Mijn lijst.
   if (location.hash === '#/zoek' || location.hash === '#/ontdekken') {
     if (location.hash === '#/ontdekken') filmsTab = 'ontdekken';
     history.replaceState(null, '', '#/films');

@@ -627,3 +627,10 @@ button.afl-link { border: 0; background: none; padding: 0; text-align: left; fon
 .balk { padding: 5px; }
 .balk a { padding: 7px 2px; gap: 3px; }
 .balk a span { white-space: nowrap; font-size: 0.68rem; letter-spacing: -0.01em; }
+
+/* Sterren goed zichtbaar, ook in donker */
+.ster { color: var(--zacht); opacity: 0.45; font-size: 2.3rem; }
+.ster.aan { color: var(--ster); opacity: 1; }
+/* Aantal titels op de tabbladen van Mijn lijst */
+.tab-aantal { font-family: var(--schreefloos); font-size: 0.75rem; font-weight: 700; letter-spacing: 0; opacity: 0.8; }
+.geef-sterren { font-size: 0.8rem; color: var(--ster); opacity: 0.8; }
