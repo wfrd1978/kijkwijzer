@@ -7,7 +7,9 @@
 
   function keuze() {
     try {
-      return localStorage.getItem('weergave') || 'donker';
+      // De gedeelde versie (/deel/) bewaart zijn keuzes met een eigen voorvoegsel; zie src/editie.js.
+      var voorvoegsel = location.pathname.indexOf('/deel/') >= 0 ? 'deel:' : '';
+      return localStorage.getItem(voorvoegsel + 'weergave') || 'donker';
     } catch (e) {
       return 'donker';
     }

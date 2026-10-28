@@ -711,3 +711,7 @@ span.embleem { display: inline-flex; align-items: center; justify-content: cente
 .agenda-beeld.wiel { font-size: 1.4rem; }
 .agenda-beeld.npo.icoon { color: #ff7a00; }
 .agenda-regel .zender-chip { flex: none; }
+
+/* Stappen voor de TMDB-sleutel */
+.stappen ol { margin: 4px 0 12px; padding-left: 20px; }
+.stappen li { margin: 6px 0; line-height: 1.45; }
