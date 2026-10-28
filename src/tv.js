@@ -19,11 +19,52 @@ export function opMijnLijst(p, titels) {
   );
 }
 
+// --- Je tv-voorkeuren (op de telefoon, gaan mee in de backup) ---
+// Genres in gewone woorden, met de genres uit de NPO-gids die erbij horen.
+export const TV_GENRES = {
+  film: { naam: 'Films', gids: ['Film'] },
+  drama: { naam: 'Drama en series', gids: ['Drama', 'Serie', 'Detective', 'Spanning', 'Misdaad'] },
+  documentaire: { naam: 'Documentaires', gids: ['Documentaire', 'Onderzoeksjournalistiek', 'Reportage'] },
+  mensen: { naam: 'Mensen en verhalen', gids: ['Human Interest', 'Reality TV', 'Familie'] },
+  quiz: { naam: 'Spel en quiz', gids: ['Spel/quiz', 'Amusement'] },
+  humor: { naam: 'Humor en satire', gids: ['Komisch/Satire', 'Cabaret'] },
+  cultuur: { naam: 'Kunst en muziek', gids: ['Kunst/cultuur', 'Muziek'] },
+  natuur: { naam: 'Natuur en reizen', gids: ['Natuur', 'Reizen', 'Wetenschap', 'Geschiedenis'] },
+  geloof: { naam: 'Geloof en zingeving', gids: ['Religieus', 'Levensbeschouwing'] },
+};
+const OPSLAG = 'tvVoorkeuren';
+
+export function leesTvVoorkeuren() {
+  try {
+    const v = JSON.parse(localStorage.getItem(OPSLAG) || '{}');
+    return {
+      genres: Array.isArray(v.genres) ? v.genres.filter((g) => g in TV_GENRES) : [],
+      omroepen: Array.isArray(v.omroepen) ? v.omroepen.filter((o) => typeof o === 'string') : [],
+    };
+  } catch {
+    return { genres: [], omroepen: [] };
+  }
+}
+
+export function zetTvVoorkeuren(v) {
+  localStorage.setItem(OPSLAG, JSON.stringify({ genres: v.genres ?? [], omroepen: v.omroepen ?? [] }));
+}
+
+// Alle omroepen die in de gids voorkomen, op naam.
+export function omroepenIn(programmas) {
+  return [...new Set(programmas.flatMap((p) => p.omroepen ?? []))].sort((a, b) => a.localeCompare(b));
+}
+
 // Hoe aantrekkelijk als kijktip: films en drama eerst, dan documentaires; nieuws en jeugd niet.
-export function tipScore(p) {
+export function tipScore(p, voorkeur = { genres: [], omroepen: [] }) {
   const g = new Set(p.genres);
   if (g.has('Nieuws/actualiteiten') || g.has('Jeugd') || g.has('Politiek')) return 0;
+  // Wat je in Instellingen hebt aangezet, telt zwaar mee: ook als het anders geen tip zou zijn.
+  const graagGenre = voorkeur.genres.some((k) => TV_GENRES[k]?.gids.some((x) => g.has(x)));
+  const graagOmroep = (p.omroepen ?? []).some((o) => voorkeur.omroepen.includes(o));
+  const bonus = (graagGenre ? 6 : 0) + (graagOmroep ? 3 : 0);
   let score = g.has('Film') ? 6 : g.has('Drama') || g.has('Serie') || g.has('Detective') || g.has('Spanning') ? 5 : g.has('Documentaire') ? 4 : g.has('Human Interest') || g.has('Kunst/cultuur') || g.has('Natuur') || g.has('Cabaret') ? 2 : 0;
+  score += bonus;
   if (!score) return 0;
   if (!p.herhaling) score += 1;
   const m = nlMinuut(p.start);
@@ -32,7 +73,7 @@ export function tipScore(p) {
 }
 
 // De avond van vandaag: wat nog niet voorbij is. Eerst wat op je lijst staat, dan de beste tips.
-export function vanavond(programmas, titels, nu = new Date()) {
+export function vanavond(programmas, titels, nu = new Date(), voorkeur = { genres: [], omroepen: [] }) {
   const dag = nlDagVanIso(nu.toISOString());
   const nog = programmas.filter((p) => nlDagVanIso(p.start) === dag && new Date(p.eind) > nu);
   // Van je lijst: een nieuwe uitzending gaat voor een herhaling, daarna de vroegste.
@@ -42,7 +83,7 @@ export function vanavond(programmas, titels, nu = new Date()) {
     .sort((a, b) => a.herhaling - b.herhaling || a.start.localeCompare(b.start));
   const tips = nog
     .filter((p) => !lijst.some((x) => x.start === p.start && x.zender === p.zender))
-    .map((p) => ({ ...p, score: tipScore(p) }))
+    .map((p) => ({ ...p, score: tipScore(p, voorkeur) }))
     .filter((p) => p.score > 0)
     .sort((a, b) => b.score - a.score || a.start.localeCompare(b.start));
   // Elke titel maar één keer.

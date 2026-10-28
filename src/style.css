@@ -598,3 +598,17 @@ a.titel { text-decoration: none; }
 .toevoeg-knoppen { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 24px; }
 .toevoeg-knoppen .hoofdknop, .toevoeg-knoppen .tweede-knop { margin: 0; width: 100%; }
 .npo-ook { margin-top: 10px; }
+
+/* NPO: tip als knop, en de detailweergave */
+button.kijktip { width: 100%; border: 0; padding: 0; text-align: left; font: inherit; cursor: pointer; }
+button.afl-link { border: 0; background: none; padding: 0; text-align: left; font: inherit; color: var(--tekst); cursor: pointer; }
+#tv-genres, #tv-omroepen { padding: 4px 0 12px; }
+.npo-detail { display: flex; flex-direction: column; gap: 10px; }
+.npo-beeld { width: calc(100% + 32px); margin: 0 -16px 6px; aspect-ratio: 16 / 9; object-fit: cover; }
+.npo-detail h2 { margin: 0; font-family: var(--kop); font-weight: 800; font-size: 2.1rem; line-height: 1; text-transform: uppercase; }
+.npo-detail p { margin: 0; line-height: 1.5; }
+.npo-wanneer { color: var(--accent); font-weight: 600; font-size: 0.9rem; }
+.npo-aflevering { font-weight: 700; }
+.npo-detail .koers-zenders { margin-top: 4px; }
+.npo-detail .hoofdknop { margin-top: 12px; }
+.npo-detail .tweede-knop { margin-top: 0; }

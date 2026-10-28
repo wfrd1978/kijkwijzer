@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vanavond, opMijnLijst, tipScore, lijstOpNpo, npoLink } from '../src/tv.js';
+import { vanavond, opMijnLijst, tipScore, lijstOpNpo, npoLink, omroepenIn } from '../src/tv.js';
 
 const p = (uur, titel, genres, extra = {}) => {
   const start = new Date(`2026-10-28T${String(uur - 1).padStart(2, '0')}:00:00Z`); // UTC+1 in oktober na de wintertijd
@@ -44,5 +44,23 @@ describe('lijstOpNpo en npoLink', () => {
     expect(x).toHaveLength(1);
     expect(npoLink(x[0])).toBe('https://npo.nl/start/serie/zussen');
     expect(npoLink(p(20, 'X', [], { serie: '../x' }))).toBe('https://npo.nl/start/live?channel=npo1');
+  });
+});
+
+describe('voorkeuren', () => {
+  it('genre en omroep die je graag ziet, wegen zwaarder', () => {
+    const doc = p(21, 'Doc', ['Documentaire'], { omroepen: ['EO'] });
+    const drama = p(21, 'Drama', ['Serie', 'Drama'], { omroepen: ['MAX'] });
+    expect(tipScore(drama)).toBeGreaterThan(tipScore(doc));
+    expect(tipScore(doc, { genres: ['documentaire'], omroepen: [] })).toBeGreaterThan(tipScore(drama, { genres: ['documentaire'], omroepen: [] }));
+    expect(tipScore(doc, { genres: [], omroepen: ['EO'] })).toBeGreaterThan(tipScore(drama, { genres: [], omroepen: ['EO'] }));
+  });
+  it('een quiz wordt alleen een tip als je hem graag ziet; nieuws nooit', () => {
+    expect(tipScore(p(21, 'Quiz', ['Informatief', 'Spel/quiz']))).toBe(0);
+    expect(tipScore(p(21, 'Quiz', ['Informatief', 'Spel/quiz']), { genres: ['quiz'], omroepen: [] })).toBeGreaterThan(0);
+    expect(tipScore(p(20, 'Journaal', ['Nieuws/actualiteiten'], { omroepen: ['NOS'] }), { genres: [], omroepen: ['NOS'] })).toBe(0);
+  });
+  it('omroepen uit de gids', () => {
+    expect(omroepenIn([{ omroepen: ['VPRO', 'EO'] }, { omroepen: ['EO'] }, {}])).toEqual(['EO', 'VPRO']);
   });
 });

@@ -11,7 +11,7 @@ import {
 } from './voetbal.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { kiesKijktips, weekDagen, weekTekst } from './vandaag.js';
-import { vanavond, lijstOpNpo, npoLink } from './tv.js';
+import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
@@ -717,10 +717,14 @@ async function toonVandaag() {
   if (nr === schermNr) document.getElementById('sport-vandaag').innerHTML = sport;
 
   const npo = await haalNpo();
-  const avond = npo ? vanavond(npo.programmas, titels) : [];
+  const avond = npo ? vanavond(npo.programmas, titels, new Date(), leesTvVoorkeuren()) : [];
   if (nr === schermNr && avond.length) {
     document.getElementById('npo').innerHTML = npoHtml(avond);
     document.getElementById('npo-blok').hidden = false;
+    document.getElementById('npo').addEventListener('click', (e) => {
+      const knop = e.target.closest('[data-npo]');
+      if (knop) toonNpo(avond[Number(knop.dataset.npo)]);
+    });
   }
 
   if (!leesSleutel()) return;
@@ -737,30 +741,66 @@ function npoHtml(avond) {
   const beeld = veiligeUrl(tip.beeld);
   const label = `${tip.titelOpLijst ? 'Van je lijst' : 'Tip'} · ${veilig(tip.zender)} · ${veilig(aftrap(tip.start))}`;
   return `
-    <a class="kijktip" href="${veiligeUrl(npoLink(tip))}" target="_blank" rel="noopener">
+    <button class="kijktip" data-npo="0">
       ${beeld ? `<img src="${beeld}" alt="" loading="lazy" />` : ''}
       <div class="kijktip-tekst">
         <span class="kijktip-label">${label}</span>
         <strong>${veilig(tip.titel)}</strong>
         <span>${veilig(tip.aflevering || tip.omschrijving.slice(0, 90))}${tip.herhaling ? ' · herhaling' : ''}</span>
       </div>
-    </a>
+    </button>
     ${
       rest.length
         ? `<ul class="sport-vandaag npo-ook">${rest
             .slice(0, 2)
             .map(
-              (p) => `
+              (p, i) => `
           <li>
             <span class="sport-tijd">${veilig(aftrap(p.start))}</span>
-            <a class="sport-wat afl-link" href="${veiligeUrl(npoLink(p))}" target="_blank" rel="noopener"><strong>${veilig(p.titel)}</strong><span class="zacht">${veilig(p.aflevering || p.genres.slice(0, 2).join(' · '))}</span></a>
+            <button class="sport-wat afl-link" data-npo="${i + 1}"><strong>${veilig(p.titel)}</strong><span class="zacht">${veilig(p.aflevering || p.genres.slice(0, 2).join(' · '))}</span></button>
             <span class="zender-chip">${veilig(p.zender)}</span>
           </li>`
             )
             .join('')}</ul>`
         : ''
     }
-    <p class="bron">Uit de tv-gids van NPO. Tik om te kijken of later terug te zien op NPO Start.</p>`;
+    <p class="bron">Uit de tv-gids van NPO. Tik voor meer informatie. Afstemmen op wat jij graag ziet kan in <a href="#/instellingen">Instellingen</a> bij Tv-tips.</p>`;
+}
+
+// Meer over een programma uit de NPO-gids, met knoppen om te kijken.
+function toonNpo(p) {
+  window.scrollTo(0, 0);
+  const start = new Date(p.start);
+  const nu = new Date();
+  const bezig = start <= nu && new Date(p.eind) > nu;
+  const wanneer = `${veilig(p.zender)} · ${start.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Amsterdam' })} · ${veilig(aftrap(p.start))}–${veilig(aftrap(p.eind))}`;
+  const chips = [...new Set(p.genres)].filter((g) => g !== 'Overig').slice(0, 4);
+  const beeld = veiligeUrl(p.beeld);
+  app.innerHTML = `
+    <header class="kop"><button class="terug" id="terug">‹ Vandaag</button></header>
+    <section class="npo-detail">
+      ${beeld ? `<img class="npo-beeld" src="${beeld}" alt="" />` : ''}
+      <p class="npo-wanneer">${wanneer}${bezig ? ' · <strong>nu bezig</strong>' : ''}</p>
+      <h2>${veilig(p.titel)}</h2>
+      ${p.aflevering ? `<p class="npo-aflevering">${veilig(p.aflevering)}</p>` : ''}
+      ${p.omschrijving ? `<p>${veilig(p.omschrijving)}</p>` : ''}
+      ${p.over && p.over !== p.omschrijving ? `<p class="zacht">${veilig(p.over)}</p>` : ''}
+      <div class="koers-zenders">
+        ${(p.omroepen ?? []).map((o) => `<span class="zender-chip mijn">${veilig(o)}</span>`).join('')}
+        ${chips.map((g) => `<span class="zender-chip">${veilig(g)}</span>`).join('')}
+        ${p.herhaling ? '<span class="zender-chip">Herhaling</span>' : ''}
+        ${p.leeftijd && p.leeftijd !== 'ALL' ? `<span class="zender-chip">${veilig(p.leeftijd)}+</span>` : ''}
+      </div>
+      ${p.titelOpLijst ? `<p class="reden">Staat op je lijst bij Wil ik zien.</p>` : ''}
+      <a class="hoofdknop" href="${veiligeUrl(bezig ? p.live : npoLink(p))}" target="_blank" rel="noopener">${bezig ? `Kijk nu live op ${veilig(p.zender)}` : 'Bekijk op NPO Start'}</a>
+      ${p.titelOpLijst ? `<a class="tweede-knop" href="#/titel/${p.titelOpLijst.id}">Open op mijn lijst</a>` : '<button class="tweede-knop" id="npo-zoek">Zoek in Films & series</button>'}
+    </section>`;
+  document.getElementById('terug').addEventListener('click', () => toonVandaag());
+  document.getElementById('npo-zoek')?.addEventListener('click', () => {
+    filmsZoek = p.titel;
+    filmsTab = 'wil';
+    location.hash = '#/films';
+  });
 }
 
 // Afleveringen van gisteren en vandaag, van series op je lijst.
@@ -1859,6 +1899,12 @@ function backupTekst() {
 
 const aantalTekst = (n) => (n === 1 ? '1 titel' : `${n} titels`);
 
+function tvStand(soort) {
+  const v = leesTvVoorkeuren()[soort];
+  if (!v.length) return 'Geen voorkeur';
+  return soort === 'genres' ? v.map((k) => TV_GENRES[k].naam).join(', ') : v.join(', ');
+}
+
 function competitiesStand() {
   const alles = leesVoetbalKeuzes().alles.map((c) => COMPETITIES[c]?.kort).filter(Boolean);
   return alles.length ? alles.join(', ') : 'Alleen je clubs';
@@ -1905,6 +1951,19 @@ async function toonInstellingen() {
       <details class="uitklap" id="clubs-uitklap">
         <summary><span class="uitklap-kop">Clubs kiezen</span><span class="zacht uitklap-stand" id="clubs-stand">${leesVoetbalKeuzes().clubs.length ? `${leesVoetbalKeuzes().clubs.length} gekozen` : 'Nog geen clubs gekozen'}</span></summary>
         <div id="clubs-keuze"><p class="zacht">Clubs ophalen…</p></div>
+      </details>
+
+      <h3 class="blok-sub">Tv-tips</h3>
+      <p>Wat zie je graag op tv? Daar stemt Vanavond op NPO de tips op af. Nieuws en jeugdprogramma's worden nooit een tip.</p>
+      <details class="uitklap" id="tv-genres-uitklap">
+        <summary><span class="uitklap-kop">Genres</span><span class="zacht uitklap-stand" id="tv-genres-stand">${veilig(tvStand('genres'))}</span></summary>
+        <div class="keuzes" id="tv-genres">${Object.entries(TV_GENRES)
+          .map(([k, g]) => `<button class="keuze${leesTvVoorkeuren().genres.includes(k) ? ' actief' : ''}" data-genre="${k}">${veilig(g.naam)}</button>`)
+          .join('')}</div>
+      </details>
+      <details class="uitklap" id="tv-omroepen-uitklap">
+        <summary><span class="uitklap-kop">Omroepen</span><span class="zacht uitklap-stand" id="tv-omroepen-stand">${veilig(tvStand('omroepen'))}</span></summary>
+        <div class="keuzes" id="tv-omroepen"><p class="zacht">Omroepen ophalen…</p></div>
       </details>
 
       <h3 class="blok-sub">Sportzenders</h3>
@@ -1994,6 +2053,38 @@ async function toonInstellingen() {
     document.getElementById('competities-stand').textContent = competitiesStand();
   });
   document.getElementById('clubs-uitklap').addEventListener('toggle', (e) => e.target.open && toonClubsKeuze(nr), { once: true });
+
+  document.getElementById('tv-genres').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-genre]');
+    if (!knop) return;
+    knop.classList.toggle('actief');
+    zetTvVoorkeuren({ ...leesTvVoorkeuren(), genres: [...document.querySelectorAll('#tv-genres .actief')].map((x) => x.dataset.genre) });
+    document.getElementById('tv-genres-stand').textContent = tvStand('genres');
+  });
+  // De omroepen komen uit de gids zelf, zodat de lijst altijd klopt.
+  document.getElementById('tv-omroepen-uitklap').addEventListener(
+    'toggle',
+    async (e) => {
+      if (!e.target.open) return;
+      const vak = document.getElementById('tv-omroepen');
+      const npo = await haalNpo();
+      const gekozen = leesTvVoorkeuren().omroepen;
+      const alle = [...new Set([...omroepenIn(npo?.programmas ?? []), ...gekozen])].filter((o) => !['NOS', 'NPO', 'NPO Zapp'].includes(o)).sort((a, b) => a.localeCompare(b));
+      if (!alle.length) {
+        vak.innerHTML = '<p class="zacht">De tv-gids is nu niet beschikbaar. Probeer het later nog eens.</p>';
+        return;
+      }
+      vak.innerHTML = alle.map((o) => `<button class="keuze${gekozen.includes(o) ? ' actief' : ''}" data-omroep="${veilig(o)}">${veilig(o)}</button>`).join('');
+      vak.addEventListener('click', (k) => {
+        const knop = k.target.closest('[data-omroep]');
+        if (!knop) return;
+        knop.classList.toggle('actief');
+        zetTvVoorkeuren({ ...leesTvVoorkeuren(), omroepen: [...vak.querySelectorAll('.actief')].map((x) => x.dataset.omroep) });
+        document.getElementById('tv-omroepen-stand').textContent = tvStand('omroepen');
+      });
+    },
+    { once: true }
+  );
 
   document.getElementById('sportzenders').addEventListener('click', (e) => {
     const knop = e.target.closest('[data-zender]');

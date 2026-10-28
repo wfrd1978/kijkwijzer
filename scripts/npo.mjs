@@ -55,6 +55,27 @@ for (let i = 0; i < DAGEN; i++) {
   }
 }
 
+// Per serie (één keer) de omroep en een algemene omschrijving, voor de voorkeuren en de detailweergave.
+const series = new Map();
+for (const slug of new Set(programmas.map((p) => p.serie).filter((x) => /^[\w-]+$/.test(x)))) {
+  try {
+    const antwoord = await fetch(`https://npo.nl/start/api/domain/series-detail?slug=${slug}`, {
+      headers: { 'User-Agent': 'Kijkwijzer (persoonlijke kijkwijzer-app)' },
+    });
+    if (!antwoord.ok) throw new Error(`status ${antwoord.status}`);
+    const d = await antwoord.json();
+    series.set(slug, {
+      omroepen: (d.broadcasters ?? []).map((b) => tekst(b.name, 40)).filter(Boolean),
+      over: tekst(d.synopsis, 500),
+      leeftijd: tekst(d.contentClassification?.ageRestriction, 4),
+    });
+  } catch {
+    // Niet erg: dan zonder omroep.
+  }
+  await new Promise((klaar) => setTimeout(klaar, 200));
+}
+for (const p of programmas) Object.assign(p, series.get(p.serie) ?? { omroepen: [], over: '', leeftijd: '' });
+
 if (!gelukt) {
   console.log('NPO-gids niet bereikbaar: npo.json overgeslagen.');
   process.exit(0);
