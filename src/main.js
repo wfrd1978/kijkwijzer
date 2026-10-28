@@ -1242,28 +1242,39 @@ function nlDagVan(w) {
   return new Date(w.start).toLocaleDateString('sv-SE', { timeZone: 'Europe/Amsterdam' });
 }
 
+const SPORT_TABS = { voetbal: 'Voetbal', f1: 'Formule 1', wielrennen: 'Wielrennen' };
+let sportTab = onthoud('sportTab', 'voetbal', Object.keys(SPORT_TABS));
+
 async function toonSport() {
   const nr = schermNr;
   const mijn = leesSportzenders();
+  // Alle drie worden geladen; de schakelaar laat er één zien, zodat wisselen meteen gaat.
+  const blok = (k, inhoud) => `<section class="sport-blok" data-sport="${k}"${k === sportTab ? '' : ' hidden'}>${inhoud}</section>`;
   app.innerHTML = `
     ${schermKop('Sport')}
+    <div class="segment" id="sport-tabs" role="tablist">${Object.entries(SPORT_TABS)
+      .map(([k, naam]) => `<button role="tab" aria-selected="${k === sportTab}" data-tab="${k}">${naam}</button>`)
+      .join('')}</div>
     ${mijn.length ? '' : '<p class="zacht sport-tip">Tip: kies in <a href="#/instellingen">Instellingen</a> je sportzenders, dan zie je wat jij live kunt volgen.</p>'}
-    <section class="sport-blok">
-      <h2>Voetbal</h2>
-      <div id="voetbal"><p class="bezig">Schema ophalen…</p></div>
-    </section>
-    <section class="sport-blok">
-      <h2>Formule 1</h2>
-      <p class="zender${mijn.includes(F1_ZENDERS.live) ? ' bij-jou-zender' : ''}"><strong>${
+    ${blok('voetbal', '<div id="voetbal"><p class="bezig">Schema ophalen…</p></div>')}
+    ${blok(
+      'f1',
+      `<p class="zender${mijn.includes(F1_ZENDERS.live) ? ' bij-jou-zender' : ''}"><strong>${
         mijn.includes(F1_ZENDERS.live) ? `Jij kijkt live via ${veilig(F1_ZENDERS.live)}` : `Live bij ${veilig(F1_ZENDERS.live)}`
       }</strong><br />${veilig(F1_ZENDERS.extra)}</p>
-      <div id="f1"><p class="bezig">Schema ophalen…</p></div>
-    </section>
-    <section class="sport-blok">
-      <h2>Wielrennen</h2>
-      ${wielrennenHtml(mijn)}
-    </section>
+      <div id="f1"><p class="bezig">Schema ophalen…</p></div>`
+    )}
+    ${blok('wielrennen', wielrennenHtml(mijn))}
   `;
+  document.getElementById('sport-tabs').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-tab]');
+    if (!knop || knop.dataset.tab === sportTab) return;
+    sportTab = knop.dataset.tab;
+    bewaarKeuze('sportTab', sportTab);
+    document.querySelectorAll('#sport-tabs [data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === sportTab)));
+    document.querySelectorAll('[data-sport]').forEach((b) => (b.hidden = b.dataset.sport !== sportTab));
+    window.scrollTo(0, 0);
+  });
   toonVoetbal(nr, mijn);
   let schema;
   try {
@@ -1946,6 +1957,7 @@ async function toonInstellingen() {
         const n = await zetBackupTerug(inhoud);
         // Keuzes uit de backup (tabblad, sortering) meteen gebruiken.
         filmsTab = onthoud('filmsTab', 'wil', Object.keys(FILMS_TABS));
+        sportTab = onthoud('sportTab', 'voetbal', Object.keys(SPORT_TABS));
         soort = onthoud('soort', 'alle', Object.keys(SOORTEN));
         sortering = onthoud('sortering', 'toegevoegd', Object.keys(SORTERINGEN));
         window.kijkThema?.toepassen();

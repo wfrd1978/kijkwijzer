@@ -577,3 +577,7 @@ a.titel { text-decoration: none; }
 .week-wat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; justify-content: center; font-size: 0.92rem; }
 .week-regel { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .week-regel .zender-chip { flex: none; }
+
+/* --- Sport met schakelaar --- */
+.sport-blok + .sport-blok { margin-top: 0; padding-top: 0; border-top: 0; }
+#sport-tabs + .sport-tip { margin: 0 0 12px; }
