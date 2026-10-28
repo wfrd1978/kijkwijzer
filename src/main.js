@@ -10,7 +10,7 @@ import {
   perDag, weekStart, aftrap, dagNaam, haalOranje,
 } from './voetbal.js';
 import { uitnodigingTekst, deel } from './delen.js';
-import { kiesKijktips, weekDagen, weekTekst } from './vandaag.js';
+import { weekDagen, weekTekst } from './vandaag.js';
 import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
@@ -608,7 +608,7 @@ async function weekHtml(titels, stand) {
     <p class="bron">Alleen wat jij volgt: nieuwe afleveringen van series op je lijst, en in Sport je clubs en competities, Oranje, Formule 1 en wielrennen. Tijden in Nederlandse tijd; afleveringen volgens TMDB.</p>`;
 }
 
-// Straks deze week: de eerstvolgende vijf dingen die je volgt, van morgen tot een week vooruit.
+// Deze week (op Vandaag): de eerstvolgende vijf dingen die je volgt, van morgen tot een week vooruit.
 async function strakHtmlVoor(titels, stand) {
   const mijn = leesSportzenders();
   const dagen = Array.from({ length: 7 }, (_, i) => {
@@ -630,25 +630,7 @@ async function strakHtmlVoor(titels, stand) {
     <button class="link-knop" id="hele-week">Bekijk de hele week</button>`;
 }
 
-// De kijktip: iets van je eigen lijst dat je vanavond bij een van je diensten kunt kijken.
-function kijktipHtml(tips, i) {
-  if (!tips.length) return '';
-  const { titel: t, dienst } = tips[i % tips.length];
-  const beeld = veiligeUrl(posterUrl(t.achtergrond || t.poster, t.achtergrond ? 'w780' : 'w342'));
-  return `
-    <a class="kijktip" href="#/titel/${t.id}">
-      ${beeld ? `<img src="${beeld}" alt="" loading="lazy" />` : ''}
-      <div class="kijktip-tekst">
-        <span class="kijktip-label">${t.nieuwBij?.length ? 'Nieuw' : 'Uit je lijst'} · bij ${veilig(dienst.naam)}</span>
-        <strong>${veilig(t.titel)}</strong>
-        <span>${soortJaar(t)}</span>
-      </div>
-    </a>
-    ${tips.length > 1 ? '<button class="link-knop" id="andere-tip">Andere tip</button>' : ''}`;
-}
-
 let vandaagWeergave = 'dag';
-let tipNr = 0;
 
 async function toonVandaag() {
   const nr = schermNr;
@@ -696,8 +678,6 @@ async function toonVandaag() {
   }
 
   const verder = titels.filter((t) => t.soort === 'serie' && t.status !== 'Gezien' && t.voortgang);
-  const heeftDiensten = Object.values(leesKeuzes()).includes('abonnement');
-  const tips = kiesKijktips(titels, leesKeuzes(), vandaag());
   app.innerHTML = `
     ${kop}
     ${keuze}
@@ -717,16 +697,9 @@ async function toonVandaag() {
       <div id="sport-vandaag"><p class="bezig">Ophalen…</p></div>
     </section>
     <section class="vandaag-blok" id="straks-blok" hidden>
-      <h2 class="vak-kop">Straks deze week</h2>
+      <h2 class="vak-kop">Deze week</h2>
       <div id="straks"></div>
     </section>
-    ${
-      tips.length
-        ? `<section class="vandaag-blok"><h2 class="vak-kop">Kijktip voor vanavond</h2><div id="kijktip">${kijktipHtml(tips, tipNr)}</div></section>`
-        : titels.length && !heeftDiensten
-          ? '<section class="vandaag-blok"><h2 class="vak-kop">Kijktip voor vanavond</h2><p class="leeg-klein">Kies in <a href="#/instellingen">Instellingen</a> welke diensten je hebt, dan krijg je hier een tip uit je eigen lijst.</p></section>'
-          : ''
-    }
     <section class="vandaag-blok" id="npo-blok" hidden>
       <h2 class="vak-kop">Vanavond op NPO</h2>
       <div id="npo"></div>
@@ -735,11 +708,6 @@ async function toonVandaag() {
   `;
   koppelKeuze();
 
-  document.getElementById('kijktip')?.addEventListener('click', (e) => {
-    if (!e.target.closest('#andere-tip')) return;
-    tipNr += 1;
-    document.getElementById('kijktip').innerHTML = kijktipHtml(tips, tipNr);
-  });
   document.getElementById('verder')?.addEventListener('click', async (e) => {
     const knop = e.target.closest('[data-volgende]');
     if (!knop) return;

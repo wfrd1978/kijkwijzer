@@ -1,25 +1,4 @@
-// Logica voor het scherm Vandaag: de kijktip en de dagen van deze week.
-import { verdeelDiensten } from './diensten.js';
-
-// Titels van Wil ik zien die je nu bij een van je eigen diensten kunt kijken, met die dienst erbij.
-// Series waar je al mee bezig bent staan bij Verder kijken en tellen hier niet mee.
-// Wat net nieuw bij jouw diensten is komt eerst; de rest schuift elke dag één plek op,
-// zodat je niet elke dag dezelfde tip ziet.
-export function kiesKijktips(titels, keuzes, dag) {
-  const kandidaten = titels
-    .filter((t) => t.status === 'Wil ik zien' && !t.voortgang && t.diensten)
-    .map((t) => ({ titel: t, dienst: verdeelDiensten(t.diensten, keuzes).bijJou[0] }))
-    .filter((k) => k.dienst)
-    .sort((a, b) => String(a.titel.toegevoegdOp).localeCompare(String(b.titel.toegevoegdOp)));
-  const nieuw = kandidaten.filter((k) => k.titel.nieuwBij?.length);
-  const rest = kandidaten.filter((k) => !k.titel.nieuwBij?.length);
-  const verschuif = rest.length ? dagNummer(dag) % rest.length : 0;
-  return [...nieuw, ...rest.slice(verschuif), ...rest.slice(0, verschuif)];
-}
-
-function dagNummer(dag) {
-  return Math.floor(Date.parse(`${dag}T12:00:00Z`) / 86400000);
-}
+// Logica voor het scherm Vandaag: de dagen van deze week.
 
 // De zeven dagen ('jjjj-mm-dd') van maandag tot en met zondag van de week waarin 'dag' valt.
 export function weekDagen(dag) {
