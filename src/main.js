@@ -11,6 +11,7 @@ import {
 } from './voetbal.js';
 import { uitnodigingTekst, deel } from './delen.js';
 import { weekDagen, weekTekst } from './vandaag.js';
+import { kanaalVoor } from './espn.js';
 import { nieuwVoorJou, GENRE_NAMEN } from './nieuw.js';
 import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
@@ -524,12 +525,12 @@ function verderKaart(t) {
 // Alles aan voetbal, Formule 1 en wielrennen dat jij volgt, op de gevraagde dagen ('jjjj-mm-dd').
 async function sportItems(dagen) {
   const op = new Set(dagen);
-  const [schema, f1, oranje] = await Promise.all([haalVoetbal(), haalF1().catch(() => null), haalOranje().catch(() => null)]);
+  const [schema, f1, oranje, kanalen] = await Promise.all([haalVoetbal(), haalF1().catch(() => null), haalOranje().catch(() => null), haalEspn()]);
   const items = [];
   if (schema) {
     for (const w of mijnWedstrijden(schema.wedstrijden, leesVoetbalKeuzes()).filter((x) => op.has(nlDagVan(x)))) {
       const c = COMPETITIES[w.competitie];
-      items.push({ dag: nlDagVan(w), start: w.start, tijd: aftrap(w.start), naam: `${w.thuis.naam} – ${w.uit.naam}`, sub: c.naam, zenders: c.zenders });
+      items.push({ dag: nlDagVan(w), start: w.start, tijd: aftrap(w.start), naam: `${w.thuis.naam} – ${w.uit.naam}`, sub: c.naam, zenders: zendersVan(w, kanalen) });
     }
   }
   if (oranje && op.has(nlDagVan(oranje))) {
@@ -1288,7 +1289,7 @@ async function verversExtra(titel, bewaar, nr) {
 
 // Label met de zender. Tik erop en je ziet in de gids van die zender op welk kanaal het komt.
 function zenderChip(z, mijn, kort = false) {
-  const tekst = `${veilig(z.naam)}${z.zeker ? '' : kort ? '?' : ' (onder voorbehoud)'}`;
+  const tekst = `${veilig(z.kanaal || z.naam)}${z.zeker ? '' : kort ? '?' : ' (onder voorbehoud)'}`;
   const klasse = `zender-chip${mijn.includes(z.naam) ? ' mijn' : ''}`;
   const gids = ZENDER_GIDS[z.naam];
   return gids
@@ -1344,6 +1345,23 @@ async function haalNpo() {
   }
 }
 
+// Op welk ESPN-kanaal een Eredivisie-wedstrijd komt (door GitHub dagelijks klaargezet).
+let espnBelofte = null;
+function haalEspn() {
+  espnBelofte ??= fetch(`${import.meta.env.BASE_URL}espn.json`, { cache: 'no-cache' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => (Array.isArray(d?.kanalen) ? d.kanalen : []))
+    .catch(() => []);
+  return espnBelofte;
+}
+
+// De zenders van een wedstrijd; bij de Eredivisie met het precieze ESPN-kanaal als dat bekend is.
+function zendersVan(w, kanalen) {
+  const c = COMPETITIES[w.competitie];
+  const kanaal = w.competitie === 'DED' ? kanaalVoor(w, kanalen, nlDagVan(w), aftrap(w.start)) : '';
+  return kanaal ? c.zenders.map((z) => (z.naam === 'ESPN' ? { ...z, kanaal } : z)) : c.zenders;
+}
+
 let voetbalWeek = 'deze';
 
 function zenderChips(zenders, mijn) {
@@ -1355,7 +1373,10 @@ function zenderChips(zenders, mijn) {
 function kijkTekst(zenders, mijn) {
   if (!mijn.length) return '';
   const mijnZ = zenders.filter((z) => mijn.includes(z.naam));
-  if (mijnZ.some((z) => z.zeker)) return `<span class="koers-kijk">Jij kijkt via ${veilig(mijnZ.find((z) => z.zeker).naam)}</span>`;
+  if (mijnZ.some((z) => z.zeker)) {
+    const z = mijnZ.find((x) => x.zeker);
+    return `<span class="koers-kijk">Jij kijkt via ${veilig(z.kanaal || z.naam)}</span>`;
+  }
   if (mijnZ.length) return `<span class="koers-kijk misschien">Misschien via ${veilig(mijnZ[0].naam)}</span>`;
   return '<span class="koers-kijk nee">Niet bij jouw zenders</span>';
 }
@@ -1388,8 +1409,11 @@ async function toonVoetbal(nr, mijn) {
   volgendeMaandag.setUTCDate(volgendeMaandag.getUTCDate() + 7);
   const grens = volgendeMaandag.toISOString().slice(0, 10);
   const inWeek = (d) => (voetbalWeek === 'deze' ? d.dag >= vandaag() && d.dag < grens : d.dag >= grens);
+  const kanalen = await haalEspn();
+  if (!vak()) return;
   const rij = (w) => {
     const c = COMPETITIES[w.competitie];
+    const zenders = zendersVan(w, kanalen);
     const mijnClub = (p) => keuzes.clubs.includes(p.id);
     return `
       <li class="wedstrijd">
@@ -1397,8 +1421,8 @@ async function toonVoetbal(nr, mijn) {
         <div class="wedstrijd-tekst">
           <strong><span class="${mijnClub(w.thuis) ? 'mijn-club' : ''}">${veilig(w.thuis.naam)}</span> – <span class="${mijnClub(w.uit) ? 'mijn-club' : ''}">${veilig(w.uit.naam)}</span></strong>
           <span class="zacht">${veilig(c.naam)}</span>
-          <div class="koers-zenders">${zenderChips(c.zenders, mijn)}</div>
-          ${kijkTekst(c.zenders, mijn)}
+          <div class="koers-zenders">${zenderChips(zenders, mijn)}</div>
+          ${kijkTekst(zenders, mijn)}
         </div>
       </li>`;
   };

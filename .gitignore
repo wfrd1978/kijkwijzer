@@ -3,3 +3,4 @@ dist
 .DS_Store
 public/voetbal.json
 public/npo.json
+public/espn.json

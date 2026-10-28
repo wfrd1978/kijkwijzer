@@ -36,6 +36,10 @@ jobs:
         env:
           FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
         continue-on-error: true
+      # Op welk ESPN-kanaal elke Eredivisie-wedstrijd komt (openbare pagina van Ziggo).
+      - name: ESPN-kanalen ophalen
+        run: node scripts/espn.mjs
+        continue-on-error: true
       # Avonden op NPO 1, 2 en 3 voor de kijktip op Vandaag (gids van npo.nl, zonder sleutel).
       - name: NPO-gids ophalen
         run: node scripts/npo.mjs
