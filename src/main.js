@@ -12,7 +12,7 @@ import {
 import { uitnodigingTekst, deel } from './delen.js';
 import { weekDagen, weekTekst } from './vandaag.js';
 import { kanaalVoor } from './espn.js';
-import { vanVandaag } from './dagcache.js';
+import { vanVandaag, ruimOudeDagenOp } from './dagcache.js';
 import { nieuwVoorJou, GENRE_NAMEN } from './nieuw.js';
 import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
@@ -127,7 +127,7 @@ function soortJaar(t) {
 // Als een scherm laadt terwijl je al verder tikt, mag het oude scherm niets meer tekenen.
 let schermNr = 0;
 
-// --- Mijn lijst ---
+// --- Keuzes onthouden ---
 
 // Je keuzes in de lijst blijven bewaard, ook als je de app sluit.
 function onthoud(sleutel, standaard, toegestaan) {
@@ -254,7 +254,7 @@ function titelRegel(t, zoek = '', { status = true } = {}) {
   return `
       <li class="veeg" data-id="${t.id}">
         <button class="veeg-actie" tabindex="-1">Verwijder</button>
-        <a class="titel" href="#/titel/${t.id}">
+        <a class="titel" href="#/titel/${t.id}${t.status === 'Gezien' && !t.sterren ? '/sterren' : ''}">
         ${posterHtml(t)}
         <div class="titel-tekst">
           <span class="regel">
@@ -293,32 +293,44 @@ const NIEUW_GECONTROLEERD = 'nieuwGecontroleerd';
 // Kijkt of titels op 'Wil ik zien' nieuw te zien zijn bij een van je abonnementen.
 // Eén keer per dag vanzelf (of nu, via Instellingen). Geeft het aantal nieuwe titels,
 // of null als er niets te controleren viel.
+// Nieuwe diensten van één titel verwerken: bewaren, en wat nieuw is bij jouw abonnementen
+// onthouden voor de melding. Gebruikt door de dagelijkse controle én bij het openen van een titel.
+// Geeft true als er iets nieuw is bij jou.
+async function werkDienstenBij(t, diensten, keuzes = leesKeuzes()) {
+  const wijziging = { diensten, dienstenOp: vandaag() };
+  const nieuw = t.status === 'Wil ik zien' ? nieuwBijJou(t, diensten, keuzes) : [];
+  if (nieuw.length) {
+    const al = t.nieuwBij ?? [];
+    wijziging.nieuwBij = [...al, ...nieuw.filter((d) => !al.some((a) => a.id === d.id))];
+  }
+  Object.assign(t, wijziging);
+  await titelBijwerken(t.id, wijziging);
+  return nieuw.length > 0;
+}
+
+// Uitkomst: het aantal titels dat nieuw is bij je diensten; null als er niets te controleren
+// viel (geen sleutel of abonnementen, of vandaag al gedaan); -1 als het onderweg mislukte.
 async function controleerNieuw({ nu = false } = {}) {
   if (!leesSleutel()) return null;
   const keuzes = leesKeuzes();
   if (!Object.values(keuzes).includes('abonnement')) return null;
   if (!nu && onthoud(NIEUW_GECONTROLEERD, '', [vandaag()]) === vandaag()) return null;
   let gevonden = 0;
-  for (const t of (await alleTitels()).filter((x) => x.status === 'Wil ik zien')) {
+  // Titels die vandaag al zijn bijgewerkt (bijvoorbeeld bij het openen) zijn al gecontroleerd.
+  for (const t of (await alleTitels()).filter((x) => x.status === 'Wil ik zien' && (nu || x.dienstenOp !== vandaag()))) {
     let diensten;
     try {
       diensten = await haalDiensten(t.soort, t.tmdbId);
-    } catch {
-      return gevonden; // Geen internet: morgen (of bij de volgende keer) opnieuw.
+    } catch (fout) {
+      if (fout?.name === 'NietGevonden') continue; // TMDB kent deze titel niet meer: door met de volgende
+      return -1; // Geen internet of sleutel geweigerd: de volgende keer opnieuw.
     }
-    const nieuw = nieuwBijJou(t, diensten, keuzes);
-    const wijziging = { diensten, dienstenOp: vandaag() };
-    if (nieuw.length) {
-      const al = t.nieuwBij ?? [];
-      wijziging.nieuwBij = [...al, ...nieuw.filter((d) => !al.some((a) => a.id === d.id))];
-      gevonden += 1;
-    }
-    await titelBijwerken(t.id, wijziging);
+    if (await werkDienstenBij(t, diensten, keuzes)) gevonden += 1;
     await new Promise((klaar) => setTimeout(klaar, 300)); // rustig aan richting TMDB
   }
   bewaarKeuze(NIEUW_GECONTROLEERD, vandaag());
-  // Staat Mijn lijst open, dan meteen de melding laten zien.
-  if (gevonden && (location.hash === '' || location.hash === '#/')) route();
+  // Staat Vandaag open, dan meteen de melding laten zien (niet als je net iets anders bekijkt).
+  if (gevonden && document.getElementById('sport-vandaag')) route();
   return gevonden;
 }
 
@@ -328,7 +340,7 @@ function herinneringHtml() {
     <div class="herinnering">
       <p>${dagen === null ? 'Je hebt nog geen backup van je lijst.' : `Je laatste backup is ${dagen} dagen oud.`}</p>
       <div class="herinnering-knoppen">
-        <a href="#/instellingen">Backup maken</a>
+        <a href="#/instellingen/backup">Backup maken</a>
         <button class="link-knop" id="later">Later</button>
       </div>
     </div>`;
@@ -415,6 +427,7 @@ async function toonResultaten() {
 // Staat hij er al op, dan zie je dat (met wanneer je hem zag) en kun je hem openen.
 toonBevestigen.nr = 0;
 function toonBevestigen(t, alOpLijst, terug = { naam: 'Mijn lijst', toon: () => toonFilms() }) {
+  schermNr += 1; // wat het vorige scherm nog aan het ophalen was, mag hier niet meer tekenen
   window.scrollTo(0, 0);
   app.innerHTML = `
     <header class="kop"><button class="terug" id="terug">‹ ${veilig(terug.naam)}</button></header>
@@ -434,7 +447,11 @@ function toonBevestigen(t, alOpLijst, terug = { naam: 'Mijn lijst', toon: () => 
       }
     </section>
   `;
-  document.getElementById('terug').addEventListener('click', terug.toon);
+  const gaTerug = () => {
+    schermNr += 1;
+    terug.toon();
+  };
+  document.getElementById('terug').addEventListener('click', gaTerug);
   // Waar kijken, trailer en acteurs, ook al voordat je hem op je lijst zet.
   if (leesSleutel()) {
     const extraVak = Object.assign(document.createElement('div'), { id: 'extra', className: 'bevestig-extra' });
@@ -472,16 +489,16 @@ function toonBevestigen(t, alOpLijst, terug = { naam: 'Mijn lijst', toon: () => 
     const { titel, nieuw } = await titelToevoegen(t);
     if (!nieuw) {
       melding('Stond al op je lijst');
-      terug.toon();
+      gaTerug();
       return;
     }
     if (knop.dataset.toevoegen === 'Gezien') {
       await titelBijwerken(titel.id, statusWijziging(titel, 'Gezien'));
-      melding('Op Gezien gezet', { tekst: 'Geef sterren', actie: () => (location.hash = `#/titel/${titel.id}`) });
+      melding('Op Gezien gezet', { tekst: 'Geef sterren', actie: () => (location.hash = `#/titel/${titel.id}/sterren`) });
     } else {
       melding('Op Wil ik zien gezet');
     }
-    terug.toon();
+    gaTerug();
   });
 }
 
@@ -591,7 +608,7 @@ async function agendaItems(titels, stand, dagen) {
     // Nieuwe afleveringen staan bovenaan hun dag.
     // Wat van je Wil ik zien deze week op NPO komt.
     ...lijstOpNpo((await haalNpo())?.programmas ?? [], titels, dagen).map((p) => ({
-      dag: nlDagVan(p), start: p.start, tijd: aftrap(p.start), naam: p.titel, sub: 'Van je lijst', zenders: [], dienst: { naam: p.zender }, nieuw: true, tv: true,
+      dag: nlDagVan(p), start: p.start, tijd: aftrap(p.start), naam: p.titel, sub: 'Van je lijst', zenders: [], dienst: { naam: p.zender }, nieuw: true,
     })),
     ...afleveringenOp(titels, stand, dagen).map((e) => ({
       dag: e.dag, start: `${e.dag}T00:00`, tijd: '', naam: `${e.titel.titel} ${afleveringKort(e)}`, sub: 'Nieuwe aflevering', zenders: [], dienst: dienstVan(e.titel), nieuw: true,
@@ -643,6 +660,7 @@ async function toonWeek() {
   // Daarna (hooguit één keer per dag) de afleveringen bijwerken en de week opnieuw tekenen.
   if (!leesSleutel()) return;
   const stand = await werkAfleveringenBij(titels, vandaag(), haalAfleveringen);
+  await werkSeizoenenBij(titels, stand);
   if (nr === schermNr) document.getElementById('week').innerHTML = await weekHtml(titels, stand);
 }
 
@@ -681,6 +699,7 @@ async function toonVandaag() {
 
   const verder = titels.filter((t) => t.soort === 'serie' && t.status !== 'Gezien' && t.voortgang);
   const eigen = eigenDiensten();
+  const afleveringenNu = afleveringenHtml(titels, leesAfleveringen());
   app.innerHTML = `
     ${kop}
     ${titels.length && moetHerinneren(titels.length) ? herinneringHtml() : ''}
@@ -690,9 +709,9 @@ async function toonVandaag() {
         : '<section class="welkom"><p class="zacht">Je lijst is nog leeg. Zoek een film of serie om te beginnen.</p><a class="hoofdknop" href="#/films">Zoek een titel</a></section>'
     }
     ${verder.length ? `<section class="vandaag-blok"><h2 class="vak-kop">Verder kijken</h2><div id="verder">${verder.map(verderKaart).join('')}</div></section>` : ''}
-    <section class="vandaag-blok" id="afleveringen-blok"${afleveringenHtml(titels, leesAfleveringen()) ? '' : ' hidden'}>
+    <section class="vandaag-blok" id="afleveringen-blok"${afleveringenNu ? '' : ' hidden'}>
       <h2 class="vak-kop">Nieuwe afleveringen</h2>
-      <div id="afleveringen">${afleveringenHtml(titels, leesAfleveringen())}</div>
+      <div id="afleveringen">${afleveringenNu}</div>
     </section>
     <section class="vandaag-blok">
       <h2 class="vak-kop">Sport vandaag</h2>
@@ -762,7 +781,9 @@ async function toonVandaag() {
   }
 
   const stand = await werkAfleveringenBij(titels, vandaag(), haalAfleveringen);
+  const seizoenenNieuw = await werkSeizoenenBij(titels, stand);
   if (nr !== schermNr) return;
+  if (seizoenenNieuw && document.getElementById('verder')) document.getElementById('verder').innerHTML = verder.map(verderKaart).join('');
   const html = afleveringenHtml(titels, stand);
   document.getElementById('afleveringen').innerHTML = html;
   document.getElementById('afleveringen-blok').hidden = !html;
@@ -802,6 +823,7 @@ function npoHtml(avond) {
 
 // Meer over een programma uit de NPO-gids, met knoppen om te kijken.
 function toonNpo(p) {
+  schermNr += 1; // wat Vandaag nog aan het ophalen was, mag hier niet meer tekenen
   window.scrollTo(0, 0);
   const start = new Date(p.start);
   const nu = new Date();
@@ -828,12 +850,29 @@ function toonNpo(p) {
       <a class="hoofdknop" href="${veiligeUrl(bezig ? p.live : npoLink(p))}" target="_blank" rel="noopener noreferrer">${bezig ? `Kijk nu live op ${veilig(p.zender)}` : 'Bekijk op NPO Start'}</a>
       ${p.titelOpLijst ? `<a class="tweede-knop" href="#/titel/${p.titelOpLijst.id}">Open op mijn lijst</a>` : '<button class="tweede-knop" id="npo-zoek">Zoek en zet op mijn lijst</button>'}
     </section>`;
-  document.getElementById('terug').addEventListener('click', () => toonVandaag());
+  document.getElementById('terug').addEventListener('click', () => {
+    schermNr += 1;
+    toonVandaag();
+  });
   document.getElementById('npo-zoek')?.addEventListener('click', () => {
     filmsZoek = p.titel;
     filmsTab = 'wil';
     location.hash = '#/films';
   });
+}
+
+// De seizoenen van je series bijwerken met wat de dagelijkse afleveringencontrole weet,
+// zodat een nieuw seizoen meteen meetelt bij Verder kijken. Geeft true als er iets veranderde.
+async function werkSeizoenenBij(titels, stand) {
+  let veranderd = false;
+  for (const t of titels.filter((x) => x.soort === 'serie')) {
+    const nieuw = stand[t.tmdbId]?.seizoenen;
+    if (!nieuw?.length || JSON.stringify(nieuw) === JSON.stringify(t.seizoenen ?? [])) continue;
+    t.seizoenen = nieuw;
+    await titelBijwerken(t.id, { seizoenen: nieuw });
+    veranderd = true;
+  }
+  return veranderd;
 }
 
 // Afleveringen van gisteren en vandaag, van series op je lijst.
@@ -1121,7 +1160,7 @@ async function toonOntdekken({ terugNaarPlek = false } = {}) {
   const teken = () => {
     vak.innerHTML = stand.titels.length
       ? `${rasterHtml(stand.titels, opLijst)}
-         ${metMeer && stand.pagina < 5 ? '<button class="tweede-knop" id="meer">Meer laden</button>' : ''}
+         ${metMeer ? '<button class="tweede-knop" id="meer">Meer laden</button>' : ''}
          ${ontdekBron === 'diensten' ? JUSTWATCH : ''}${BRON}`
       : `<p class="leeg">${ontdekBron === 'tips' ? 'Nog geen tips gevonden. Geef meer titels 4 of 5 sterren.' : 'Niets gevonden.'}</p>`;
     vak.querySelectorAll('.raster-titel').forEach((knop) =>
@@ -1228,10 +1267,7 @@ async function verversDiensten(titel, bewaar, nr) {
   }
   try {
     // Vandaag al opgehaald? Dan is dat vers genoeg.
-    if (titel.dienstenOp !== vandaag()) {
-      const diensten = await haalDiensten(titel.soort, titel.tmdbId);
-      await bewaar({ diensten, dienstenOp: vandaag() });
-    }
+    if (titel.dienstenOp !== vandaag()) await werkDienstenBij(titel, await haalDiensten(titel.soort, titel.tmdbId));
   } catch {
     // Geen verbinding of TMDB doet even niet mee: dan de bewaarde versie.
   }
@@ -1373,7 +1409,7 @@ function wielrennenHtml(mijn) {
         <div class="koers-zenders">${k.zenders
           .map((z) => zenderChip(z, mijn))
           .join('')}</div>
-        ${kijk === 'ja' ? '<span class="koers-kijk">Jij kunt live kijken</span>' : kijk === 'misschien' ? '<span class="koers-kijk misschien">Misschien bij jouw zenders</span>' : kijk === 'nee' ? '<span class="koers-kijk nee">Niet bij jouw zenders</span>' : ''}
+        ${kijk === 'misschien' ? '<span class="koers-kijk misschien">Misschien bij jouw zenders</span>' : ''}
         ${k.noot ? `<span class="zacht koers-noot">${veilig(k.noot)}</span>` : ''}
       </li>`;
   };
@@ -1392,7 +1428,6 @@ function wielrennenHtml(mijn) {
     <p class="bron">Data: UCI WorldTour-kalender ${WIELRENNEN.seizoen}. Zenders gecontroleerd in ${veilig(WIELRENNEN.gecontroleerd)}; uitzendrechten kunnen nog veranderen.</p>`;
 }
 
-// Het voetbalschema dat GitHub dagelijks klaarzet. Null als het (nog) niet bestaat.
 // Een bestand dat GitHub elke ochtend klaarzet; één keer per dag opgehaald en daarna bewaard.
 function haalKlaargezet(naam) {
   return vanVandaag(naam, async () => {
@@ -1442,12 +1477,10 @@ function zenderChips(zenders, mijn) {
 function kijkTekst(zenders, mijn) {
   if (!mijn.length) return '';
   const mijnZ = zenders.filter((z) => mijn.includes(z.naam));
-  if (mijnZ.some((z) => z.zeker)) {
-    const z = mijnZ.find((x) => x.zeker);
-    return `<span class="koers-kijk">Jij kijkt via ${veilig(z.kanaal || z.naam)}</span>`;
-  }
+  // Wat je zeker kunt zien, is al gemarkeerd in het zenderlabel; alleen twijfel apart noemen.
+  if (mijnZ.some((z) => z.zeker)) return '';
   if (mijnZ.length) return `<span class="koers-kijk misschien">Misschien via ${veilig(mijnZ[0].naam)}</span>`;
-  return '<span class="koers-kijk nee">Niet bij jouw zenders</span>';
+  return '';
 }
 
 async function toonVoetbal(nr, mijn) {
@@ -1469,7 +1502,7 @@ async function toonVoetbal(nr, mijn) {
     return;
   }
   if (!keuzes.clubs.length && !keuzes.alles.length) {
-    vak().innerHTML = `${oranjeHtml}<p class="leeg">Kies in <a href="#/instellingen">Instellingen</a> bij Mijn voetbal je clubs en competities.</p>`;
+    vak().innerHTML = `${oranjeHtml}<p class="leeg">Kies in <a href="#/instellingen">Instellingen</a> bij Voetbal je clubs en competities.</p>`;
     return;
   }
   const dagen = perDag(mijnWedstrijden(schema.wedstrijden, keuzes).filter((w) => w.status !== 'FINISHED' || nlDagVan(w) === vandaag()));
@@ -1664,7 +1697,7 @@ async function toonActeur(id, { terugNaarPlek = false } = {}) {
 
 // --- Eén titel van je lijst ---
 
-async function toonTitel(id) {
+async function toonTitel(id, { naarSterren = false } = {}) {
   const nr = schermNr;
   const titel = await haalTitel(id);
   if (nr !== schermNr) return;
@@ -1747,6 +1780,8 @@ async function toonTitel(id) {
   };
   tekenStatus();
   tekenSterren();
+  // Via 'Geef sterren' gekomen: meteen naar de sterren.
+  if (naarSterren) document.getElementById('sterren').scrollIntoView({ block: 'center' });
   // Je hebt de titel bekeken: dan is het 'nieuw'-label niet meer nodig.
   if (titel.nieuwBij?.length) bewaar({ nieuwBij: [] });
   verversDiensten(titel, bewaar, nr);
@@ -1906,7 +1941,8 @@ async function toonTitel(id) {
     const kopie = { ...titel };
     await titelVerwijderen(id);
     toonTitel.bewaarOpenstaand = null;
-    location.hash = '#/';
+    if (binnenApp) history.back();
+    else location.hash = '#/films';
     melding(`"${kopie.titel}" verwijderd`, {
       tekst: 'Ongedaan maken',
       actie: async () => {
@@ -2105,7 +2141,7 @@ async function toonInstellingen() {
       ).join('')}</div>
     </section>
 
-    <section class="blok">
+    <section class="blok" id="backup-blok">
       <h2>Backup</h2>
       <p>Je lijst staat alleen op deze telefoon. Bewaar regelmatig een backup in je Google Drive: kies in het deelmenu de <b>Drive</b>-app, of <b>Bewaar in Bestanden</b> en dan Google Drive.</p>
       <p class="zacht" id="backup-status">${backupTekst()}</p>
@@ -2139,7 +2175,7 @@ async function toonInstellingen() {
           : `<p>Kijkwijzer haalt titels, posters en streaminginformatie op bij TMDB. Daarvoor heb je een gratis sleutel nodig. Je vindt hem op <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">themoviedb.org/settings/api</a>.</p>
              <p class="zacht">De sleutel blijft op deze telefoon en gaat nergens anders heen dan naar TMDB.</p>
              <form id="sleutel-form">
-               <textarea id="sleutel-veld" rows="3" placeholder="Plak hier je API Key of Read Access Token" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+               <textarea id="sleutel-veld" rows="3" placeholder="Plak hier je sleutel" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
                <p class="fout" id="sleutel-fout" hidden></p>
                <button class="hoofdknop" type="submit">Bewaar sleutel</button>
              </form>`
@@ -2171,7 +2207,9 @@ async function toonInstellingen() {
     uitkomst.textContent =
       n === null
         ? 'Kies eerst hierboven bij Diensten aanpassen welke abonnementen je hebt.'
-        : n
+        : n === -1
+          ? 'Controleren lukt nu niet. Heb je internet? Probeer het later nog eens.'
+          : n
           ? `${n === 1 ? '1 titel is' : `${n} titels zijn`} nieuw bij je diensten. Kijk op Vandaag.`
           : 'Niets nieuws: je titels op Wil ik zien staan nog bij dezelfde diensten.';
   });
@@ -2372,7 +2410,7 @@ async function route() {
     toonTitel.bewaarOpenstaand = null;
   }
   window.scrollTo(0, 0);
-  const titelId = location.hash.match(/^#\/titel\/(\d+)$/);
+  const titelId = location.hash.match(/^#\/titel\/(\d+)(\/sterren)?$/);
   const acteurId = location.hash.match(/^#\/acteur\/(\d+)$/);
   // Oude adressen (van voor de nieuwe indeling) komen uit bij Mijn lijst.
   if (location.hash === '#/zoek' || location.hash === '#/ontdekken') {
@@ -2380,12 +2418,12 @@ async function route() {
     history.replaceState(null, '', '#/films');
   }
   const plek =
-    { '#/films': 'films', '#/week': 'week', '#/sport': 'sport', '#/instellingen': 'instellingen' }[location.hash] || (titelId || acteurId ? 'films' : 'vandaag');
+    { '#/films': 'films', '#/week': 'week', '#/sport': 'sport', '#/instellingen': 'instellingen', '#/instellingen/backup': 'instellingen' }[location.hash] || (titelId || acteurId ? 'films' : 'vandaag');
   document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === plek));
-  if (plek === 'instellingen') toonInstellingen();
+  if (plek === 'instellingen') toonInstellingen().then(() => location.hash === '#/instellingen/backup' && document.getElementById('backup-blok')?.scrollIntoView());
   else if (plek === 'sport') toonSport();
   else if (plek === 'week') toonWeek();
-  else if (titelId) toonTitel(Number(titelId[1]));
+  else if (titelId) toonTitel(Number(titelId[1]), { naarSterren: Boolean(titelId[2]) });
   else if (acteurId) toonActeur(Number(acteurId[1]));
   else if (plek === 'films') toonFilms();
   else toonVandaag();
@@ -2399,6 +2437,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', bewaarNu);
 
 vraagBlijvendeOpslag();
+ruimOudeDagenOp();
 
 // Titels van vóór stap 11 hebben nog geen acteurs (en trailer). Die vult de app op de
 // achtergrond aan, één voor één, zodat zoeken op acteur voor je hele lijst werkt.
@@ -2410,8 +2449,10 @@ async function vulActeursAan() {
   for (const t of zonder.slice(0, 100)) {
     try {
       await titelBijwerken(t.id, { ...(await haalTrailerEnActeurs(t.soort, t.tmdbId)), extraOp: vandaag() });
-    } catch {
-      return; // Geen internet of sleutel geweigerd: de volgende keer verder.
+    } catch (fout) {
+      // Kent TMDB de titel niet meer: niet steeds opnieuw proberen, door met de volgende.
+      if (fout?.name === 'NietGevonden') await titelBijwerken(t.id, { extraOp: vandaag() });
+      else return; // Geen internet of sleutel geweigerd: de volgende keer verder.
     }
     await new Promise((klaar) => setTimeout(klaar, 300)); // rustig aan richting TMDB
   }

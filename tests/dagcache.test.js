@@ -28,3 +28,20 @@ describe('vanVandaag', () => {
     expect(await vanVandaag('z', async () => null, new Date(2026, 9, 28, 9))).toBe('oud');
   });
 });
+
+describe('ruimOudeDagenOp', () => {
+  it('gooit alleen weg wat van een eerdere dag is', async () => {
+    opslag.clear();
+    globalThis.localStorage.removeItem = (k) => opslag.delete(k);
+    const { ruimOudeDagenOp } = await import('../src/dagcache.js');
+    await vanVandaag('oud', async () => 1, new Date(2026, 9, 27, 9));
+    await vanVandaag('nieuw', async () => 2, new Date(2026, 9, 28, 9));
+    opslag.set('voetbal', '{"clubs":[]}');
+    // In de browser geeft Object.keys(localStorage) de sleutels; hier nagebootst.
+    const echteKeys = Object.keys;
+    Object.keys = (o) => (o === globalThis.localStorage ? [...opslag.keys()] : echteKeys(o));
+    ruimOudeDagenOp(new Date(2026, 9, 28, 10));
+    Object.keys = echteKeys;
+    expect([...opslag.keys()].sort()).toEqual(['dag:nieuw', 'voetbal']);
+  });
+});

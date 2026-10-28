@@ -3,6 +3,7 @@
 // FOOTBALL_DATA_KEY. De app zelf mag football-data niet rechtstreeks aanroepen.
 // Zonder sleutel of bij een storing wordt er niets geschreven en gaat het online zetten gewoon door.
 import { writeFile } from 'node:fs/promises';
+import { houdVorige } from './vorige.mjs';
 
 const SLEUTEL = process.env.FOOTBALL_DATA_KEY;
 // Eredivisie, Champions League, Premier League, Bundesliga, LaLiga, Serie A (gratis bij football-data).
@@ -12,6 +13,7 @@ const WACHT = 7000; // de gratis versie staat 10 vragen per minuut toe
 
 if (!SLEUTEL) {
   console.log('Geen FOOTBALL_DATA_KEY: voetbalschema overgeslagen.');
+  await houdVorige('voetbal');
   process.exit(0);
 }
 
@@ -50,9 +52,10 @@ for (const [i, code] of COMPETITIES.entries()) {
 }
 
 if (!gelukt) {
-  console.log('Geen enkele competitie opgehaald: voetbal.json niet geschreven.');
+  console.log('Geen enkele competitie opgehaald: voetbal.json niet opnieuw geschreven.');
+  await houdVorige('voetbal');
   process.exit(0);
 }
 wedstrijden.sort((a, b) => a.start.localeCompare(b.start));
-await writeFile('public/voetbal.json', JSON.stringify({ op: new Date().toISOString(), van: dag(van), tot: dag(tot), wedstrijden }));
+await writeFile(new URL('../public/voetbal.json', import.meta.url), JSON.stringify({ op: new Date().toISOString(), van: dag(van), tot: dag(tot), wedstrijden }));
 console.log(`voetbal.json geschreven: ${wedstrijden.length} wedstrijden.`);

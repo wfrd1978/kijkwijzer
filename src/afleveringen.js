@@ -36,8 +36,11 @@ export async function werkAfleveringenBij(titels, dag, haal, { wacht = 250, max 
   for (const t of series.filter((x) => alles[x.tmdbId]?.op !== dag).slice(0, max)) {
     try {
       alles[t.tmdbId] = { op: dag, ...(await haal(t.tmdbId)) };
-    } catch {
-      break; // geen internet of sleutel geweigerd: wat er al is blijft staan
+    } catch (fout) {
+      // Kent TMDB deze serie niet (meer), dan door met de volgende; anders (geen internet,
+      // sleutel geweigerd) stoppen: wat er al is blijft staan.
+      if (fout?.name !== 'NietGevonden') break;
+      alles[t.tmdbId] = { op: dag, laatste: null, volgende: null, seizoenen: [] };
     }
     if (wacht) await new Promise((klaar) => setTimeout(klaar, wacht));
   }

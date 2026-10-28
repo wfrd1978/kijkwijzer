@@ -86,9 +86,6 @@ main {
 
 /* --- Koppen --- */
 
-.woordmerk { text-align: center; padding: 10px 0 12px; border-bottom: 1px solid var(--lijn); margin: 0 -16px; }
-.woordmerk h1 { margin: 0; font-family: var(--schreef); font-weight: 800; font-size: 2.1rem; letter-spacing: -0.02em; }
-.woordmerk h1 span { color: var(--accent); }
 
 button, input, select, textarea { font: inherit; color: inherit; }
 a { color: var(--accent); }
@@ -106,13 +103,12 @@ a { color: var(--accent); }
 
 /* --- Zoeken en resultaten --- */
 
-.zoekbalk { display: flex; gap: 8px; margin: 16px 0 8px; }
-.zoekbalk input, #sleutel-veld {
+#sleutel-veld {
   flex: 1; width: 100%; min-width: 0; padding: 11px 14px; font-size: 16px;
   border: 1px solid var(--lijn); border-radius: 10px; background: var(--vlak);
 }
 #sleutel-veld { resize: none; font-family: ui-monospace, Menlo, monospace; font-size: 14px; word-break: break-all; }
-.zoekbalk button, .hoofdknop {
+.hoofdknop {
   border: 0; border-radius: 10px; padding: 12px 18px;
   background: var(--accent); color: var(--accent-tekst); font-weight: 600;
 }
@@ -149,23 +145,6 @@ a { color: var(--accent); }
 .persoon-foto.acteur-leeg { display: flex; align-items: center; justify-content: center; color: var(--zacht); font-family: var(--schreef); font-weight: 700; font-size: 1.3rem; }
 .aantal { color: var(--zacht); font-size: 0.9rem; }
 
-/* --- Tabjes en bediening boven de lijst (gelijk aan de boekenapp) --- */
-
-.tabs {
-  display: flex; gap: 22px; overflow-x: auto; margin: 0 -16px 14px; padding: 0 16px;
-  border-bottom: 1px solid var(--lijn); scrollbar-width: none;
-}
-.tabs::-webkit-scrollbar { display: none; }
-.tab {
-  flex: none; border: 0; background: none; padding: 12px 0 10px; font-size: 1rem; color: var(--zacht); cursor: pointer;
-  border-bottom: 3px solid transparent; margin-bottom: -1px;
-}
-.tab.actief { color: var(--tekst); font-weight: 700; border-bottom-color: var(--accent); }
-.lijst-bediening { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
-.lijst-bediening input {
-  width: 100%; min-width: 0; padding: 11px 14px; font-size: 16px;
-  border: 1px solid var(--lijn); border-radius: 10px; background: var(--vlak);
-}
 .lijst-regel { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 18px; }
 .lijst-regel .aantal { margin-left: auto; }
 .sorteer { display: flex; align-items: center; gap: 8px; color: var(--zacht); font-size: 0.9rem; }
@@ -186,7 +165,6 @@ a { color: var(--accent); }
 .sterren-klein { color: var(--ster); letter-spacing: 1px; font-size: 0.8rem; }
 a.titel { text-decoration: none; }
 .op-lijst { color: var(--accent) !important; }
-.midden { text-align: center; margin-top: 24px !important; }
 .titel-tekst { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .titel-tekst strong { font-family: var(--schreef); font-weight: 700; font-size: 1.12rem; line-height: 1.25; }
 .titel-tekst > span { color: var(--zacht); font-size: 0.92rem; }
@@ -231,7 +209,7 @@ a.titel { text-decoration: none; }
 }
 .datum-regel .link-knop { padding: 8px 0; }
 .bevestig .datum-tekst { text-align: left; font-size: 0.85rem; margin-top: 6px; }
-.bevestig textarea { width: 100%; resize: vertical; min-height: 110px; font-family: var(--schreef); font-size: 17px; line-height: 1.5; }
+.bevestig textarea { width: 100%; resize: vertical; min-height: 110px; font-family: var(--schreefloos); font-size: 16px; line-height: 1.5; }
 .bevestig .opgeslagen { text-align: right; font-size: 0.85rem; margin: 4px 0 0; }
 .trailer { margin: 18px -16px 0; aspect-ratio: 16 / 9; background: #000; position: relative; }
 .trailer-voorplaat {
@@ -309,7 +287,6 @@ a.titel { text-decoration: none; }
 
 /* --- Sport --- */
 
-.sport-blok h2 { font-family: var(--schreef); font-size: 1.4rem; margin: 0 0 8px; }
 .zender { margin: 0 0 16px; padding: 12px 14px; border-radius: 10px; background: var(--vlak); font-size: 0.9rem; color: var(--zacht); }
 .zender strong { color: var(--tekst); }
 .race-volgend { padding: 16px; border-radius: 12px; background: var(--accent-zacht); }
@@ -471,18 +448,15 @@ a.titel { text-decoration: none; }
 
 /* --- Nieuwe look: koppen en titels in de smalle koppenletter --- */
 
-.woordmerk { text-align: left; padding: 14px 16px 12px; }
-.woordmerk h1 { font-family: var(--kop); font-weight: 800; font-size: 2.6rem; line-height: 0.95; text-transform: uppercase; letter-spacing: 0.01em; }
 .kop h1 { font-family: var(--kop); font-weight: 800; font-size: 2.6rem; line-height: 0.95; text-transform: uppercase; letter-spacing: 0.01em; }
-.blok h2, .sport-blok h2 { font-family: var(--kop); font-weight: 800; font-size: 1.7rem; text-transform: uppercase; letter-spacing: 0.02em; }
+.blok h2 { font-family: var(--kop); font-weight: 800; font-size: 1.7rem; text-transform: uppercase; letter-spacing: 0.02em; }
 .bevestig h2, .acteur-kop h2 { font-family: var(--kop); font-weight: 800; font-size: 2.1rem; line-height: 1; text-transform: uppercase; }
 .race-volgend h3 { font-family: var(--kop); font-weight: 800; font-size: 1.7rem; text-transform: uppercase; line-height: 1; }
 .titel-tekst strong, .raster-titel strong, .koers strong, .oranje strong { font-family: var(--kop); font-weight: 700; font-size: 1.25rem; line-height: 1.1; }
 .bevestig .label, .label.sport-label, .label.acteur-label, .label.zoek-kop, .race-ronde, .nieuw-melding .nieuw-kop {
   font-family: var(--kop); font-weight: 700; font-size: 1rem; letter-spacing: 0.12em; text-transform: uppercase;
 }
-.tab { font-family: var(--kop); font-weight: 700; font-size: 1.1rem; letter-spacing: 0.06em; text-transform: uppercase; }
-.hoofdknop, .zoekbalk button { font-weight: 700; border-radius: 12px; }
+.hoofdknop { font-weight: 700; border-radius: 12px; }
 .keuze { font-weight: 600; }
 .balk { background: color-mix(in srgb, var(--vlak) 92%, transparent); }
 .balk a.actief { background: var(--tekst); color: var(--bg); }
@@ -553,17 +527,15 @@ a.titel { text-decoration: none; }
 .dag-blok .wedstrijd:last-child { border-bottom: 0; }
 
 /* --- Vandaag: keuze dag/week, kijktip en Deze week --- */
-.vandaag-keuze { margin: -4px 0 4px; }
 .kijktip { position: relative; display: block; height: 170px; border-radius: 14px; overflow: hidden; background: var(--vlak); color: #fff; text-decoration: none; }
 .kijktip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .kijktip-tekst {
   position: absolute; inset: 0; padding: 16px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
   background: linear-gradient(to top, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0.15) 70%);
 }
-.kijktip-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--goud); }
+.kijktip-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #f5c46b; } /* altijd op een donker beeld */
 .kijktip-tekst strong { font-family: var(--kop); font-weight: 800; font-size: 1.9rem; line-height: 1; text-transform: uppercase; }
 .kijktip-tekst span:last-child { font-size: 0.85rem; color: #e2ded6; }
-#kijktip .link-knop { padding: 10px 0 0; color: var(--zacht); font-size: 0.9rem; }
 .vandaag-blok + .nieuw-melding { margin-top: 24px; }
 
 .week { list-style: none; margin: 8px 0 0; padding: 0; }
@@ -615,12 +587,6 @@ button.afl-link { border: 0; background: none; padding: 0; text-align: left; fon
 .bevestig-waar { text-align: left; }
 .verborgen-diensten a { color: var(--accent); }
 
-/* Straks deze week */
-.straks { list-style: none; margin: 0; padding: 4px 14px; border-radius: 14px; background: var(--vlak); }
-.straks li { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--lijn); font-size: 0.92rem; }
-.straks li:last-child { border-bottom: 0; }
-.straks-dag { width: 58px; flex: none; font-family: var(--kop); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--zacht); }
-.straks .week-regel { flex: 1; min-width: 0; }
 #straks .link-knop { padding: 10px 0 0; color: var(--zacht); font-size: 0.9rem; }
 
 /* Vier knoppen onderin: labels op één regel */
@@ -653,7 +619,6 @@ span.embleem-groot { display: flex; align-items: center; justify-content: center
 .met-emblemen { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .embleem { width: 20px; height: 20px; object-fit: contain; flex: none; }
 span.embleem { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--lijn); font-size: 0.65rem; }
-.sport-vandaag.na-kaart { margin-top: 0; }
 /* Oranje: oranje kaart */
 .oranjekaart { background: linear-gradient(120deg, #ff7a00 0%, #c84f00 100%); color: #1a0d00; padding: 16px; }
 .oranjekaart .koers-soort, .oranjekaart .zacht { color: #2b1500; opacity: 0.85; }
@@ -673,3 +638,9 @@ span.embleem { display: inline-flex; align-items: center; justify-content: cente
 }
 .race-volgend .zacht { color: #c9ccd3; }
 .race-volgend .sessies li { border-color: #2a2d34; }
+
+/* Aantal op de tabbladen: leesbaar, ook op het actieve tabblad en op een smal scherm */
+.tab-aantal { display: inline-block; min-width: 1.4em; padding: 0 4px; border-radius: 8px; background: rgb(127 127 127 / 0.22); opacity: 1; }
+@media (max-width: 360px) {
+  .segment button { font-size: 0.92rem; letter-spacing: 0.02em; }
+}

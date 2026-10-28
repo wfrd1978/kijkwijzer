@@ -6,6 +6,10 @@ const POSTERS = 'https://image.tmdb.org/t/p/';
 
 // TMDB weigert de sleutel: dan moet je hem in Instellingen opnieuw plakken.
 export class SleutelFout extends Error {}
+// TMDB kent deze titel niet (meer): bijvoorbeeld verwijderd of samengevoegd. Dan gewoon door met de volgende.
+export class NietGevonden extends Error {
+  name = 'NietGevonden';
+}
 
 // Bouwt het adres en de kopregels voor één vraag aan TMDB.
 export function maakVerzoek(pad, params, sleutel) {
@@ -23,6 +27,7 @@ async function vraag(pad, params = {}, sleutel = leesSleutel()) {
   const { url, headers } = maakVerzoek(pad, params, sleutel);
   const antwoord = await fetch(url, { headers });
   if (antwoord.status === 401) throw new SleutelFout('Sleutel geweigerd');
+  if (antwoord.status === 404) throw new NietGevonden('Niet gevonden bij TMDB');
   if (!antwoord.ok) throw new Error(`TMDB gaf ${antwoord.status}`);
   return antwoord.json();
 }

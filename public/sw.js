@@ -83,5 +83,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (url.origin !== self.location.origin) return;
+  // De dagelijkse schema's (voetbal, NPO, ESPN) bewaart de app zelf; niet ook nog hier.
+  if (url.pathname.endsWith('.json') && !url.pathname.endsWith('manifest.webmanifest')) return;
   event.respondWith(url.pathname.includes('/assets/') ? opslagEerst(request) : netwerkEerst(request));
 });

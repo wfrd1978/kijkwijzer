@@ -60,7 +60,6 @@ export function kaal(tekst) {
   return (tekst || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-export const TABS = ['Alles', ...STATUSSEN];
 export const SOORTEN = { alle: 'Films en series', film: 'Films', serie: 'Series' };
 export const SORTERINGEN = {
   toegevoegd: 'Laatst toegevoegd',

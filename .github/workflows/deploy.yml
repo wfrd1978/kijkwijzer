@@ -4,9 +4,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  # Elke ochtend (rond 05:30 Nederlandse tijd) opnieuw, voor een vers voetbalschema en de NPO-gids.
+  # Elke nacht opnieuw (02:17 UTC = 03:17 of 04:17 Nederlandse tijd, ruim vóór 06:00),
+  # voor een vers voetbalschema, de ESPN-kanalen en de NPO-gids.
   schedule:
-    - cron: '17 4 * * *'
+    - cron: '17 2 * * *'
 
 permissions:
   contents: read
@@ -40,7 +41,7 @@ jobs:
       - name: ESPN-kanalen ophalen
         run: node scripts/espn.mjs
         continue-on-error: true
-      # Avonden op NPO 1, 2 en 3 voor de kijktip op Vandaag (gids van npo.nl, zonder sleutel).
+      # Avonden op NPO 1, 2 en 3 voor Vanavond op de NPO (gids van npo.nl, zonder sleutel).
       - name: NPO-gids ophalen
         run: node scripts/npo.mjs
         continue-on-error: true

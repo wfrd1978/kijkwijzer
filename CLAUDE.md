@@ -92,6 +92,6 @@ Het nieuwe ontwerp is af (stap 19–24).
 | Stap | Resultaat om te testen |
 |---|---|
 | 25 | Nieuwe afleveringen van series op je lijst: op Vandaag (gisteren en vandaag) en in Deze week |
-| 26 | Deze week: eerst als blok op Vandaag, daarna (op verzoek) een eigen knop onderin |
+| 26 | Deze week: eerst als blok op Vandaag ("Straks deze week"), daarna (op verzoek) een eigen knop onderin |
 | 26b | Nieuw voor jou op Vandaag: elke dag een recent verschenen film of serie bij jouw diensten, in jouw smaak |
 | 27 | Nieuws op Vandaag; eerst samen een gratis, toegestane bron kiezen |

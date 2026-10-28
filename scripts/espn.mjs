@@ -4,6 +4,7 @@
 // kanaal worden overgenomen. Lukt het niet, dan toont de app gewoon "ESPN".
 import { writeFile } from 'node:fs/promises';
 import { leesEspnPagina, ESPN_BRON } from '../src/espn.js';
+import { houdVorige } from './vorige.mjs';
 
 try {
   const antwoord = await fetch(ESPN_BRON, { headers: { 'User-Agent': 'Kijkwijzer (persoonlijke kijkwijzer-app)' } });
@@ -14,4 +15,5 @@ try {
   console.log(`espn.json: ${kanalen.length} wedstrijden met kanaal.`);
 } catch (fout) {
   console.log(`ESPN-kanalen overgeslagen: ${fout.message}`);
+  await houdVorige('espn');
 }

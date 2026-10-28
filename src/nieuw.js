@@ -62,6 +62,8 @@ export async function nieuwVoorJou({ titels, diensten, dag, haalGenres, haalNieu
       break;
     }
   }
+  // Alleen de genres van titels die nog op je lijst staan bewaren.
+  for (const k of Object.keys(bekend)) if (!opLijst.has(k)) delete bekend[k];
   zet('genresPerTitel', bekend);
 
   const vanaf = new Date(`${dag}T12:00:00Z`);

@@ -1,5 +1,5 @@
 // Op welk ESPN-kanaal (1 tot en met 4) een Eredivisie-wedstrijd komt. Ziggo zet dat per speelronde
-// op een openbare pagina; GitHub leest die één keer per dag (scripts/voetbal.mjs) en zet de kanalen
+// op een openbare pagina; GitHub leest die één keer per dag (scripts/espn.mjs) en zet de kanalen
 // klaar in espn.json. Hier staat het lezen van die pagina en het koppelen aan de wedstrijden.
 import { kaal } from './titels.js';
 

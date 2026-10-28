@@ -4,6 +4,7 @@
 // Let op: dit is de gids die npo.nl zelf gebruikt, geen officieel open aanbod. Werkt hij
 // niet (meer), dan wordt er niets geschreven en verdwijnt het blok in de app vanzelf.
 import { writeFile } from 'node:fs/promises';
+import { houdVorige } from './vorige.mjs';
 
 const ZENDERS = [
   { naam: 'NPO 1', guid: '83dc1f25-a065-496c-9418-bd5c60dfb36d', live: 'npo1' },
@@ -77,7 +78,8 @@ for (const slug of new Set(programmas.map((p) => p.serie).filter((x) => /^[\w-]+
 for (const p of programmas) Object.assign(p, series.get(p.serie) ?? { omroepen: [], over: '', leeftijd: '' });
 
 if (!gelukt) {
-  console.log('NPO-gids niet bereikbaar: npo.json overgeslagen.');
+  console.log('NPO-gids niet bereikbaar: npo.json niet opnieuw geschreven.');
+  await houdVorige('npo');
   process.exit(0);
 }
 // Dubbele regels (een programma dat over middernacht loopt staat soms op twee dagen) eruit.
