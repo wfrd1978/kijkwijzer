@@ -17,7 +17,7 @@ import { vanVandaag, ruimOudeDagenOp, dagSleutel } from './dagcache.js';
 import { nieuwVoorJou, kijktipsVanDag, GENRE_NAMEN } from './nieuw.js';
 import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
-import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink } from './diensten.js';
+import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink, beperkDiensten } from './diensten.js';
 import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
 import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
 import {
@@ -2292,7 +2292,6 @@ async function toonClubsKeuze(nr) {
   });
 }
 
-const MEER_NA = 15;
 
 // Licht of donker. Het wisselen zelf gebeurt in thema.js, dat al laadt vóór de app.
 const WEERGAVEN = { donker: 'Altijd donker', avond: "Donker 's avonds", iphone: 'Zoals mijn iPhone', licht: 'Altijd licht' };
@@ -2321,10 +2320,7 @@ async function toonDienstenKeuze(nr) {
   }
   if (!vak()) return;
   const keuzes = leesKeuzes();
-  // Wat je al gekozen hebt staat altijd in beeld, ook als de dienst verder onderaan staat.
-  const gekozen = (d) => keuzeVan(keuzes, d.id) !== 'tonen';
-  const boven = alle.filter((d, i) => i < MEER_NA || gekozen(d));
-  const onder = alle.filter((d, i) => i >= MEER_NA && !gekozen(d));
+  const lijst = beperkDiensten(alle, keuzes);
   const regel = (d) => `
     <li class="dienst-keuze" data-id="${d.id}">
       <span class="dienst-naam">${logoHtml(d)}${veilig(d.naam)}</span>
@@ -2337,12 +2333,7 @@ async function toonDienstenKeuze(nr) {
       <button class="keuze" data-alles="verbergen">Verberg alles behalve mijn abonnementen</button>
       <button class="keuze" data-alles="tonen">Toon alles</button>
     </div>
-    <ul class="diensten-lijst">${boven.map(regel).join('')}</ul>
-    ${
-      onder.length
-        ? `<details class="meer-diensten"><summary>Nog ${onder.length} diensten</summary><ul class="diensten-lijst">${onder.map(regel).join('')}</ul></details>`
-        : ''
-    }`;
+    <ul class="diensten-lijst">${lijst.map(regel).join('')}</ul>`;
   vak().addEventListener('click', (e) => {
     const alles = e.target.closest('[data-alles]');
     if (alles) {
