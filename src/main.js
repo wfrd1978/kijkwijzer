@@ -55,6 +55,21 @@ async function kijkNaarNieuweVersie() {
   } catch {
     return; // Geen internet: dan later nog eens.
   }
+  // Net geopend (of net terug in beeld) en nog niets aangetikt? Dan meteen de nieuwe versie laden.
+  // Hooguit één keer per vijf minuten, zodat een oude bewaarde versie nooit blijft herladen.
+  if (!aangeraakt && Date.now() - inBeeldSinds < 15000 && !document.activeElement?.matches('input, textarea')) {
+    let vorige = 0;
+    try {
+      vorige = Number(sessionStorage.getItem('zelfVernieuwd')) || 0;
+      sessionStorage.setItem('zelfVernieuwd', String(Date.now()));
+    } catch {
+      vorige = Date.now(); // zonder opslag: niet zelf herladen, dan de knop
+    }
+    if (Date.now() - vorige > 5 * 60000) {
+      location.reload();
+      return;
+    }
+  }
   const knop = Object.assign(document.createElement('button'), {
     id: 'nieuwe-versie',
     textContent: 'Nieuwe versie klaar · tik om te vernieuwen',
@@ -65,6 +80,16 @@ async function kijkNaarNieuweVersie() {
   });
   document.body.append(knop);
 }
+// Of je sinds het openen (of terugkomen) al iets hebt aangetikt of getypt.
+let aangeraakt = false;
+let inBeeldSinds = Date.now();
+['pointerdown', 'keydown'].forEach((soort) => document.addEventListener(soort, () => (aangeraakt = true), { capture: true }));
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    aangeraakt = false;
+    inBeeldSinds = Date.now();
+  }
+});
 if (HUIDIG_SCRIPT) {
   // Controleren: kort na het opstarten (de bewaarde, oude versie kan als eerste openen),
   // als de app terug in beeld komt, en verder elk half uur.
@@ -683,9 +708,9 @@ function dienstVan(t) {
 }
 
 // Alles wat jij volgt op deze dagen: sport, wat van je lijst op NPO komt, en nieuwe afleveringen.
-async function agendaItems(titels, stand, dagen) {
+async function agendaItems(titels, stand, dagen, { sport = true } = {}) {
   return [
-    ...(await sportItems(dagen)),
+    ...(sport ? await sportItems(dagen) : []),
     // Nieuwe afleveringen staan bovenaan hun dag.
     // Wat van je Wil ik zien deze week op NPO komt.
     ...lijstOpNpo((await haalNpo())?.programmas ?? [], titels, dagen).map((p) => ({
@@ -734,7 +759,9 @@ async function weekHtml(titels, stand) {
   const mijn = leesSportzenders();
   const dagen = weekDagen(vandaag());
   // In het weekoverzicht bij de Formule 1 alleen wat telt: kwalificatie, sprint en race.
-  const items = (await agendaItems(titels, stand, dagen)).filter((x) => x.soort !== 'f1' || !/^Vrije training/.test(x.sessie));
+  // Sport volgen uit: dan geen sport in de week.
+  const metSport = sportOpVandaag();
+  const items = (await agendaItems(titels, stand, dagen, { sport: metSport })).filter((x) => x.soort !== 'f1' || !/^Vrije training/.test(x.sessie));
   const voorbij = dagen.filter((d) => d < vandaag());
   const telling = [
     [items.filter((x) => x.soort === 'voetbal' || x.soort === 'oranje').length, 'wedstrijd', 'wedstrijden'],
@@ -763,7 +790,11 @@ async function weekHtml(titels, stand) {
     ${telling.length ? `<div class="week-telling">${telling.map(([n, een, meer]) => `<span><strong>${n}</strong> ${n === 1 ? een : meer}</span>`).join('')}</div>` : ''}
     ${voorbij.length ? `<p class="week-voorbij zacht">${voorbij.length === 1 ? 'Maandag is' : `Maandag tot en met ${new Date(`${voorbij.at(-1)}T12:00:00Z`).toLocaleDateString('nl-NL', { weekday: 'long', timeZone: 'UTC' })} zijn`} voorbij.</p>` : ''}
     ${kaarten.join('')}
-    <p class="bron">Alleen wat jij volgt: nieuwe afleveringen en NPO-uitzendingen van titels op je lijst, en in Sport je clubs en competities, Oranje, Formule 1 (kwalificatie en race) en wielrennen. Tijden in Nederlandse tijd; afleveringen volgens TMDB.</p>`;
+    <p class="bron">${
+      metSport
+        ? 'Alleen wat jij volgt: nieuwe afleveringen en NPO-uitzendingen van titels op je lijst, en in Sport je clubs en competities, Oranje, Formule 1 (kwalificatie en race) en wielrennen.'
+        : 'Nieuwe afleveringen en NPO-uitzendingen van titels op je lijst. Sport staat uit; aanzetten kan in Instellingen.'
+    } Tijden in Nederlandse tijd; afleveringen volgens TMDB.</p>`;
 }
 
 // --- Deze week: eigen scherm, maandag tot en met zondag ---
@@ -801,7 +832,8 @@ function nieuwVoorJouHtml(t) {
     <p class="bron">Elke dag een andere tip, gekozen op de genres van wat je hoog waardeert en wilt zien.</p>`;
 }
 
-// Sport op Vandaag aan of uit (in Instellingen, bij Weergave). Uit: dan kijktips op die plek.
+// Sport volgen aan of uit (in Instellingen, bij Sport). Uit: nergens sport in de app (geen Sport-knop,
+// niets op Vandaag en in Deze week, niets ophalen), en op Vandaag kijktips op die plek.
 const sportOpVandaag = () => onthoud('vandaagSport', 'aan', ['aan', 'uit']) === 'aan';
 
 // De waardering van kijkers (0 tot 10) als vijf sterren, met het cijfer erbij.
@@ -1685,6 +1717,7 @@ function leesExtra() {
 // TheSportsDB opvragen, voor wat football-data gratis niet heeft, zoals de beker.
 let extraBezig = false;
 async function werkExtraWedstrijdenBij() {
+  if (!sportOpVandaag()) return;
   const keuzes = leesVoetbalKeuzes();
   const sleutel = `${dagSleutel()}|${keuzes.clubs.join(',')}`;
   if (extraBezig || !keuzes.clubs.length || leesExtra()?.sleutel === sleutel) return;
@@ -2434,7 +2467,7 @@ async function toonInstellingen({ welkom = null } = {}) {
       <h2>Sport</h2>
       <div class="kaart">
       <div data-groep="sportvandaag" class="rij">
-        <span><span class="rij-kop">Sport op Vandaag</span><span class="zacht rij-stand">Uit: kijktips op die plek</span></span>
+        <span><span class="rij-kop">Sport volgen</span><span class="zacht rij-stand">Uit: nergens sport, wel extra kijktips</span></span>
         <div class="keuzes schakelaar" id="vandaag-sport">
           <button class="keuze${sportOpVandaag() ? ' actief' : ''}" data-sport="aan">Aan</button>
           <button class="keuze${sportOpVandaag() ? '' : ' actief'}" data-sport="uit">Uit</button>
@@ -2616,6 +2649,8 @@ async function toonInstellingen({ welkom = null } = {}) {
     if (!knop) return;
     bewaarKeuze('vandaagSport', knop.dataset.sport);
     document.querySelectorAll('#vandaag-sport .keuze').forEach((k) => k.classList.toggle('actief', k === knop));
+    document.querySelector('.balk a[data-plek="sport"]')?.toggleAttribute('hidden', !sportOpVandaag());
+    if (sportOpVandaag()) werkExtraWedstrijdenBij();
   });
 
   document.getElementById('weergave').addEventListener('click', (e) => {
@@ -2797,22 +2832,30 @@ const WELKOM_STAPPEN = [
   {
     id: 'diensten',
     titel: 'Welke streamingdiensten heb je?',
-    uitleg: 'Zet bij je abonnementen <b>Abonnement</b> aan. Dan zie je bij elke titel meteen of je hem kunt kijken, en krijg je tips die bij jou te zien zijn.',
-    groepen: ['diensten'],
+    uitleg: 'Tik aan wat je hebt. Dan zie je bij elke film en serie meteen of je hem kunt kijken, en krijg je tips die bij jou te zien zijn.',
+    eigen: welkomDiensten,
   },
   {
     id: 'sport',
-    titel: 'Sport',
-    uitleg: 'Volg je sport? Kies wat je wilt zien. Niet zo van sport? Zet Sport op Vandaag uit en ga verder.',
-    groepen: ['sportvandaag', 'sportzenders', 'voetbal'],
+    titel: 'Volg je sport?',
+    uitleg: 'Dan zie je op Vandaag welke wedstrijden, races en koersen er zijn, en waar je ze kunt kijken. Zo niet, dan staan daar kijktips.',
+    eigen: welkomSportVraag,
+  },
+  {
+    id: 'sportzenders',
+    titel: 'Waar kijk je sport?',
+    uitleg: 'Kies wat je hebt. Dan zie je bij elke wedstrijd of je hem live kunt volgen. Volg je een voetbalclub, kies die dan ook; dat mag ook later.',
+    groepen: ['sportzenders', 'voetbal'],
+    open: ['sportzenders-uitklap'],
+    nodig: () => sportOpVandaag(),
   },
   {
     id: 'tv',
     titel: 'Wat zie je graag op tv?',
-    uitleg: 'Daar stemt Vanavond op de NPO de tips op af. Kies er een paar, of sla het over.',
+    uitleg: 'Daaruit kiest de app elke avond een paar tips voor Vanavond op de NPO. Kies er een paar, of ga gewoon verder.',
     groepen: ['tv'],
+    open: ['tv-genres-uitklap'],
   },
-  { id: 'weergave', titel: 'Licht of donker?', uitleg: 'Kies hoe de app eruitziet.', groepen: ['weergave'] },
   { id: 'klaar' },
 ];
 
@@ -2844,6 +2887,12 @@ function toonWelkom(id) {
   const stap = WELKOM_STAPPEN.find((st) => st.id === id) ?? WELKOM_STAPPEN[0];
   if (stap.groepen) {
     toonInstellingen({ welkom: stap });
+    return;
+  }
+  if (stap.eigen) {
+    const kader = welkomKader(stap);
+    app.replaceChildren(kader);
+    stap.eigen(kader, schermNr);
     return;
   }
   if (stap.id === 'klaar') {
@@ -2885,18 +2934,74 @@ function toonWelkom(id) {
 function richtInAlsWelkomststap(stap) {
   const groepen = stap.groepen.map((g) => app.querySelector(`[data-groep="${g}"]`)).filter(Boolean);
   for (const details of app.querySelectorAll('[data-groep] details.uitklap')) {
-    if (groepen.some((g) => g.contains(details))) details.open = true; // keuzes meteen zichtbaar
+    const hoort = groepen.some((g) => g.contains(details));
+    if (hoort && (!stap.open || stap.open.includes(details.id))) details.open = true; // keuzes meteen zichtbaar
   }
-  const vorige = WELKOM_STAPPEN.slice(0, WELKOM_STAPPEN.findIndex((st) => st.id === stap.id)).filter((st) => !st.nodig || st.nodig()).at(-1);
-  const kader = document.createElement('section');
-  kader.className = 'welkom-stap';
-  kader.innerHTML = `${welkomTeller(stap.id)}<h1>${veilig(stap.titel)}</h1><p>${stap.uitleg}</p><div class="kaart welkom-groepen"></div>
-    <button class="hoofdknop" id="welkom-verder">Verder</button>
-    <p class="welkom-onder">${vorige ? `<a href="#/welkom/${vorige.id}">‹ Vorige</a> · ` : ''}<button class="link-knop" id="welkom-later">Rest later instellen</button></p>`;
+  const kader = welkomKader(stap);
   kader.querySelector('.welkom-groepen').append(...groepen);
   app.replaceChildren(kader);
-  document.getElementById('welkom-verder').addEventListener('click', () => (location.hash = welkomVolgende(stap.id)));
-  document.getElementById('welkom-later').addEventListener('click', welkomAfronden);
+}
+
+// Het kader van een stap: teller, vraag, uitleg, plek voor de keuzes, en Verder.
+function welkomKader(stap) {
+  const vorige = WELKOM_STAPPEN.slice(0, WELKOM_STAPPEN.findIndex((st) => st.id === stap.id)).filter((st) => !st.nodig || st.nodig()).at(-1);
+  const kader = document.createElement('section');
+  kader.className = `welkom-stap welkom-${stap.id}`;
+  kader.innerHTML = `${welkomTeller(stap.id)}<h1>${veilig(stap.titel)}</h1><p>${stap.uitleg}</p><div class="kaart welkom-groepen"></div>
+    <button class="hoofdknop" id="welkom-verder">Verder</button>
+    <p class="welkom-onder">${vorige ? `<a href="#/welkom/${vorige.id}">‹ Vorige</a> · ` : ''}<button class="link-knop" id="welkom-later">Rest later instellen</button></p>
+    <p class="zacht klein welkom-later-uitleg">Alles kun je later aanpassen via het tandwiel rechtsboven.</p>`;
+  kader.querySelector('#welkom-verder').addEventListener('click', () => (location.hash = welkomVolgende(stap.id)));
+  kader.querySelector('#welkom-later').addEventListener('click', welkomAfronden);
+  return kader;
+}
+
+const NIET_IN_WELKOM = [11, 223, 639]; // MUBI, Hayu, CineMember
+
+// Streamingdiensten als eenvoudige knoppen: aantikken is Abonnement.
+async function welkomDiensten(kader, nr) {
+  const vak = kader.querySelector('.welkom-groepen');
+  vak.innerHTML = '<p class="zacht welkom-diensten">Diensten ophalen…</p>';
+  let lijst;
+  try {
+    // In de eerste vragen alleen de bekende diensten; MUBI, Hayu en CineMember staan wel in Instellingen.
+    lijst = beperkDiensten(await haalAlleDiensten(), leesKeuzes()).filter((d) => !NIET_IN_WELKOM.includes(d.id) || keuzeVan(leesKeuzes(), d.id) === 'abonnement');
+  } catch {
+    if (nr === schermNr) vak.innerHTML = '<p class="zacht welkom-diensten">Ophalen lukt nu niet. Ga gerust verder; je kiest ze later in Instellingen.</p>';
+    return;
+  }
+  if (nr !== schermNr) return;
+  const keuzes = leesKeuzes();
+  vak.innerHTML = `<div class="keuzes welkom-diensten">${lijst
+    .map((d) => {
+      const aan = keuzeVan(keuzes, d.id) === 'abonnement';
+      return `<button class="keuze${aan ? ' actief' : ''}" data-dienst="${d.id}" aria-pressed="${aan}">${veilig(d.naam)}</button>`;
+    })
+    .join('')}</div>`;
+  vak.addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-dienst]');
+    if (!knop) return;
+    const aan = !knop.classList.contains('actief');
+    knop.classList.toggle('actief', aan);
+    knop.setAttribute('aria-pressed', String(aan));
+    zetKeuze(Number(knop.dataset.dienst), aan ? 'abonnement' : 'tonen');
+  });
+}
+
+// Eén vraag: ja of nee. Bij nee slaat de app de sportvragen over.
+function welkomSportVraag(kader) {
+  kader.querySelector('.welkom-groepen').outerHTML = `
+    <div class="welkom-antwoord">
+      <button class="hoofdknop" data-antwoord="aan">Ja, graag</button>
+      <button class="tweede-knop" data-antwoord="uit">Nee, niet zo</button>
+    </div>`;
+  kader.querySelector('#welkom-verder').remove();
+  kader.querySelector('.welkom-antwoord').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-antwoord]');
+    if (!knop) return;
+    bewaarKeuze('vandaagSport', knop.dataset.antwoord);
+    location.hash = welkomVolgende('sport');
+  });
 }
 
 // --- Schermen ---
@@ -2915,6 +3020,9 @@ async function route() {
   document.body.classList.toggle('welkom-modus', Boolean(welkomStap));
   // Oude adressen (van voor de nieuwe indeling) komen uit bij Mijn lijst.
   if (location.hash === '#/zoek') history.replaceState(null, '', '#/films');
+  // Sport uit: dan nergens sport, behalve in Instellingen (daar zet je het weer aan).
+  document.querySelector('.balk a[data-plek="sport"]')?.toggleAttribute('hidden', !sportOpVandaag());
+  if (location.hash === '#/sport' && !sportOpVandaag()) history.replaceState(null, '', '#/');
   const plek =
     { '#/films': 'films', '#/ontdekken': 'ontdekken', '#/week': 'week', '#/sport': 'sport', '#/instellingen': 'instellingen', '#/instellingen/backup': 'instellingen' }[location.hash] || (titelId || acteurId ? 'films' : 'vandaag');
   document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === (plek === 'ontdekken' ? 'films' : plek)));
