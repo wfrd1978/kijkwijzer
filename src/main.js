@@ -1741,7 +1741,6 @@ async function toonVoetbal(nr, mijn) {
   const uitgelicht = volgendeVanMijnClub(schema.wedstrijden, keuzes);
   vak().innerHTML = `
     ${uitgelicht ? wedstrijdKaart(uitgelicht, zendersVan(uitgelicht, kanalen), mijn, `Jouw club · ${competitieVan(uitgelicht).naam}`) : ''}
-    ${oranjeHtml}
     <div class="keuzes week-keuze" id="voetbal-week">
       <button class="keuze${voetbalWeek === 'deze' ? ' actief' : ''}" data-week="deze">Deze week</button>
       <button class="keuze${voetbalWeek === 'volgende' ? ' actief' : ''}" data-week="volgende">Volgende week</button>
@@ -1765,6 +1764,7 @@ async function toonVoetbal(nr, mijn) {
             .join('')
         : `<p class="leeg">Geen wedstrijden ${voetbalWeek === 'deze' ? 'meer deze week' : 'volgende week'} bij jouw keuzes.</p>`
     }
+    <div class="oranje-onder">${oranjeHtml}</div>
     <p class="bron">${extraTekst()}</p>
     <p class="bron">Tijden in Nederlandse tijd. Schema van football-data.org, bijgewerkt ${veilig(new Date(schema.op).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }))}. Oranje via TheSportsDB. Zenders gecontroleerd in ${veilig(VOETBAL_GECONTROLEERD)}; Premier League en Bundesliga gaan mogelijk naar Videoland.</p>`;
   document.getElementById('voetbal-week').addEventListener('click', (e) => {
