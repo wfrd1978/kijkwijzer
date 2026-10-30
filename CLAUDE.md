@@ -30,7 +30,9 @@ Geen betaalde diensten, geen eigen server en geen sleutels in de code. De TMDB-s
 
 Adres van de app: https://wfrd1978.github.io/kijkwijzer/
 
-## App voor anderen (apart project)
+## De gedeelde app (apart project)
+
+**Woordgebruik:** de eigenaar spreekt van **"mijn eigen app"** (deze repository) en **"de gedeelde app"** (`kijkwijzer-app`). Standaard wordt er in mijn eigen app ontwikkeld; de gedeelde app wordt alleen aangepast als de eigenaar daar specifiek om vraagt.
 
 Voor familie en vrienden is er een apart project: repository `kijkwijzer-app`, adres https://wfrd1978.github.io/kijkwijzer-app/. Het is een kopie van deze app met een eigen geschiedenis; de twee worden los van elkaar ontwikkeld. Verbeteringen gaan alleen over als de eigenaar daarom vraagt. Omdat beide apps op hetzelfde webadres staan, gebruikt die app een eigen database en een voorvoegsel voor zijn opslag; deze app mag sleutels met een voorvoegsel en de opslag van die app niet aanraken.
 
