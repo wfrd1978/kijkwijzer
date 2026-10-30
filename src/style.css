@@ -728,3 +728,23 @@ span.embleem { display: inline-flex; align-items: center; justify-content: cente
 .kijktip-wat .zacht { font-size: 0.82rem; }
 .score { font-size: 0.85rem; font-weight: 700; }
 .score-sterren { color: var(--ster); letter-spacing: 1px; }
+
+/* Welkomststappen (de eerste keer) */
+.welkom-modus .balk { display: none; }
+.welkom-stap { padding: 28px 0 32px; }
+.welkom-stap h1 { margin: 6px 0 10px; }
+.welkom-stap > p { margin: 0 0 12px; }
+.welkom-teller { margin: 0; color: var(--zacht); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.welkom-voortgang { height: 4px; margin: 8px 0 18px; border-radius: 2px; background: var(--lijn); overflow: hidden; }
+.welkom-voortgang span { display: block; height: 100%; background: var(--accent); }
+.welkom-groepen { margin-top: 16px; }
+.welkom-groepen > [data-groep] + [data-groep] { margin-top: 18px; }
+.welkom-onder { margin-top: 18px; text-align: center; color: var(--zacht); }
+.welkom-onder a { color: inherit; }
+.welkom-klaar { text-align: center; padding-top: 64px; }
+.welkom-klaar .tweede-knop { display: block; width: 100%; margin-top: 10px; }
+.veld { display: flex; flex-direction: column; gap: 6px; margin: 16px 0 6px; font-weight: 600; }
+.veld input { padding: 12px 14px; font-size: 16px; font-weight: 400; border: 1px solid var(--lijn); border-radius: 12px; background: var(--vlak); color: var(--tekst); min-height: 48px; }
+/* In de welkomststappen staat de uitleg al bovenaan; alleen de keuzes tonen. */
+.welkom-groepen [data-groep="diensten"] > :not(details),
+.welkom-groepen [data-groep="tv"] > :not(details) { display: none; }
