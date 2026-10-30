@@ -1,10 +1,8 @@
 // Service worker: zorgt dat de app snel opent, ook met slecht of geen internet.
-// Er zijn twee versies op hetzelfde adres: de eigen app (/kijkwijzer/) en de gedeelde versie
-// (/kijkwijzer/deel/). Elk heeft een eigen opslag en mag die van de ander niet aanraken.
-const DEEL = self.registration.scope.endsWith('/deel/');
-const CACHE = DEEL ? 'kijkwijzer-v1-deel' : 'kijkwijzer-v1';
-const EIGEN = DEEL ? /^kijkwijzer-v\d+-deel$/ : /^kijkwijzer-v\d+$/;
-const DEEL_PAD = new URL('deel/', self.registration.scope).pathname;
+// Op hetzelfde webadres staat ook de app voor anderen (/kijkwijzer-app/), met een eigen opslag.
+// Deze service worker ruimt daarom alleen zijn eigen oude opslag op.
+const CACHE = 'kijkwijzer-v1';
+const EIGEN = /^kijkwijzer-v\d+$/;
 // Posters van TMDB apart bewaren, zodat je lijst ook zonder internet plaatjes heeft.
 const POSTERS = 'posters-v1';
 const POSTER_ADRES = 'image.tmdb.org';
@@ -89,8 +87,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (url.origin !== self.location.origin) return;
-  // De eigen app laat de gedeelde versie (die een eigen service worker heeft) met rust.
-  if (!DEEL && url.pathname.startsWith(DEEL_PAD)) return;
   // De dagelijkse schema's (voetbal, NPO, ESPN) bewaart de app zelf; niet ook nog hier.
   if (url.pathname.endsWith('.json') && !url.pathname.endsWith('manifest.webmanifest')) return;
   event.respondWith(url.pathname.includes('/assets/') ? opslagEerst(request) : netwerkEerst(request));

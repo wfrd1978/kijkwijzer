@@ -1,9 +1,8 @@
 import Dexie from 'dexie';
-import { DATABASE } from './editie.js';
 import { nieuweTitel, zonderBezig } from './titels.js';
 
 // Je lijst staat in IndexedDB op het toestel zelf.
-export const db = new Dexie(DATABASE);
+export const db = new Dexie('kijkwijzer');
 
 db.version(1).stores({
   // Elke film of serie maar één keer: de combinatie soort + TMDB-nummer is uniek.

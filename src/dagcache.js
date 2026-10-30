@@ -1,5 +1,3 @@
-import { eigenSleutels } from './editie.js';
-
 // Eén keer per dag ophalen, en daarna bewaren op de telefoon. Zo hoeft de app niet bij elke
 // keer openen alles opnieuw te vragen. Lukt ophalen niet, dan blijft de laatst bewaarde versie.
 
@@ -30,7 +28,8 @@ function bewaar(sleutel, waarde) {
 export function ruimOudeDagenOp(nu = new Date()) {
   const dag = dagSleutel(nu);
   try {
-    for (const k of eigenSleutels().filter((x) => x.startsWith('dag:'))) {
+    // Sleutels met een voorvoegsel horen bij de app voor anderen op hetzelfde webadres: niet aankomen.
+    for (const k of Object.keys(localStorage).filter((x) => x.startsWith('dag:'))) {
       if (lees(k.slice(4))?.dag !== dag) localStorage.removeItem(k);
     }
   } catch {

@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          # De hele geschiedenis, zodat de vastgezette versie (bestand STABIEL) er ook is.
+          # De hele geschiedenis: de versie in de app is het moment van de laatste codewijziging.
           fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -49,21 +49,6 @@ jobs:
         run: node scripts/npo.mjs
         continue-on-error: true
       - run: npm run build
-      # De gedeelde versie voor familie en vrienden (/kijkwijzer/deel/): gebouwd uit de versie die in
-      # het bestand STABIEL staat, met eigen opslag. Die gaat alleen vooruit als de eigenaar dat zegt.
-      - name: Gedeelde versie bouwen
-        run: |
-          STABIEL="$(tr -d '[:space:]' < STABIEL 2>/dev/null)"
-          if [ -n "$STABIEL" ] && git cat-file -e "$STABIEL^{commit}" 2>/dev/null; then
-            rm -rf ../stabiel && mkdir ../stabiel
-            git archive "$STABIEL" | tar -x -C ../stabiel
-            cp public/voetbal.json public/npo.json public/espn.json ../stabiel/public/ 2>/dev/null || true
-            VERSIE_DATUM="$(git log -1 --format=%cI "$STABIEL")"
-            cd ../stabiel && npm ci
-            VITE_EDITIE=deel VERSIE_DATUM="$VERSIE_DATUM" npx vite build --base=/kijkwijzer/deel/ --outDir "$GITHUB_WORKSPACE/dist/deel" --emptyOutDir
-          else
-            echo "Geen geldige versie in STABIEL: gedeelde versie overgeslagen."
-          fi
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: dist

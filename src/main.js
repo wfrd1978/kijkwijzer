@@ -1,5 +1,3 @@
-// Eerst: welke versie dit is (eigen app of gedeelde versie), vóór er iets wordt opgeslagen.
-import { DEEL } from './editie.js';
 import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
@@ -2409,7 +2407,6 @@ async function toonInstellingen() {
              </form>`
       }
       ${BRON}
-      ${DEEL ? '<p class="zacht klein">Dit is de gedeelde versie van Kijkwijzer. Alles wat je invult, staat alleen op deze telefoon.</p>' : ''}
       <p class="versie">Versie van ${__VERSIE__}</p>
     </section>
     </div>
