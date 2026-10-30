@@ -103,10 +103,10 @@ const TANDWIEL =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>';
 
 // Kop van de drie hoofdschermen: grote titel, eventueel een regel erboven, en het tandwiel naar Instellingen.
-function schermKop(titel, boven = '') {
+function schermKop(titel, boven = '', onder = '') {
   return `
     <header class="schermkop">
-      <div>${boven ? `<p class="schermkop-boven">${veilig(boven)}</p>` : ''}<h1>${veilig(titel)}</h1></div>
+      <div>${boven ? `<p class="schermkop-boven">${veilig(boven)}</p>` : ''}<h1>${veilig(titel)}</h1>${onder ? `<p class="groet">${veilig(onder)}</p>` : ''}</div>
       <a class="tandwiel" href="#/instellingen" aria-label="Instellingen">${TANDWIEL}</a>
     </header>`;
 }
@@ -163,15 +163,13 @@ function leesNaam() {
   }
 }
 
-// Zoals in de boekenapp: 'Goedemorgen, Sanne' boven de kop van Vandaag (zonder naam alleen de datum).
-function groetRegel() {
-  const nu = new Date();
-  const datum = nu.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+// Zoals in de boekenapp: 'Goedemorgen, Sanne' onder de kop van Vandaag (zonder naam niets).
+function groet() {
   const naam = leesNaam();
-  if (!naam) return datum;
-  const uur = nu.getHours();
+  if (!naam) return '';
+  const uur = new Date().getHours();
   const tijd = uur < 6 ? 'Goedenacht' : uur < 12 ? 'Goedemorgen' : uur < 18 ? 'Goedemiddag' : 'Goedenavond';
-  return `${tijd}, ${naam} · ${datum}`;
+  return `${tijd}, ${naam}`;
 }
 let soort = onthoud('soort', 'alle', Object.keys(SOORTEN));
 let sortering = onthoud('sortering', 'toegevoegd', Object.keys(SORTERINGEN));
@@ -837,7 +835,7 @@ async function toonVandaag() {
   const nr = schermNr;
   const titels = await alleTitels();
   if (nr !== schermNr) return;
-  const kop = schermKop('Vandaag', groetRegel());
+  const kop = schermKop('Vandaag', new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }), groet());
   // De allereerste keer: eerst de welkomststappen.
   if (!titels.length && !welkomGedaan()) {
     location.replace('#/welkom');
@@ -2397,113 +2395,125 @@ async function toonInstellingen({ welkom = null } = {}) {
     <header class="kop"><h1>Instellingen</h1></header>
     <div class="instellingen${sleutel ? '' : ' zonder-sleutel'}">
 
+    <section class="blok profiel-blok">
+      <div data-groep="naam" class="kaart profiel-kaart">
+        <span class="profiel-letter" id="profiel-letter" aria-hidden="true">${veilig((leesNaam()[0] || '?').toUpperCase())}</span>
+        <label class="profiel-naam">
+          <span class="zacht klein-label">Je naam</span>
+          <input id="naam-veld" value="${veilig(leesNaam())}" maxlength="40" placeholder="Je voornaam" autocomplete="given-name" />
+        </label>
+      </div>
+      <p class="zacht onder-kaart">Alleen op deze telefoon en in je backup. De app gebruikt hem om je te begroeten.</p>
+    </section>
+
     <section class="blok">
-      <h2>Wat ik heb en volg</h2>
+      <h2>Kijken</h2>
+      <div class="kaart">
       <div data-groep="diensten">
-      <h3 class="blok-sub">Streamingdiensten</h3>
-      <p>Kies per streamingdienst: <b>Abonnement</b> als je hem hebt, <b>Tonen</b> om hem bij een titel te zien, of <b>Verbergen</b> als hij je niet interesseert.</p>
       ${
         sleutel
           ? `<details class="uitklap" id="diensten-uitklap">
-               <summary><span class="uitklap-kop">Diensten aanpassen</span><span class="zacht uitklap-stand" id="diensten-stand">${veilig(dienstenStand())}</span></summary>
+               <summary><span class="uitklap-kop">Streamingdiensten</span><span class="zacht uitklap-stand" id="diensten-stand">${veilig(dienstenStand())}</span></summary>
+               <p class="zacht uitklap-uitleg"><b>Abonnement</b> als je hem hebt, <b>Tonen</b> om hem bij een titel te zien, <b>Verbergen</b> als hij je niet interesseert.</p>
                <div id="diensten-keuze"><p class="zacht">Diensten ophalen…</p></div>
+               <p class="zacht klein nieuw-uitleg">Eén keer per dag kijkt de app of titels op Wil ik zien nieuw bij je abonnementen te zien zijn. Je ziet dat op Vandaag.</p>
+               <button class="tweede-knop" id="nieuw-nu">Nu controleren</button>
+               <p class="zacht klein" id="nieuw-uitkomst" hidden></p>
              </details>`
-          : '<p class="zacht">Stel eerst hierboven je TMDB-sleutel in.</p>'
-      }
-      ${
-        sleutel
-          ? `<p class="zacht klein">Eén keer per dag kijkt de app of titels op Wil ik zien nieuw bij je abonnementen te zien zijn. Je ziet dat op Vandaag.</p>
-             <button class="tweede-knop" id="nieuw-nu">Nu controleren</button>
-             <p class="zacht klein" id="nieuw-uitkomst" hidden></p>`
-          : ''
+          : '<p class="rij zacht">Streamingdiensten kies je zodra je TMDB-sleutel is ingesteld.</p>'
       }
       </div>
-
-      <div data-groep="voetbal">
-      <h3 class="blok-sub">Voetbal</h3>
-      <p>Je ziet in Sport altijd de wedstrijden van je clubs, in elke competitie. Wil je van een competitie álle wedstrijden zien, zet hem dan aan.</p>
-      <details class="uitklap" id="competities-uitklap">
-        <summary><span class="uitklap-kop">Hele competities</span><span class="zacht uitklap-stand" id="competities-stand">${veilig(competitiesStand())}</span></summary>
-        <div class="keuzes" id="voetbal-alles">${Object.entries(COMPETITIES)
-          .map(([c, x]) => `<button class="keuze${leesVoetbalKeuzes().alles.includes(c) ? ' actief' : ''}" data-competitie="${c}">Alles ${veilig(x.naam)}</button>`)
-          .join('')}</div>
-      </details>
-      <details class="uitklap" id="clubs-uitklap">
-        <summary><span class="uitklap-kop">Clubs kiezen</span><span class="zacht uitklap-stand" id="clubs-stand">${leesVoetbalKeuzes().clubs.length ? `${leesVoetbalKeuzes().clubs.length} gekozen` : 'Nog geen clubs gekozen'}</span></summary>
-        <div id="clubs-keuze"><p class="zacht">Clubs ophalen…</p></div>
-      </details>
-      </div>
-
       <div data-groep="tv">
-      <h3 class="blok-sub">Tv-tips</h3>
-      <p>Wat zie je graag op tv? Daar stemt Vanavond op de NPO de tips op af. Nieuws en jeugdprogramma's worden nooit een tip.</p>
       <details class="uitklap" id="tv-genres-uitklap">
-        <summary><span class="uitklap-kop">Genres</span><span class="zacht uitklap-stand" id="tv-genres-stand">${veilig(tvStand('genres'))}</span></summary>
+        <summary><span class="uitklap-kop">Tv-tips: genres</span><span class="zacht uitklap-stand" id="tv-genres-stand">${veilig(tvStand('genres'))}</span></summary>
+        <p class="zacht uitklap-uitleg">Daar stemt Vanavond op de NPO de tips op af. Nieuws en jeugd worden nooit een tip.</p>
         <div class="keuzes" id="tv-genres">${Object.entries(TV_GENRES)
           .map(([k, g]) => `<button class="keuze${leesTvVoorkeuren().genres.includes(k) ? ' actief' : ''}" data-genre="${k}">${veilig(g.naam)}</button>`)
           .join('')}</div>
       </details>
       <details class="uitklap" id="tv-omroepen-uitklap">
-        <summary><span class="uitklap-kop">Omroepen</span><span class="zacht uitklap-stand" id="tv-omroepen-stand">${veilig(tvStand('omroepen'))}</span></summary>
+        <summary><span class="uitklap-kop">Tv-tips: omroepen</span><span class="zacht uitklap-stand" id="tv-omroepen-stand">${veilig(tvStand('omroepen'))}</span></summary>
         <div class="keuzes" id="tv-omroepen"><p class="zacht">Omroepen ophalen…</p></div>
       </details>
       </div>
+      </div>
+    </section>
 
+    <section class="blok">
+      <h2>Sport</h2>
+      <div class="kaart">
+      <div data-groep="sportvandaag" class="rij">
+        <span><span class="rij-kop">Sport op Vandaag</span><span class="zacht rij-stand">Uit: kijktips op die plek</span></span>
+        <div class="keuzes schakelaar" id="vandaag-sport">
+          <button class="keuze${sportOpVandaag() ? ' actief' : ''}" data-sport="aan">Aan</button>
+          <button class="keuze${sportOpVandaag() ? '' : ' actief'}" data-sport="uit">Uit</button>
+        </div>
+      </div>
       <div data-groep="sportzenders">
-      <h3 class="blok-sub">Sportzenders</h3>
-      <p>Welke zenders en diensten heb je? Dan laat Sport zien wat jij live kunt volgen. NOS valt onder de gewone NPO-zenders.</p>
-      <div class="keuzes" id="sportzenders">${SPORTZENDERS.map(
-        (z) => `<button class="keuze${leesSportzenders().includes(z) ? ' actief' : ''}" data-zender="${z}" aria-pressed="${leesSportzenders().includes(z)}">${z}</button>`
-      ).join('')}</div>
+      <details class="uitklap" id="sportzenders-uitklap">
+        <summary><span class="uitklap-kop">Sportzenders</span><span class="zacht uitklap-stand" id="sportzenders-stand">${veilig(leesSportzenders().join(', ') || 'Nog niets gekozen')}</span></summary>
+        <p class="zacht uitklap-uitleg">Dan laat Sport zien wat jij live kunt volgen. NOS valt onder de gewone NPO-zenders.</p>
+        <div class="keuzes" id="sportzenders">${SPORTZENDERS.map(
+          (z) => `<button class="keuze${leesSportzenders().includes(z) ? ' actief' : ''}" data-zender="${z}" aria-pressed="${leesSportzenders().includes(z)}">${z}</button>`
+        ).join('')}</div>
+      </details>
+      </div>
+      <div data-groep="voetbal">
+      <details class="uitklap" id="clubs-uitklap">
+        <summary><span class="uitklap-kop">Voetbalclubs</span><span class="zacht uitklap-stand" id="clubs-stand">${leesVoetbalKeuzes().clubs.length ? `${leesVoetbalKeuzes().clubs.length} gekozen` : 'Nog geen clubs gekozen'}</span></summary>
+        <p class="zacht uitklap-uitleg">Van je clubs zie je in Sport alle wedstrijden, in elke competitie.</p>
+        <div id="clubs-keuze"><p class="zacht">Clubs ophalen…</p></div>
+      </details>
+      <details class="uitklap" id="competities-uitklap">
+        <summary><span class="uitklap-kop">Hele competities</span><span class="zacht uitklap-stand" id="competities-stand">${veilig(competitiesStand())}</span></summary>
+        <p class="zacht uitklap-uitleg">Zet een competitie aan om er álle wedstrijden van te zien.</p>
+        <div class="keuzes" id="voetbal-alles">${Object.entries(COMPETITIES)
+          .map(([c, x]) => `<button class="keuze${leesVoetbalKeuzes().alles.includes(c) ? ' actief' : ''}" data-competitie="${c}">Alles ${veilig(x.naam)}</button>`)
+          .join('')}</div>
+      </details>
+      </div>
       </div>
     </section>
 
     <section class="blok" id="backup-blok">
       <h2>Backup</h2>
-      <p>Je lijst staat alleen op deze telefoon. Tik op Backup maken en kies in het deelmenu <b>Bewaar in Bestanden</b>, met daarna iCloud Drive of Google Drive, of kies de <b>Drive</b>-app. De telefoon onthoudt de map, dus de volgende keer gaat het in twee tikken.</p>
-      <p class="zacht" id="backup-status">${backupTekst()}</p>
-      <button class="hoofdknop" id="backup-maken"${aantal ? '' : ' disabled'}>Backup maken</button>
-      <label class="tweede-knop bestand-knop">Backup terugzetten
-        <input type="file" id="backup-bestand" accept="application/json,.json" hidden />
-      </label>
-      <div id="terugzet-vak"></div>
-      <p class="zacht klein">Je TMDB-sleutel zit niet in de backup. Op een nieuwe telefoon plak je hem opnieuw.</p>
+      <div class="kaart kaart-ruim">
+        <p class="backup-status" id="backup-status">${backupTekst()}</p>
+        <button class="hoofdknop" id="backup-maken"${aantal ? '' : ' disabled'}>Backup maken</button>
+        <label class="tweede-knop bestand-knop">Backup terugzetten
+          <input type="file" id="backup-bestand" accept="application/json,.json" hidden />
+        </label>
+        <div id="terugzet-vak"></div>
+        <details class="uitklap uitklap-klein">
+          <summary><span class="uitklap-kop">Hoe werkt het?</span></summary>
+          <p class="zacht">Je lijst staat alleen op deze telefoon. Tik op Backup maken en kies in het deelmenu <b>Bewaar in Bestanden</b> en dan iCloud Drive of Google Drive, of kies de <b>Drive</b>-app. De telefoon onthoudt de map. Je TMDB-sleutel zit niet in de backup; op een nieuwe telefoon plak je hem opnieuw.</p>
+        </details>
+      </div>
     </section>
 
     <section class="blok">
       <h2>Weergave</h2>
-      <div data-groep="naam">
-      <label class="veld">Je naam<input id="naam-veld" value="${veilig(leesNaam())}" maxlength="40" placeholder="Je voornaam" autocomplete="given-name" /></label>
-      <p class="zacht klein">Alleen op deze telefoon (en in je backup). De app gebruikt hem om je te begroeten.</p>
-      </div>
-      <div data-groep="weergave">
-      <div class="keuzes" id="weergave">
-        ${Object.entries(WEERGAVEN)
-          .map(([k, naam]) => `<button class="keuze${k === weergave() ? ' actief' : ''}" data-weergave="${k}">${naam}</button>`)
-          .join('')}
-      </div>
-      <p class="zacht klein">Donker is de basis. Donker 's avonds: van 20:00 tot 7:00 donker, en altijd als je iPhone op donker staat.</p>
-      </div>
-      <div data-groep="sportvandaag">
-      <h3 class="blok-sub">Sport op Vandaag</h3>
-      <div class="keuzes" id="vandaag-sport">
-        <button class="keuze${sportOpVandaag() ? ' actief' : ''}" data-sport="aan">Aan</button>
-        <button class="keuze${sportOpVandaag() ? '' : ' actief'}" data-sport="uit">Uit</button>
-      </div>
-      <p class="zacht klein">Niet zo van sport? Zet het uit. Dan staan op die plek op Vandaag kijktips van jouw streamingdiensten. Sport blijft onderin te vinden.</p>
+      <div class="kaart kaart-ruim" data-groep="weergave">
+        <div class="keuzes" id="weergave">
+          ${Object.entries(WEERGAVEN)
+            .map(([k, naam]) => `<button class="keuze${k === weergave() ? ' actief' : ''}" data-weergave="${k}">${naam}</button>`)
+            .join('')}
+        </div>
+        <p class="zacht klein">Donker 's avonds: van 20:00 tot 7:00 donker, en altijd als je iPhone op donker staat.</p>
       </div>
     </section>
 
     <section class="blok">
       <h2>Sleutel &amp; over</h2>
+      <div class="kaart kaart-ruim">
       <div data-groep="sleutel">
-      <h3 class="blok-sub">TMDB-sleutel</h3>
       ${
         sleutel
-          ? `<p>Je sleutel is ingesteld en staat alleen op deze telefoon.</p>
-             <p class="zacht sleutel-kort">${soortSleutel(sleutel) === 'token' ? 'Read Access Token' : 'API Key'} · eindigt op ${veilig(sleutel.slice(-4))}</p>
-             <button class="tweede-knop" id="sleutel-test">Test de sleutel</button>
-             <button class="link-knop" id="sleutel-weg">Sleutel verwijderen</button>`
+          ? `<p><span class="rij-kop">TMDB-sleutel</span><span class="zacht rij-stand">${soortSleutel(sleutel) === 'token' ? 'Read Access Token' : 'API Key'} · eindigt op ${veilig(sleutel.slice(-4))} · alleen op deze telefoon</span></p>
+             <div class="knoppen-rij">
+               <button class="tweede-knop" id="sleutel-test">Test de sleutel</button>
+               <button class="link-knop" id="sleutel-weg">Verwijderen</button>
+             </div>`
           : `<p>Kijkwijzer haalt titels, posters en waar je iets kunt kijken op bij TMDB, een gratis filmdatabase. Daarvoor heb je een eigen, gratis sleutel nodig. Dat is eenmalig ongeveer vijf minuten werk.</p>
              <details class="uitklap stappen" open>
                <summary><span class="uitklap-kop">Zo vraag je de sleutel aan</span></summary>
@@ -2521,6 +2531,7 @@ async function toonInstellingen({ welkom = null } = {}) {
                <button class="hoofdknop" type="submit">Bewaar sleutel</button>
              </form>`
       }
+      </div>
       </div>
       <button class="link-knop" id="welkom-opnieuw">Welkomststappen opnieuw doorlopen</button>
       ${BRON}
@@ -2606,6 +2617,7 @@ async function toonInstellingen({ welkom = null } = {}) {
     knop.classList.toggle('actief', aan);
     knop.setAttribute('aria-pressed', String(aan));
     zetSportzenders([...document.querySelectorAll('#sportzenders .actief')].map((k) => k.dataset.zender));
+    document.getElementById('sportzenders-stand').textContent = leesSportzenders().join(', ') || 'Nog niets gekozen';
   });
 
   document.getElementById('vandaag-sport').addEventListener('click', (e) => {
@@ -2771,7 +2783,10 @@ async function toonInstellingen({ welkom = null } = {}) {
     route();
   });
 
-  document.getElementById('naam-veld').addEventListener('input', (e) => bewaarKeuze('naam', e.target.value.trim()));
+  document.getElementById('naam-veld').addEventListener('input', (e) => {
+    bewaarKeuze('naam', e.target.value.trim());
+    document.getElementById('profiel-letter').textContent = (leesNaam()[0] || '?').toUpperCase();
+  });
   document.getElementById('welkom-opnieuw').addEventListener('click', () => (location.hash = '#/welkom'));
 
   if (welkom) richtInAlsWelkomststap(welkom);
@@ -2884,7 +2899,7 @@ function richtInAlsWelkomststap(stap) {
   const vorige = WELKOM_STAPPEN.slice(0, WELKOM_STAPPEN.findIndex((st) => st.id === stap.id)).filter((st) => !st.nodig || st.nodig()).at(-1);
   const kader = document.createElement('section');
   kader.className = 'welkom-stap';
-  kader.innerHTML = `${welkomTeller(stap.id)}<h1>${veilig(stap.titel)}</h1><p>${stap.uitleg}</p><div class="blok welkom-groepen"></div>
+  kader.innerHTML = `${welkomTeller(stap.id)}<h1>${veilig(stap.titel)}</h1><p>${stap.uitleg}</p><div class="kaart welkom-groepen"></div>
     <button class="hoofdknop" id="welkom-verder">Verder</button>
     <p class="welkom-onder">${vorige ? `<a href="#/welkom/${vorige.id}">‹ Vorige</a> · ` : ''}<button class="link-knop" id="welkom-later">Rest later instellen</button></p>`;
   kader.querySelector('.welkom-groepen').append(...groepen);
