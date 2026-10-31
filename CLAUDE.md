@@ -25,6 +25,7 @@ Werk alleen aan de fase die actief is. Fase 1 is af. Nu actief: **Fase 2**.
 | Film- en seriegegevens | TMDB (gratis sleutel, door de eigenaar zelf in de app geplakt) | Beste gratis bron, inclusief NL-streaminginfo |
 | Online zetten | GitHub Pages via GitHub Actions, automatisch bij elke push en elke ochtend | Gratis; geen server nodig |
 | Voetbalschema | football-data.org, opgehaald door GitHub tijdens het online zetten (`scripts/voetbal.mjs`) en klaargezet als `voetbal.json` | football-data staat ophalen vanuit de app niet toe; de sleutel staat als GitHub-geheim `FOOTBALL_DATA_KEY`, niet in de code |
+| Europa League en Conference League | TheSportsDB (gratis sleutel '123'), met OpenLigaDB als vangnet; ook opgehaald door `scripts/voetbal.mjs` en in `voetbal.json` gezet | Football-data heeft ze niet gratis; beide bronnen zijn gratis en open |
 
 Geen betaalde diensten, geen eigen server en geen sleutels in de code. De TMDB-sleutel komt alleen in de opslag op de telefoon; de football-data-sleutel alleen als geheim in GitHub. De versie in de app is het moment van de laatste codewijziging, zodat de dagelijkse run geen melding "Nieuwe versie" geeft.
 
