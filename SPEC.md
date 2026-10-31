@@ -135,6 +135,8 @@ Lijsten of tips delen met anderen (één titel delen om samen te kijken zit al i
 
 - **Europa League en Conference League (31 oktober 2026).** ook als hele competitie te kiezen (Instellingen → Sport → Hele competities). Football-data heeft ze niet gratis; GitHub haalt ze elke nacht bij TheSportsDB op (de ronde van de eerstvolgende wedstrijd en de ronde daarna) en zet ze in voetbal.json. Geeft TheSportsDB een ronde niet compleet (de gratis versie geeft hooguit 50 wedstrijden per ronde, en voorrondes tellen mee), dan het programma van OpenLigaDB (gratis en open), met Duitse clubnamen omgezet naar de gangbare namen en zonder logo's. Een wedstrijd van een van je clubs staat er één keer in. Zender: Ziggo Sport (onder voorbehoud).
 
+- **Volgende week (31 oktober 2026).** bovenaan Deze week twee knoppen, Deze week en Volgende week. Volgende week toont maandag tot en met zondag van de week erna, met dezelfde onderdelen (sport, nieuwe afleveringen, NPO; in de gedeelde app zonder sport de tv-tips, zolang de NPO-gids zo ver vooruit loopt).
+
 - **Dataverlies:** Safari kan gegevens van websites wissen die je lang niet opent. Daarom: app op het beginscherm zetten (dan geldt dat niet) én regelmatig backuppen. De app herinnert je als de laatste backup ouder is dan 14 dagen.
 - **De sleutel:** de TMDB-sleutel staat op de telefoon en is in principe zichtbaar voor wie je ontgrendelde telefoon heeft. Het is een gratis sleutel waarmee je alleen gegevens kunt lezen; dat risico is acceptabel. Hij staat nooit in de code op GitHub.
 - **Nederlandse teksten:** niet elke titel heeft een Nederlandse beschrijving. Dan toont de app de Engelse.
