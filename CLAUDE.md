@@ -26,7 +26,7 @@ Werk alleen aan de fase die actief is. Fase 1 is af. Nu actief: **Fase 2**.
 | Online zetten | GitHub Pages via GitHub Actions, automatisch bij elke push en elke ochtend | Gratis; geen server nodig |
 | Voetbalschema | football-data.org, opgehaald door GitHub tijdens het online zetten (`scripts/voetbal.mjs`) en klaargezet als `voetbal.json` | football-data staat ophalen vanuit de app niet toe; de sleutel staat als GitHub-geheim `FOOTBALL_DATA_KEY`, niet in de code |
 | Europa League en Conference League | TheSportsDB (gratis sleutel '123'), met OpenLigaDB als vangnet; ook opgehaald door `scripts/voetbal.mjs` en in `voetbal.json` gezet | Football-data heeft ze niet gratis; beide bronnen zijn gratis en open |
-| Live standen | OpenLigaDB (open, vanuit de app), en het scorebord van ESPN voor Eredivisie, Serie A en KNVB-beker (niet officieel; alleen in deze app, bewuste keuze van de eigenaar) | Alleen tijdens een wedstrijd, elke minuut; aan/uit in Instellingen |
+| Live standen | Het scorebord van ESPN voor alle competities (niet officieel; alleen in deze app, bewuste keuze van de eigenaar), met OpenLigaDB als reserve | Alleen tijdens een wedstrijd, elke minuut; aan/uit in Instellingen |
 
 Geen betaalde diensten, geen eigen server en geen sleutels in de code. De TMDB-sleutel komt alleen in de opslag op de telefoon; de football-data-sleutel alleen als geheim in GitHub. De versie in de app is het moment van de laatste codewijziging, zodat de dagelijkse run geen melding "Nieuwe versie" geeft.
 

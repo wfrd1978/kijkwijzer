@@ -5,9 +5,9 @@ const w = (competitie, thuis, uit, start = '2026-11-01T13:30:00Z', extra = {}) =
 
 describe('live standen', () => {
   it('kiest per competitie de bron', () => {
-    expect(bronVoor(w('DED', 'Ajax', 'AZ'))).toEqual({ bron: 'espn', liga: 'ned.1' });
-    expect(bronVoor(w('BL1', 'Bayern', 'Dortmund'))).toEqual({ bron: 'oldb', liga: 'bl1' });
-    expect(bronVoor(w('EXTRA', 'Ajax', 'NEC', undefined, { competitieNaam: 'KNVB Beker' }))).toEqual({ bron: 'espn', liga: 'ned.cup' });
+    expect(bronVoor(w('DED', 'Ajax', 'AZ'))).toEqual({ bron: 'espn', liga: 'ned.1', reserve: null });
+    expect(bronVoor(w('BL1', 'Bayern', 'Dortmund'))).toEqual({ bron: 'espn', liga: 'ger.1', reserve: { bron: 'oldb', liga: 'bl1' } });
+    expect(bronVoor(w('EXTRA', 'Ajax', 'NEC', undefined, { competitieNaam: 'KNVB Beker' }))).toEqual({ bron: 'espn', liga: 'ned.cup', reserve: null });
     expect(bronVoor(w('EXTRA', 'X', 'Y', undefined, { competitieNaam: 'FA Cup' }))).toBe(null);
   });
   it('vraagt alleen rond de wedstrijd', () => {
@@ -35,6 +35,12 @@ describe('live standen', () => {
     expect(vindStand(w('CL', 'Bayern', 'Barça', '2026-11-03T20:00:00Z'), s)?.uit).toBe('FC Barcelona');
     expect(vindStand(w('DED', 'Ajax', 'AZ', '2026-11-03T20:00:00Z'), s)?.uit).toBe('AZ Alkmaar');
     expect(vindStand(w('DED', 'Ajax', 'PSV', '2026-11-03T20:00:00Z'), s)).toBe(null);
+  });
+  it('verzint geen 0-0 als OpenLigaDB een wedstrijd niet bijhoudt', () => {
+    const niet = uitOpenLigaDB([{ matchDateTimeUTC: '2020-11-03T20:00:00Z', matchDateTime: '2020-11-03T21:00:00', lastUpdateDateTime: '2020-08-29T18:29:34', team1: { teamName: 'Feyenoord Rotterdam' }, team2: { teamName: 'Inter Mailand' }, matchIsFinished: false, matchResults: [], goals: [] }]);
+    expect(standTekst(niet[0])).toBe(null);
+    const wel = uitOpenLigaDB([{ matchDateTimeUTC: '2020-11-03T20:00:00Z', matchDateTime: '2020-11-03T21:00:00', lastUpdateDateTime: '2020-11-03T21:20:00', team1: { teamName: 'A' }, team2: { teamName: 'B' }, matchIsFinished: false, matchResults: [], goals: [] }]);
+    expect(standTekst(wel[0])?.tekst).toBe('0-0');
   });
   it('leest OpenLigaDB, ook een eindstand', () => {
     const standen = uitOpenLigaDB([

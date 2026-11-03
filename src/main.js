@@ -1688,7 +1688,13 @@ async function werkLiveBij() {
       try {
         standen = await haalStanden(g.b, g.dag, g.wedstrijden.some((w) => inLiveVenster(w)));
       } catch {
-        continue; // deze bron lukt nu niet: dan geen stand, de rest gewoon wel
+        // De vaste bron lukt nu niet: dan de reserve, en anders geen stand (de rest gewoon wel).
+        if (!g.b.reserve) continue;
+        try {
+          standen = await haalStanden(g.b.reserve, g.dag, g.wedstrijden.some((w) => inLiveVenster(w)));
+        } catch {
+          continue;
+        }
       }
       for (const w of g.wedstrijden) {
         const t = standTekst(vindStand(w, standen));

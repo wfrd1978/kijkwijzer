@@ -1,24 +1,23 @@
 // Live standen: tijdens een wedstrijd haalt de app zelf de stand op (de schema's komen 's nachts,
-// dat is hiervoor te traag). Twee bronnen:
-// - OpenLigaDB (gratis en open, bedoeld voor dit gebruik): Bundesliga, Champions League, Premier League,
-//   LaLiga, Europa League, Conference League en DFB-Pokal;
-// - het scorebord van ESPN voor wat OpenLigaDB niet heeft (Eredivisie, Serie A, KNVB-beker). Dat is geen
-//   officieel aangeboden dienst en kan zonder aankondiging stoppen; dan blijft alleen de stand weg.
+// dat is hiervoor te traag). Vaste bron: het scorebord van ESPN, voor alle competities. Dat is geen
+// officieel aangeboden dienst en kan zonder aankondiging stoppen (bewuste keuze van de eigenaar, alleen
+// in deze app). Antwoordt ESPN niet, dan als reserve OpenLigaDB (gratis en open, maar door vrijwilligers
+// bijgehouden: buiten Duitsland vaak niet tijdens de wedstrijd).
 
 const OLDB = (liga) => ({ bron: 'oldb', liga });
-const ESPN = (liga) => ({ bron: 'espn', liga });
+const ESPN = (liga, reserve = null) => ({ bron: 'espn', liga, reserve });
 export const LIVE_BRON = {
   DED: ESPN('ned.1'),
   SA: ESPN('ita.1'),
-  CL: OLDB('ucl'),
-  PL: OLDB('pl'),
-  BL1: OLDB('bl1'),
-  PD: OLDB('la1'),
-  EL: OLDB('uel2026'),
-  ECL: OLDB('uecl2026'),
+  CL: ESPN('uefa.champions', OLDB('ucl')),
+  PL: ESPN('eng.1', OLDB('pl')),
+  BL1: ESPN('ger.1', OLDB('bl1')),
+  PD: ESPN('esp.1', OLDB('la1')),
+  EL: ESPN('uefa.europa', OLDB('uel2026')),
+  ECL: ESPN('uefa.europa.conf', OLDB('uecl2026')),
 };
 // Losse clubwedstrijden van TheSportsDB (bekers en dergelijke), op naam van de competitie.
-const PER_NAAM = { 'KNVB Beker': ESPN('ned.cup'), 'DFB-Pokal': OLDB('dfb'), 'Europa League': LIVE_BRON.EL, 'Conference League': LIVE_BRON.ECL };
+const PER_NAAM = { 'KNVB Beker': ESPN('ned.cup'), 'DFB-Pokal': ESPN('ger.dfb_pokal', OLDB('dfb')), 'Europa League': LIVE_BRON.EL, 'Conference League': LIVE_BRON.ECL };
 
 export function bronVoor(w) {
   return LIVE_BRON[w.competitie] ?? PER_NAAM[w.competitieNaam] ?? null;
@@ -42,9 +41,16 @@ export function uitOpenLigaDB(wedstrijden) {
   return (wedstrijden ?? []).map((m) => {
     const laatste = (m.goals ?? []).at(-1);
     const uitslag = [...(m.matchResults ?? [])].sort((a, b) => (a.resultOrderID ?? 0) - (b.resultOrderID ?? 0)).at(-1);
-    const begonnen = Date.now() >= new Date(m.matchDateTimeUTC).getTime();
-    const doelThuis = laatste?.scoreTeam1 ?? uitslag?.pointsTeam1 ?? (begonnen ? 0 : null);
-    const doelUit = laatste?.scoreTeam2 ?? uitslag?.pointsTeam2 ?? (begonnen ? 0 : null);
+    const aftrap = new Date(m.matchDateTimeUTC).getTime();
+    const begonnen = Date.now() >= aftrap;
+    // OpenLigaDB wordt door vrijwilligers bijgehouden; niet elke wedstrijd. Alleen 0-0 tonen als er sinds
+    // de aftrap echt iets is bijgewerkt (de tijd daarvan is plaatselijke tijd; het verschil met UTC staat
+    // in de wedstrijd zelf). Anders geen stand: liever niets dan een verkeerde stand.
+    const verschil = new Date(`${m.matchDateTime}Z`).getTime() - aftrap;
+    const bijgewerkt = m.lastUpdateDateTime ? new Date(`${m.lastUpdateDateTime}Z`).getTime() - (Number.isFinite(verschil) ? verschil : 0) : 0;
+    const nul = begonnen && bijgewerkt >= aftrap ? 0 : null;
+    const doelThuis = laatste?.scoreTeam1 ?? uitslag?.pointsTeam1 ?? nul;
+    const doelUit = laatste?.scoreTeam2 ?? uitslag?.pointsTeam2 ?? nul;
     return {
       start: m.matchDateTimeUTC,
       thuis: m.team1?.teamName ?? '',
