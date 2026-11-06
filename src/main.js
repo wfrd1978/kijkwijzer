@@ -760,23 +760,9 @@ async function sportVandaagHtml() {
   const gewicht = (x) =>
     x.mijnClub ? 6 : x.soort === 'oranje' || x.land ? (x.land === 'NL' ? 5 : 3) : ['f1', 'motor'].includes(x.soort) ? (/^(Race|Sprint)/.test(x.sessie) ? (x.soort === 'f1' ? 4.5 : 4) : 2) : x.soort === 'voetbal' ? 2 : 1;
   const [groot] = [...items].sort((a, b) => nogTeGaan(b) - nogTeGaan(a) || gewicht(b) - gewicht(a) || a.start.localeCompare(b.start));
-  const rest = items.filter((x) => x !== groot);
-  const regels = rest.slice(0, 3);
-  return `${sportKaart(groot, mijn)}${
-    regels.length
-      ? `<ul class="sport-vandaag npo-ook">${regels
-          .map((x) => {
-            const z = eenZender(x.zenders, mijn);
-            return `
-      <li>
-        <span class="sport-tijd${x.tijd ? '' : ' dag'}">${x.tijd ? veilig(x.tijd) : 'Hele dag'}</span>
-        <a class="sport-wat afl-link" href="#/sport"><strong>${veilig(x.naam)}</strong>${x.w ? liveVak(x.w) : ''}<span class="zacht">${veilig(x.sub)}</span></a>
-        ${z ? zenderChip(z, mijn, true) : ''}
-      </li>`;
-          })
-          .join('')}${rest.length > regels.length ? `<li class="meer-regel"><a href="#/sport">Nog ${rest.length - regels.length} in Sport ›</a></li>` : ''}</ul>`
-      : ''
-  }`;
+  // Rust: alleen de belangrijkste groot; de rest staat in Sport.
+  const rest = items.length - 1;
+  return `${sportKaart(groot, mijn)}${rest ? `<a class="stil-link" href="#/sport">Nog ${rest} vandaag in Sport ›</a>` : ''}`;
 }
 
 // De grote kaart bovenaan Sport vandaag: emblemen bij voetbal, de racetekening bij racen,
@@ -960,6 +946,7 @@ function nieuwVoorJouHtml(t) {
 // Sport volgen aan of uit (in Instellingen, bij Sport). Uit: nergens sport in de app (geen Sport-knop,
 // niets op Vandaag en in Deze week, niets ophalen), en op Vandaag kijktips op die plek.
 const sportOpVandaag = () => onthoud('vandaagSport', 'aan', ['aan', 'uit']) === 'aan';
+const sportnieuwsAan = () => onthoud('sportnieuws', 'aan', ['aan', 'uit']) === 'aan';
 
 // De waardering van kijkers (0 tot 10) als vijf sterren, met het cijfer erbij.
 function scoreHtml(score) {
@@ -1133,7 +1120,7 @@ async function toonVandaag() {
     document.getElementById('sportnieuws').innerHTML = html;
     document.getElementById('sportnieuws-blok').hidden = false;
   };
-  await Promise.allSettled([sportOpVandaag() ? sportBlok() : null, sportOpVandaag() ? nieuwsBlok() : null, tipsBlokken(), npoBlok(), afleveringenBlok()]);
+  await Promise.allSettled([sportOpVandaag() ? sportBlok() : null, sportOpVandaag() && sportnieuwsAan() ? nieuwsBlok() : null, tipsBlokken(), npoBlok(), afleveringenBlok()]);
 }
 
 // Vanavond op de NPO: één grote tip (iets van je lijst gaat voor), en nog twee kleinere.
@@ -1152,7 +1139,7 @@ function npoHtml(avond) {
     </button>
     ${
       rest.length
-        ? `<ul class="sport-vandaag npo-ook">${rest
+        ? `<details class="stil-meer"><summary class="stil-link">Ook vanavond ›</summary><ul class="sport-vandaag npo-ook">${rest
             .slice(0, 2)
             .map(
               (p, i) => `
@@ -1162,7 +1149,7 @@ function npoHtml(avond) {
             <span class="zender-chip">${veilig(p.zender)}</span>
           </li>`
             )
-            .join('')}</ul>`
+            .join('')}</ul></details>`
         : ''
     }`;
 }
@@ -1829,37 +1816,21 @@ async function sportnieuwsHtml() {
     ...keuzes.clubs.map((id) => ploegen.get(id)).filter(Boolean),
     ...keuzes.landen.map((c) => ({ naam: c === 'NL' ? 'Oranje' : VOLG_LANDEN[c].naam, land: true })),
   ];
-  const items = nieuwsVoorJou(data.items ?? [], { clubs, alles: keuzes.alles, f1: f1Volgen() }).filter((x) => /^https:\/\/nos\.nl\//.test(veiligeUrl(x.link) ?? ''));
+  const items = nieuwsVoorJou(data.items ?? [], { clubs, alles: keuzes.alles, f1: f1Volgen() }, 3).filter((x) => /^https:\/\/nos\.nl\//.test(veiligeUrl(x.link) ?? ''));
   if (!items.length) return '';
-  const ICOON = { voetbal: '⚽', f1: '🏁', wielrennen: '🚴', sport: '🏅' };
-  // Beeld bij een kop: het logo van je club, anders een vrije foto van de hoofdpersoon (Wikimedia
-  // Commons, met maker en licentie), anders een tegel met het teken van de sport.
-  const beeld = (x) => {
-    const logo = veiligeUrl(x.club?.logo);
-    if (logo) return `<span class="nieuws-beeld logo"><img src="${logo}" alt="" loading="lazy" /></span>`;
-    const foto = veiligeUrl(x.foto?.url);
-    if (foto && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(foto)) return `<span class="nieuws-beeld foto"><img src="${foto}" alt="${veilig(x.foto.wie ?? '')}" loading="lazy" /></span>`;
-    if (x.soort === 'f1') return raceTegel('f1', 'nieuws-beeld tegel');
-    return `<span class="nieuws-beeld tegel ${veilig(x.soort)}" aria-hidden="true">${ICOON[x.soort] ?? '🏅'}</span>`;
-  };
-  const fotoBron = (x) => {
-    if (x.club?.logo || !x.foto) return '';
-    const pagina = veiligeUrl(x.foto.pagina);
-    const tekst = `Foto ${veilig(x.foto.wie ?? '')}: ${veilig(x.foto.maker ?? 'onbekend')}, ${veilig(x.foto.licentie ?? '')}`;
-    return `<p class="nieuws-foto-bron">${pagina && /^https:\/\/commons\.wikimedia\.org\//.test(pagina) ? `<a href="${pagina}" target="_blank" rel="noopener noreferrer">${tekst}</a>` : tekst}</p>`;
-  };
-  return `<ul class="sportnieuws">${items
+  // Zonder plaatjes: grote nummers en koppen in de koppenletter, zoals de voorpagina van een sportkrant.
+  return `<ol class="sportnieuws">${items
     .map(
-      (x) => `
+      (x, i) => `
       <li><a class="nieuws-regel" href="${veiligeUrl(x.link)}" target="_blank" rel="noopener noreferrer">
-        ${beeld(x)}
+        <span class="nieuws-nr" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span>
         <span class="nieuws-wat">
           <span class="nieuws-meta"><b class="nieuws-bron">NOS</b> · ${veilig(nieuwsTijd(x.tijd))}${x.waarom ? ` · ${veilig(x.waarom)}` : ''}</span>
           <strong>${veilig(x.titel)}</strong>
         </span>
-      </a>${fotoBron(x)}</li>`
+      </a></li>`
     )
-    .join('')}</ul>`;
+    .join('')}</ol>`;
 }
 
 // --- Live standen (aan/uit in Instellingen bij Sport) ---
@@ -2926,6 +2897,13 @@ async function toonInstellingen({ welkom = null } = {}) {
           <button class="keuze${sportOpVandaag() ? '' : ' actief'}" data-sport="uit">Uit</button>
         </div>
       </div>
+      <div data-groep="sportnieuws" class="rij">
+        <span><span class="rij-kop">Sportnieuws</span><span class="zacht rij-stand">Drie koppen van NOS Sport op Vandaag</span></span>
+        <div class="keuzes schakelaar" id="sportnieuws-keuze">
+          <button class="keuze${sportnieuwsAan() ? ' actief' : ''}" data-nieuws-keuze="aan">Aan</button>
+          <button class="keuze${sportnieuwsAan() ? '' : ' actief'}" data-nieuws-keuze="uit">Uit</button>
+        </div>
+      </div>
       <div data-groep="live" class="rij">
         <span><span class="rij-kop">Live standen</span><span class="zacht rij-stand">Tijdens een wedstrijd elke minuut de stand</span></span>
         <div class="keuzes schakelaar" id="live-standen">
@@ -3151,6 +3129,13 @@ async function toonInstellingen({ welkom = null } = {}) {
     knop.setAttribute('aria-pressed', String(aan));
     zetSportzenders([...document.querySelectorAll('#sportzenders .actief')].map((k) => k.dataset.zender));
     document.getElementById('sportzenders-stand').textContent = leesSportzenders().join(', ') || 'Nog niets gekozen';
+  });
+
+  document.getElementById('sportnieuws-keuze').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-nieuws-keuze]');
+    if (!knop) return;
+    bewaarKeuze('sportnieuws', knop.dataset.nieuwsKeuze);
+    document.querySelectorAll('#sportnieuws-keuze .keuze').forEach((k) => k.classList.toggle('actief', k === knop));
   });
 
   document.getElementById('live-standen').addEventListener('click', (e) => {
