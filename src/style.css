@@ -788,12 +788,27 @@ p.rij { display: block; }
 .kijktip-tekst .live-stand { color: #fff; }
 
 /* Sportnieuws (koppen van NOS Sport) */
-.sportnieuws { list-style: none; margin: 0; padding: 0; background: var(--vlak); border-radius: 16px; overflow: hidden; }
-.sportnieuws li + li { border-top: 1px solid var(--lijn); }
-.nieuws-regel { display: flex; align-items: center; gap: 12px; padding: 12px 14px; color: var(--tekst); text-decoration: none; }
-.nieuws-icoon { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: var(--bg); font-size: 1.15rem; }
-.nieuws-wat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.nieuws-wat strong { font-weight: 600; line-height: 1.3; }
-.nieuws-wat .zacht { font-size: 0.82rem; }
-.nieuws-bron { color: var(--accent); font-weight: 700; letter-spacing: 0.03em; }
-.nieuws-pijl { flex: none; color: var(--zacht); font-size: 1.3rem; }
+.sportnieuws { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.sportnieuws li { background: var(--vlak); border-radius: 14px; overflow: hidden; }
+.nieuws-regel { display: flex; align-items: center; gap: 14px; padding: 10px 14px 10px 10px; color: var(--tekst); text-decoration: none; }
+.nieuws-beeld { flex: none; display: grid; place-items: center; width: 72px; height: 72px; border-radius: 10px; overflow: hidden; }
+.nieuws-beeld img { width: 100%; height: 100%; }
+.nieuws-beeld.foto img { object-fit: cover; object-position: 50% 20%; }
+.nieuws-beeld.logo { background: #fff; padding: 10px; }
+.nieuws-beeld.logo img { object-fit: contain; }
+.nieuws-beeld.tegel { font-size: 1.9rem; background: linear-gradient(135deg, var(--accent), #7a1a10); }
+.nieuws-beeld.tegel.f1 { background: linear-gradient(135deg, #1d1f26, #e10600); }
+.nieuws-beeld.tegel.wielrennen { background: linear-gradient(135deg, #f2c200, #c27a00); }
+.nieuws-beeld.tegel.voetbal { background: linear-gradient(135deg, #2f8f46, #14532d); }
+.nieuws-wat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.nieuws-wat strong { font-weight: 650; line-height: 1.3; font-size: 1rem; }
+.nieuws-meta { font-size: 0.75rem; color: var(--zacht); text-transform: uppercase; letter-spacing: 0.06em; }
+.nieuws-bron { color: var(--accent); font-weight: 800; }
+.nieuws-foto-bron { margin: -4px 14px 8px 96px; font-size: 0.68rem; color: var(--zacht); }
+.nieuws-foto-bron a { color: inherit; }
+
+/* Kop van een blok op Vandaag met een link rechts */
+.blok-kop { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
+.blok-kop .vak-kop { margin: 0; }
+.blok-link { flex: none; font-size: 0.85rem; color: var(--zacht); text-decoration: none; }
+.nieuw-label { align-self: flex-start; padding: 2px 8px; border-radius: 6px; background: var(--accent); color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }

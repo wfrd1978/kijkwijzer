@@ -3,7 +3,11 @@
 // een particulier voor niet-commercieel gebruik de artikelkop overnemen uit een door de NOS
 // aangeboden feed, met duidelijke bronvermelding en zonder iets te bewerken. Daarom neemt dit script
 // alleen de kop (letterlijk), de link naar het artikel bij de NOS en het tijdstip over; geen tekst en
-// geen foto's. Lukt het niet, dan blijft de vorige versie staan.
+// geen foto's van de NOS. Lukt het niet, dan blijft de vorige versie staan.
+//
+// Foto's: alleen van een vaste lijst bekende coureurs en renners, en alleen als hun foto op Wikimedia
+// Commons een vrije licentie heeft (CC BY, CC BY-SA, CC0 of publiek domein). De maker en de licentie
+// gaan mee, voor de naamsvermelding. Een persoon telt alleen in een kop uit zijn eigen sport.
 import { writeFile } from 'node:fs/promises';
 import { houdVorige } from './vorige.mjs';
 
@@ -14,6 +18,53 @@ const FEEDS = {
   sport: 'https://feeds.nos.nl/nossportalgemeen',
 };
 const MAX_UREN = 48;
+const UA = { 'user-agent': 'Kijkwijzer-sportnieuws/1.0 (https://wfrd1978.github.io/kijkwijzer/)' };
+
+// wiki: titel van het artikel op nl.wikipedia.org; woorden: hoe de NOS hem in een kop noemt.
+const PERSONEN = [
+  { wiki: 'Max Verstappen', woorden: ['Verstappen'], sport: 'f1', niet: ['Jos Verstappen'] },
+  { wiki: 'Lewis Hamilton', woorden: ['Hamilton'], sport: 'f1' },
+  { wiki: 'Charles Leclerc', woorden: ['Leclerc'], sport: 'f1' },
+  { wiki: 'Lando Norris', woorden: ['Norris'], sport: 'f1' },
+  { wiki: 'Oscar Piastri', woorden: ['Piastri'], sport: 'f1' },
+  { wiki: 'George Russell (autocoureur)', woorden: ['Russell'], sport: 'f1' },
+  { wiki: 'Andrea Kimi Antonelli', woorden: ['Antonelli'], sport: 'f1' },
+  { wiki: 'Mathieu van der Poel', woorden: ['Van der Poel'], sport: 'wielrennen' },
+  { wiki: 'Tadej Pogačar', woorden: ['Pogacar', 'Pogačar'], sport: 'wielrennen' },
+  { wiki: 'Jonas Vingegaard', woorden: ['Vingegaard'], sport: 'wielrennen' },
+  { wiki: 'Wout van Aert', woorden: ['Van Aert'], sport: 'wielrennen' },
+  { wiki: 'Remco Evenepoel', woorden: ['Evenepoel'], sport: 'wielrennen' },
+  { wiki: 'Demi Vollering', woorden: ['Vollering'], sport: 'wielrennen' },
+  { wiki: 'Marianne Vos', woorden: ['Marianne Vos'], sport: 'wielrennen' },
+];
+const VRIJ = /^(CC BY(-SA)? ?\d|CC0|Public domain|PD)/i;
+const zonderTags = (t) => (t ?? '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+const fotoCache = new Map();
+async function fotoVan(persoon) {
+  if (fotoCache.has(persoon.wiki)) return fotoCache.get(persoon.wiki);
+  let foto = null;
+  try {
+    const wiki = await (await fetch(`https://nl.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&piprop=name&titles=${encodeURIComponent(persoon.wiki)}`, { headers: UA, signal: AbortSignal.timeout(20000) })).json();
+    const bestand = Object.values(wiki.query?.pages ?? {})[0]?.pageimage;
+    if (bestand) {
+      const info = await (await fetch(`https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=240&titles=${encodeURIComponent(`File:${bestand}`)}`, { headers: UA, signal: AbortSignal.timeout(20000) })).json();
+      const ii = Object.values(info.query?.pages ?? {})[0]?.imageinfo?.[0];
+      const licentie = zonderTags(ii?.extmetadata?.LicenseShortName?.value);
+      const url = (ii?.thumburl ?? '').replace(/\?utm_[^#]*$/, '');
+      if (/^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(url) && VRIJ.test(licentie)) {
+        foto = { url, maker: zonderTags(ii.extmetadata?.Artist?.value).slice(0, 60) || 'onbekend', licentie, pagina: ii.descriptionurl, wie: persoon.wiki.replace(/ \(.*\)$/, '') };
+      }
+    }
+  } catch {
+    // Geen foto: dan gewoon zonder.
+  }
+  fotoCache.set(persoon.wiki, foto);
+  return foto;
+}
+const noemt = (titel, w) => new RegExp(`(^|[^\\p{L}])${w}($|[^\\p{L}])`, 'u').test(titel);
+function persoonIn(titel, soort) {
+  return PERSONEN.find((p) => (soort === p.sport || soort === 'sport') && p.woorden.some((w) => noemt(titel, w)) && !(p.niet ?? []).some((w) => titel.includes(w)));
+}
 
 // De paar tekens die in een RSS-kop als code staan, terug naar gewone tekst (de kop zelf blijft gelijk).
 const ontcijfer = (t) =>
@@ -60,5 +111,13 @@ if (!gelukt) {
   process.exit(0);
 }
 const items = [...berichten.values()].sort((a, b) => b.tijd.localeCompare(a.tijd));
+for (const x of items) {
+  const persoon = persoonIn(x.titel, x.soort);
+  if (persoon) {
+    const foto = await fotoVan(persoon);
+    if (foto) x.foto = foto;
+  }
+}
+console.log(`Foto's: ${items.filter((x) => x.foto).length} (${[...new Set(items.filter((x) => x.foto).map((x) => x.foto.wie))].join(', ') || 'geen'})`);
 await writeFile(new URL('../public/nieuws.json', import.meta.url), JSON.stringify({ op: new Date().toISOString(), bron: 'NOS Sport', items }));
 console.log(`nieuws.json geschreven: ${items.length} koppen.`);

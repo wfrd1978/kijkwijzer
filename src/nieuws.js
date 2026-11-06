@@ -30,14 +30,15 @@ export function clubNamen(ploeg) {
 }
 
 // items: uit nieuws.json; keuzes: { clubs: [ploeg], alles: [competitiecodes] }; aantal: hoeveel koppen.
-export function nieuwsVoorJou(items, { clubs = [], alles = [] }, aantal = 4) {
-  const clubWoorden = clubs.flatMap(clubNamen);
+// Gaat een kop over een van je clubs, dan staat die club erbij (voor het clublogo).
+export function nieuwsVoorJou(items, { clubs = [], alles = [] }, aantal = 2) {
+  const clubWoorden = clubs.flatMap((c) => clubNamen(c).map((naam) => ({ naam, c })));
   const compWoorden = alles.flatMap((c) => COMPETITIE_WOORDEN[c] ?? []);
   const gescoord = items.map((x) => {
     let score = 0;
     let waarom = '';
-    const club = clubWoorden.find((n) => noemt(x.titel, n));
-    if (club) [score, waarom] = [3, club];
+    const club = clubWoorden.find((w) => noemt(x.titel, w.naam));
+    if (club) return { ...x, score: 3, waarom: club.c.naam, club: club.c };
     else if (compWoorden.some((n) => noemt(x.titel, n))) [score, waarom] = [2, compWoorden.find((n) => noemt(x.titel, n))];
     else if (x.soort === 'f1') [score, waarom] = [1, 'Formule 1'];
     else if (x.soort === 'wielrennen') [score, waarom] = [1, 'Wielrennen'];

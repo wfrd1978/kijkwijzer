@@ -16,13 +16,18 @@ describe('sportnieuws voor jou', () => {
     expect(clubNamen({ naam: 'PSV', vol: 'PSV' })).toEqual(['PSV']);
   });
   it('zet nieuws over je clubs voorop, dan je competities, dan F1', () => {
-    const uit = nieuwsVoorJou(items, { clubs: [{ naam: 'AZ', vol: 'AZ Alkmaar' }], alles: ['CL'] });
+    const uit = nieuwsVoorJou(items, { clubs: [{ naam: 'AZ', vol: 'AZ Alkmaar', logo: 'x' }], alles: ['CL'] }, 4);
     expect(uit.map((x) => x.link)).toEqual(['https://nos.nl/l/2', 'https://nos.nl/l/5', 'https://nos.nl/l/3']);
     expect(uit[0].waarom).toBe('AZ');
+    expect(uit[0].club.logo).toBe('x');
+    expect(uit[1].club).toBeUndefined();
   });
   it('herkent een korte clubnaam niet in een ander woord', () => {
     const uit = nieuwsVoorJou([{ titel: 'Bazen en baas', soort: 'voetbal', tijd: '2026-11-05T10:00:00Z' }], { clubs: [{ naam: 'AZ' }] });
     expect(uit[0].score).toBe(0);
+  });
+  it('geeft standaard twee koppen', () => {
+    expect(nieuwsVoorJou(items, { clubs: [], alles: ['CL', 'DED'] })).toHaveLength(2);
   });
   it('toont het nieuwste algemene sportnieuws als er niets voor jou is', () => {
     const uit = nieuwsVoorJou(items.filter((x) => x.soort === 'sport'), { clubs: [], alles: [] });

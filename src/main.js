@@ -651,7 +651,21 @@ function rasterHtml(titels, opLijst, onder = (t) => (t.jaar ? veilig(t.jaar) : '
 
 // --- Vandaag ---
 
-function verderKaart(t) {
+// Kop van een blok op Vandaag, met rechts eventueel een korte link (bijvoorbeeld naar het hele schema).
+function blokKop(titel, link) {
+  if (!link) return `<h2 class="vak-kop">${titel}</h2>`;
+  const extern = /^https:/.test(link.href);
+  return `<div class="blok-kop"><h2 class="vak-kop">${titel}</h2><a class="blok-link" href="${link.href}"${extern ? ' target="_blank" rel="noopener noreferrer"' : ''}>${link.tekst} ›</a></div>`;
+}
+
+const gisterenDag = () => {
+  const d = new Date(`${vandaag()}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+};
+
+function verderKaart(t, stand = leesAfleveringen()) {
+  const nieuw = afleveringenOp([t], stand, [gisterenDag(), vandaag()]).pop();
   const v = t.voortgang ?? beginVoortgang();
   const seizoenen = t.seizoenen ?? [];
   const dit = seizoenen.find((x) => x.nr === v.seizoen);
@@ -660,6 +674,7 @@ function verderKaart(t) {
     <div class="verder-kaart" data-id="${t.id}">
       <a href="#/titel/${t.id}" tabindex="-1">${posterHtml(t)}</a>
       <div class="verder-tekst">
+        ${nieuw ? `<span class="nieuw-label">Nieuwe aflevering ${nieuw.dag === vandaag() ? 'vandaag' : 'gisteren'} · ${afleveringKort(nieuw)}</span>` : ''}
         <a href="#/titel/${t.id}"><strong>${veilig(t.titel)}</strong></a>
         <span class="zacht">${
           v.aflevering ? `Seizoen ${v.seizoen} · aflevering ${v.aflevering}${dit ? ` van ${dit.afleveringen}` : ''}` : `Seizoen ${v.seizoen} · nog niet begonnen`
@@ -875,8 +890,7 @@ function nieuwVoorJouHtml(t) {
         <strong>${veilig(t.titel)}</strong>
         <span>${soortJaar(t)}</span>
       </div>
-    </button>
-    <p class="bron">Elke dag een andere tip, gekozen op de genres van wat je hoog waardeert en wilt zien.</p>`;
+    </button>`;
 }
 
 // Sport volgen aan of uit (in Instellingen, bij Sport). Uit: nergens sport in de app (geen Sport-knop,
@@ -906,8 +920,7 @@ function kijktipsHtml(tips) {
         </span>
       </button></li>`;
     })
-    .join('')}</ul>
-    <p class="bron">Goed gewaardeerd door kijkers (TMDB), te zien bij jouw diensten en in de genres die jij graag ziet. Elke dag een ander rijtje.</p>`;
+    .join('')}</ul>`;
 }
 
 async function toonVandaag() {
@@ -941,7 +954,7 @@ async function toonVandaag() {
         ? ''
         : '<section class="welkom"><p class="zacht">Je lijst is nog leeg. Zoek een film of serie om te beginnen.</p><a class="hoofdknop" href="#/films">Zoek een titel</a></section>'
     }
-    ${verder.length ? `<section class="vandaag-blok"><h2 class="vak-kop">Verder kijken</h2><div id="verder">${verder.map(verderKaart).join('')}</div></section>` : ''}
+    ${verder.length ? `<section class="vandaag-blok">${blokKop('Verder kijken', { href: '#/films', tekst: 'Mijn lijst' })}<div id="verder">${verder.map(verderKaart).join('')}</div></section>` : ''}
     <section class="vandaag-blok" id="afleveringen-blok"${afleveringenNu ? '' : ' hidden'}>
       <h2 class="vak-kop">Nieuwe afleveringen</h2>
       <div id="afleveringen">${afleveringenNu}</div>
@@ -949,11 +962,11 @@ async function toonVandaag() {
     ${
       sportOpVandaag()
         ? `<section class="vandaag-blok">
-             <h2 class="vak-kop">Sport vandaag</h2>
+             ${blokKop('Sport vandaag', { href: '#/sport', tekst: 'Schema' })}
              <div id="sport-vandaag"><p class="bezig">Ophalen…</p></div>
            </section>
            <section class="vandaag-blok" id="sportnieuws-blok" hidden>
-             <h2 class="vak-kop">Sportnieuws</h2>
+             ${blokKop('Sportnieuws', { href: 'https://nos.nl/sport', tekst: 'Meer bij NOS' })}
              <div id="sportnieuws"></div>
            </section>`
         : leesSleutel() && eigen.length
@@ -964,7 +977,7 @@ async function toonVandaag() {
           : ''
     }
     <section class="vandaag-blok" id="npo-blok" hidden>
-      <h2 class="vak-kop">Vanavond op de NPO</h2>
+      ${blokKop('Vanavond op de NPO', { href: '#/instellingen', tekst: 'Afstemmen' })}
       <div id="npo"></div>
     </section>
     ${
@@ -1043,9 +1056,9 @@ async function toonVandaag() {
   const afleveringenBlok = async () => {
     if (!leesSleutel()) return;
     const stand = await werkAfleveringenBij(titels, vandaag(), haalAfleveringen);
-    const seizoenenNieuw = await werkSeizoenenBij(titels, stand);
+    await werkSeizoenenBij(titels, stand);
     if (nr !== schermNr) return;
-    if (seizoenenNieuw && document.getElementById('verder')) document.getElementById('verder').innerHTML = verder.map(verderKaart).join('');
+    if (document.getElementById('verder')) document.getElementById('verder').innerHTML = verder.map((t) => verderKaart(t, stand)).join('');
     const html = afleveringenHtml(titels, stand);
     document.getElementById('afleveringen').innerHTML = html;
     document.getElementById('afleveringen-blok').hidden = !html;
@@ -1087,8 +1100,7 @@ function npoHtml(avond) {
             )
             .join('')}</ul>`
         : ''
-    }
-    <p class="bron">Uit de tv-gids van NPO. Tik voor meer informatie. Afstemmen op wat jij graag ziet kan in <a href="#/instellingen">Instellingen</a> bij Tv-tips.</p>`;
+    }`;
 }
 
 // Meer over een programma uit de NPO-gids, met knoppen om te kijken.
@@ -1147,10 +1159,8 @@ async function werkSeizoenenBij(titels, stand) {
 
 // Afleveringen van gisteren en vandaag, van series op je lijst.
 function afleveringenHtml(titels, stand) {
-  const gisteren = new Date(`${vandaag()}T12:00:00Z`);
-  gisteren.setUTCDate(gisteren.getUTCDate() - 1);
-  const g = gisteren.toISOString().slice(0, 10);
-  const lijst = afleveringenOp(titels, stand, [g, vandaag()]).reverse();
+  // Series met voortgang staan al bij Verder kijken (met een label); hier alleen de andere.
+  const lijst = afleveringenOp(titels, stand, [gisterenDag(), vandaag()]).filter((e) => !e.titel.voortgang).reverse();
   if (!lijst.length) return '';
   return `<ul class="sport-vandaag">${lijst
     .map((e) => {
@@ -1706,25 +1716,36 @@ async function sportnieuwsHtml() {
   const schema = keuzes.clubs.length ? await haalVoetbalSchema() : null;
   const ploegen = new Map((schema?.wedstrijden ?? []).flatMap((w) => [w.thuis, w.uit]).map((p) => [p.id, p]));
   const clubs = keuzes.clubs.map((id) => ploegen.get(id)).filter(Boolean);
-  const items = nieuwsVoorJou(data.items ?? [], { clubs, alles: keuzes.alles });
+  const items = nieuwsVoorJou(data.items ?? [], { clubs, alles: keuzes.alles }).filter((x) => /^https:\/\/nos\.nl\//.test(veiligeUrl(x.link) ?? ''));
   if (!items.length) return '';
   const ICOON = { voetbal: '⚽', f1: '🏁', wielrennen: '🚴', sport: '🏅' };
+  // Beeld bij een kop: het logo van je club, anders een vrije foto van de hoofdpersoon (Wikimedia
+  // Commons, met maker en licentie), anders een tegel met het teken van de sport.
+  const beeld = (x) => {
+    const logo = veiligeUrl(x.club?.logo);
+    if (logo) return `<span class="nieuws-beeld logo"><img src="${logo}" alt="" loading="lazy" /></span>`;
+    const foto = veiligeUrl(x.foto?.url);
+    if (foto && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(foto)) return `<span class="nieuws-beeld foto"><img src="${foto}" alt="${veilig(x.foto.wie ?? '')}" loading="lazy" /></span>`;
+    return `<span class="nieuws-beeld tegel ${veilig(x.soort)}" aria-hidden="true">${ICOON[x.soort] ?? '🏅'}</span>`;
+  };
+  const fotoBron = (x) => {
+    if (x.club?.logo || !x.foto) return '';
+    const pagina = veiligeUrl(x.foto.pagina);
+    const tekst = `Foto ${veilig(x.foto.wie ?? '')}: ${veilig(x.foto.maker ?? 'onbekend')}, ${veilig(x.foto.licentie ?? '')}`;
+    return `<p class="nieuws-foto-bron">${pagina && /^https:\/\/commons\.wikimedia\.org\//.test(pagina) ? `<a href="${pagina}" target="_blank" rel="noopener noreferrer">${tekst}</a>` : tekst}</p>`;
+  };
   return `<ul class="sportnieuws">${items
-    .map((x) => {
-      const link = veiligeUrl(x.link);
-      if (!link || !/^https:\/\/nos\.nl\//.test(link)) return '';
-      return `
-      <li><a class="nieuws-regel" href="${link}" target="_blank" rel="noopener noreferrer">
-        <span class="nieuws-icoon" aria-hidden="true">${ICOON[x.soort] ?? '🏅'}</span>
+    .map(
+      (x) => `
+      <li><a class="nieuws-regel" href="${veiligeUrl(x.link)}" target="_blank" rel="noopener noreferrer">
+        ${beeld(x)}
         <span class="nieuws-wat">
+          <span class="nieuws-meta"><b class="nieuws-bron">NOS</b> · ${veilig(nieuwsTijd(x.tijd))}${x.waarom ? ` · ${veilig(x.waarom)}` : ''}</span>
           <strong>${veilig(x.titel)}</strong>
-          <span class="zacht"><b class="nieuws-bron">NOS</b> · ${veilig(nieuwsTijd(x.tijd))}${x.waarom ? ` · ${veilig(x.waarom)}` : ''}</span>
         </span>
-        <span class="nieuws-pijl" aria-hidden="true">›</span>
-      </a></li>`;
-    })
-    .join('')}</ul>
-    <p class="bron">Koppen van NOS Sport, afgestemd op wat jij volgt. Tik om het hele bericht bij de NOS te lezen.</p>`;
+      </a>${fotoBron(x)}</li>`
+    )
+    .join('')}</ul>`;
 }
 
 // --- Live standen (aan/uit in Instellingen bij Sport) ---
