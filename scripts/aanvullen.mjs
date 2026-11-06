@@ -3,7 +3,7 @@
 import { access } from 'node:fs/promises';
 import { houdVorige } from './vorige.mjs';
 
-for (const naam of ['voetbal', 'espn', 'npo', 'nieuws']) {
+for (const naam of ['voetbal', 'espn', 'npo', 'nieuws', 'motorsport']) {
   try {
     await access(new URL(`../public/${naam}.json`, import.meta.url));
   } catch {

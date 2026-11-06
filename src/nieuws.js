@@ -11,6 +11,9 @@ const COMPETITIE_WOORDEN = {
   SA: ['Serie A'],
   EL: ['Europa League'],
   ECL: ['Conference League'],
+  UNL: ['Nations League'],
+  EC: ['EK'],
+  WC: ['WK'],
 };
 
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -31,16 +34,17 @@ export function clubNamen(ploeg) {
 
 // items: uit nieuws.json; keuzes: { clubs: [ploeg], alles: [competitiecodes] }; aantal: hoeveel koppen.
 // Gaat een kop over een van je clubs, dan staat die club erbij (voor het clublogo).
-export function nieuwsVoorJou(items, { clubs = [], alles = [] }, aantal = 2) {
+export function nieuwsVoorJou(items, { clubs = [], alles = [], f1 = true }, aantal = 2) {
   const clubWoorden = clubs.flatMap((c) => clubNamen(c).map((naam) => ({ naam, c })));
   const compWoorden = alles.flatMap((c) => COMPETITIE_WOORDEN[c] ?? []);
   const gescoord = items.map((x) => {
     let score = 0;
     let waarom = '';
-    const club = clubWoorden.find((w) => noemt(x.titel, w.naam));
+    // Een land (Oranje, België) telt alleen in voetbalnieuws: 'Oranje' staat ook boven hockey of schaatsen.
+    const club = clubWoorden.find((w) => (!w.c.land || x.soort === 'voetbal') && noemt(x.titel, w.naam));
     if (club) return { ...x, score: 3, waarom: club.c.naam, club: club.c };
     else if (compWoorden.some((n) => noemt(x.titel, n))) [score, waarom] = [2, compWoorden.find((n) => noemt(x.titel, n))];
-    else if (x.soort === 'f1') [score, waarom] = [1, 'Formule 1'];
+    else if (x.soort === 'f1' && f1) [score, waarom] = [1, 'Formule 1'];
     else if (x.soort === 'wielrennen') [score, waarom] = [1, 'Wielrennen'];
     return { ...x, score, waarom };
   });

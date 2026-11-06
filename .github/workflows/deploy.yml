@@ -58,6 +58,12 @@ jobs:
         timeout-minutes: 6
         run: node scripts/npo.mjs
         continue-on-error: true
+      # Kalenders van MotoGP, DTM, GT World Challenge en WEC (TheSportsDB, zonder eigen sleutel); alleen 's nachts.
+      - name: Motorsport ophalen
+        if: github.event_name != 'schedule' || github.event.schedule == '47 0 * * *'
+        timeout-minutes: 12
+        run: node scripts/motorsport.mjs
+        continue-on-error: true
       # Sportnieuws: alleen de koppen van NOS Sport (zie scripts/nieuws.mjs), elk uur.
       - name: Sportnieuws ophalen
         timeout-minutes: 3

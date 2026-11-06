@@ -34,3 +34,20 @@ describe('sportnieuws voor jou', () => {
     expect(uit.map((x) => x.link)).toEqual(['https://nos.nl/l/4']);
   });
 });
+
+describe('sportnieuws: landen en Formule 1', () => {
+  const lijst = [
+    { titel: 'Oranje wint van Griekenland', soort: 'voetbal', tijd: '2026-11-13T21:00:00Z' },
+    { titel: 'Oranje hockeysters winnen', soort: 'sport', tijd: '2026-11-13T22:00:00Z' },
+    { titel: 'Verstappen pakt pole', soort: 'f1', tijd: '2026-11-13T20:00:00Z' },
+  ];
+  it('telt een land alleen in voetbalnieuws', () => {
+    const uit = nieuwsVoorJou(lijst, { clubs: [{ naam: 'Oranje', land: true }] }, 3);
+    expect(uit[0].titel).toBe('Oranje wint van Griekenland');
+    expect(uit.map((x) => x.titel)).not.toContain('Oranje hockeysters winnen');
+  });
+  it('slaat Formule 1 over als je die niet volgt', () => {
+    const uit = nieuwsVoorJou(lijst, { clubs: [], f1: false }, 3);
+    expect(uit.every((x) => x.waarom === '')).toBe(true);
+  });
+});
