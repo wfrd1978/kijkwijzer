@@ -17,7 +17,7 @@ import { vanVandaag, ruimOudeDagenOp, dagSleutel } from './dagcache.js';
 import { nieuwsVoorJou } from './nieuws.js';
 import { SERIES, leesMotorKeuzes, zetMotorKeuzes, komendeMotorraces, isTraining, f1Volgen, zetF1Volgen } from './motorsport.js';
 import { bronVoor, inLiveVenster, vanVandaagNog, uitOpenLigaDB, uitEspn, vindStand, standTekst } from './live.js';
-import { nieuwVoorJou, kijktipsVanDag, GENRE_NAMEN } from './nieuw.js';
+import { nieuwVoorJou, kijktipsVanDag, GENRE_NAMEN, bekendeGenres, vulGenresAan } from './nieuw.js';
 import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink, beperkDiensten } from './diensten.js';
@@ -26,7 +26,7 @@ import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinne
 import {
   titelSleutel, STATUSSEN, statusWijziging, vandaag, datumTekst,
   SOORTEN, SORTERINGEN, filterTitels, sorteerTitels, dubbelTekst, gevondenActeur,
-  beginVoortgang, volgendeAflevering, voortgangKort,
+  beginVoortgang, volgendeAflevering, voortgangKort, categorieTelling, categorieenVan,
 } from './titels.js';
 
 const app = document.getElementById('app');
@@ -630,6 +630,13 @@ function toonBevestigen(t, alOpLijst, terug = { naam: 'Mijn lijst', toon: () => 
       await zetOpGezien(titel);
     } else {
       melding('Op Wil ik zien gezet');
+    }
+    // Kwam je uit het zoeken: zoekterm weg, zodat je meteen weer je lijst ziet (op het tabblad waar hij nu staat).
+    if (terug.naam === 'Mijn lijst') {
+      filmsZoek = '';
+      laatsteZoekterm = '';
+      filmsTab = knop.dataset.toevoegen === 'Gezien' ? 'gezien' : 'wil';
+      bewaarKeuze('filmsTab', filmsTab);
     }
     gaTerug();
   });
@@ -1235,6 +1242,10 @@ function afleveringenHtml(titels, stand) {
 // --- Mijn lijst: Wil ik zien, Gezien en Ontdekken, met één zoekveld ---
 
 const FILMS_TABS = { wil: 'Wil ik zien', gezien: 'Gezien' };
+// De gekozen categorie (zoals Komedie); 'alle' = geen keuze. Geldt zolang de app open is.
+let categorie = 'alle';
+// Om de lijst opnieuw te tekenen als er op de achtergrond genres bij zijn gekomen.
+let lijstOpnieuw = null;
 const LIJST_STATUSSEN = { wil: ['Wil ik zien'], gezien: ['Gezien'] };
 let filmsTab = onthoud('filmsTab', 'wil', Object.keys(FILMS_TABS));
 let filmsZoek = '';
@@ -1255,14 +1266,29 @@ function toonLijstTab(vak, welke, titels, naWijziging) {
       </label>
       <span class="aantal" id="aantal"></span>
     </div>
+    <div class="categorieen" id="categorieen" role="group" aria-label="Categorie"></div>
     <ul class="lijst" id="lijst"></ul>
   `;
   const teken = () => {
-    const zichtbaar = sorteerTitels(filterTitels(titels, { soort }).filter((t) => LIJST_STATUSSEN[welke].includes(t.status)), sortering);
+    const genres = bekendeGenres();
+    const genresVan = (t) => genres[titelSleutel(t)];
+    const opTab = filterTitels(titels, { soort }).filter((t) => LIJST_STATUSSEN[welke].includes(t.status));
+    // Alleen categorieën die op dit tabblad voorkomen; staat de gekozen er niet (meer) bij, dan weer alles.
+    const telling = categorieTelling(opTab, genresVan);
+    if (categorie !== 'alle' && !telling.some(([c]) => c === categorie)) categorie = 'alle';
+    const balk = document.getElementById('categorieen');
+    balk.hidden = telling.length < 2;
+    balk.innerHTML = [['alle', 'Alles', opTab.length], ...telling.map(([c, n]) => [c, c, n])]
+      .map(([k, naam, n]) => `<button class="categorie${k === categorie ? ' actief' : ''}" data-categorie="${veilig(k)}" aria-pressed="${k === categorie}">${veilig(naam)} <span>${n}</span></button>`)
+      .join('');
+    const gekozen = categorie === 'alle' ? opTab : opTab.filter((t) => categorieenVan(genresVan(t) ?? []).includes(categorie));
+    const zichtbaar = sorteerTitels(gekozen, sortering);
     document.getElementById('lijst').innerHTML = zichtbaar.length
       ? zichtbaar.map((t) => titelRegel(t, '', { status: false, acties: true })).join('')
       : `<li class="leeg">${
-          soort !== 'alle'
+          categorie !== 'alle'
+            ? `Geen ${veilig(categorie.toLowerCase())} bij ${FILMS_TABS[welke]}.`
+            : soort !== 'alle'
             ? `Geen ${SOORTEN[soort].toLowerCase()} bij ${FILMS_TABS[welke]}.`
             : welke === 'wil'
               ? 'Nog niets op Wil ik zien. Zoek hierboven een film of serie, of kijk bij Ontdek iets nieuws.'
@@ -1271,6 +1297,15 @@ function toonLijstTab(vak, welke, titels, naWijziging) {
     document.getElementById('aantal').textContent = aantalTekst(zichtbaar.length);
   };
   teken();
+  lijstOpnieuw = () => vak.isConnected && document.getElementById('categorieen') && teken();
+
+  document.getElementById('categorieen').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-categorie]');
+    if (!knop) return;
+    // Nog een keer op de gekozen categorie tikken: weer alles.
+    categorie = knop.dataset.categorie === categorie ? 'alle' : knop.dataset.categorie;
+    teken();
+  });
 
   // De knoppen in een regel: niet de titel openen, maar meteen doen.
   document.getElementById('lijst').addEventListener('click', async (e) => {
@@ -1336,7 +1371,12 @@ async function toonFilms() {
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
       <input id="films-zoek" type="search" placeholder="Zoek of voeg een film of serie toe" autocomplete="off" enterkeyhint="search" value="${veilig(filmsZoek)}" aria-label="Zoek een film, serie of acteur" />
     </form>
-    <a class="ontdek-link" id="ontdek-link" href="#/ontdekken"><span>Ontdek iets nieuws</span><span class="zacht">Trending en tips ›</span></a>
+    <a class="ontdek-link" id="ontdek-link" href="#/ontdekken">
+      <span class="ontdek-icoon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></svg></span>
+      <span class="ontdek-tekst"><strong>Ontdek iets nieuws</strong><span>Trending, bij jouw diensten en tips voor jou</span></span>
+      <span class="ontdek-posters" id="ontdek-posters" aria-hidden="true"></span>
+      <span class="ontdek-pijl" aria-hidden="true">›</span>
+    </a>
     <div class="segment" id="films-tabs" role="tablist">${Object.entries(FILMS_TABS)
       .map(([k, naam]) => `<button role="tab" aria-selected="${k === filmsTab}" data-tab="${k}">${naam} <span class="tab-aantal" data-aantal="${k}">${titels.filter((t) => LIJST_STATUSSEN[k].includes(t.status)).length}</span></button>`)
       .join('')}</div>
@@ -1376,6 +1416,19 @@ async function toonFilms() {
   if (filmsZoek.trim() && leesSleutel()) {
     if (laatsteZoekterm === filmsZoek.trim()) toonResultaten();
     else zoek(filmsZoek);
+  }
+  if (leesSleutel()) {
+    // Drie posters van wat deze week trending is op de Ontdek-kaart (één keer per dag opgehaald).
+    vanVandaag('ontdek-voorproef', async () => (await haalTrending('film')).filter((t) => t.poster).slice(0, 3).map((t) => t.poster))
+      .then((posters) => {
+        const plek = document.getElementById('ontdek-posters');
+        if (plek && posters?.length) plek.innerHTML = posters.map((p) => `<img src="${posterUrl(p, 'w92')}" alt="" loading="lazy" />`).join('');
+      })
+      .catch(() => {});
+    // Categorieën: ontbrekende genres op de achtergrond ophalen en daarna de lijst bijwerken.
+    vulGenresAan(titels, haalGenres)
+      .then((nieuw) => nieuw && nr === schermNr && !filmsZoek.trim() && lijstOpnieuw?.())
+      .catch(() => {});
   }
 
   let wacht;
@@ -3496,6 +3549,12 @@ async function route() {
   const plek =
     { '#/films': 'films', '#/ontdekken': 'ontdekken', '#/week': 'week', '#/sport': 'sport', '#/instellingen': 'instellingen', '#/instellingen/backup': 'instellingen' }[location.hash] || (titelId || acteurId ? 'films' : 'vandaag');
   document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === (plek === 'ontdekken' ? 'films' : plek)));
+  // Naar een ander tabblad onderin: een openstaande zoekterm vergeten, zodat je bij terugkomen je lijst ziet.
+  // (Een titel of acteur openen vanuit het zoeken hoort bij Mijn lijst; dan blijft hij staan.)
+  if (!['films', 'ontdekken'].includes(plek)) {
+    filmsZoek = '';
+    laatsteZoekterm = '';
+  }
   if (welkomStap) toonWelkom(welkomStap[1] ?? 'naam');
   else if (plek === 'instellingen') toonInstellingen().then(() => location.hash === '#/instellingen/backup' && document.getElementById('backup-blok')?.scrollIntoView());
   else if (plek === 'sport') toonSport();

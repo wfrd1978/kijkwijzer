@@ -666,11 +666,47 @@ span.livery b { font-family: var(--kop); font-weight: 800; font-style: italic; f
 .lijst-sterren { display: inline-flex; gap: 2px; margin-top: 4px; }
 .lijst-ster { font-size: 1.45rem; line-height: 1; padding: 2px 3px; color: var(--zacht); opacity: 0.45; cursor: pointer; }
 .lijst-ster.aan { color: var(--ster); opacity: 1; }
+/* Ontdek-kaart: compact, met een kleur van de app en drie posters van wat trending is */
 .ontdek-link {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 10px; padding: 12px 14px;
-  border-radius: 12px; border: 1px solid var(--lijn); color: var(--tekst); text-decoration: none; font-weight: 700;
+  display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 10px 12px; min-height: 64px;
+  border-radius: 14px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--lijn));
+  background: linear-gradient(110deg, var(--accent-zacht), var(--vlak) 70%);
+  color: var(--tekst); text-decoration: none; overflow: hidden;
 }
-.ontdek-link .zacht { font-weight: 400; font-size: 0.85rem; }
+.ontdek-link[hidden] { display: none; }
+.ontdek-icoon {
+  flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-tekst);
+}
+.ontdek-icoon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.ontdek-icoon path { fill: currentColor; }
+.ontdek-tekst { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ontdek-tekst strong { font-size: 1.02rem; }
+.ontdek-tekst span { font-size: 0.8rem; color: var(--zacht); line-height: 1.25; }
+.ontdek-posters { flex: none; display: flex; }
+.ontdek-posters img {
+  width: 30px; height: 45px; object-fit: cover; border-radius: 4px; box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+  border: 1px solid var(--vlak);
+}
+.ontdek-posters img + img { margin-left: -12px; }
+.ontdek-posters img:nth-child(1) { transform: rotate(-6deg); }
+.ontdek-posters img:nth-child(3) { transform: rotate(6deg); }
+.ontdek-pijl { flex: none; font-size: 1.4rem; color: var(--accent); font-weight: 700; }
+@media (max-width: 360px) { .ontdek-posters { display: none; } }
+/* Categorieën in Mijn lijst: een rij om opzij te vegen */
+.categorieen {
+  display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px 6px; padding: 2px 16px 6px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.categorieen::-webkit-scrollbar { display: none; }
+.categorieen[hidden] { display: none; }
+.categorie {
+  flex: none; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--lijn); background: var(--vlak);
+  color: var(--tekst); font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.categorie span { color: var(--zacht); font-weight: 400; margin-left: 2px; }
+.categorie.actief { background: var(--accent); border-color: var(--accent); color: var(--accent-tekst); }
+.categorie.actief span { color: inherit; opacity: 0.8; }
 .segment { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
 .sorteer select { border: 1px solid var(--lijn); border-radius: 999px; padding: 4px 10px; background: var(--vlak); text-decoration: none; }
 /* Titelpagina: je eigen dingen in één blok bovenaan */
