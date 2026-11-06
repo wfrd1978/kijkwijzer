@@ -839,3 +839,5 @@ p.rij { display: block; }
 .motor-zender { margin: 12px 0 0; display: flex; gap: 6px; flex-wrap: wrap; }
 .race-volgend .race-ronde, .race-volgend h3 { padding-right: 92px; }
 .race-volgend .race-tekening path[stroke] { display: none; }
+.race-volgend.livery-motogp .livery-merk { font-size: 2.2rem; }
+.race-volgend.livery-motogp .race-ronde, .race-volgend.livery-motogp h3 { padding-right: 130px; }
