@@ -303,3 +303,33 @@ export async function haalNieuwOpDiensten(soort, ids, genres, vanaf) {
     })
     .filter(Boolean);
 }
+
+// --- Zoek op maat ---
+
+// Een resultaat met genres, waardering en aantal stemmen (om te wegen).
+function naarKandidaat(r, s, bron) {
+  const t = naarTitel(r, s);
+  return t && { ...t, genreIds: (r.genre_ids ?? []).filter(Number.isInteger), score: typeof r.vote_average === 'number' ? r.vote_average : null, stemmen: r.vote_count ?? 0, bron };
+}
+
+// Het nummer van een onderwerp bij TMDB (zoals 'christmas'), of null.
+export async function zoekOnderwerp(woord) {
+  const data = await vraag('/search/keyword', { query: woord });
+  const r = data.results ?? [];
+  return (r.find((x) => x.name?.toLowerCase() === woord.toLowerCase()) ?? r[0])?.id ?? null;
+}
+
+// Films of series via 'discover', met de voorwaarden van Zoek op maat. Twee bladzijden.
+export async function haalOpMaat(soort, params, bron = 'genre') {
+  const s = TMDB_SOORT[soort];
+  const vraagParams = { sort_by: 'popularity.desc', include_adult: 'false', 'vote_count.gte': s === 'movie' ? 80 : 30, ...params };
+  const paginas = await Promise.all([1, 2].map((page) => vraag(`/discover/${s}`, { ...vraagParams, page }).catch(() => ({ results: [] }))));
+  return paginas.flatMap((d) => d.results ?? []).map((r) => naarKandidaat(r, s, bron)).filter(Boolean);
+}
+
+// Wat lijkt op een voorbeeld: aanbevelingen en 'vergelijkbaar' van TMDB samen.
+export async function haalLijktOp(soort, tmdbId) {
+  const s = TMDB_SOORT[soort];
+  const [a, b] = await Promise.all(['recommendations', 'similar'].map((w) => vraag(`/${s}/${tmdbId}/${w}`).catch(() => ({ results: [] }))));
+  return [...(a.results ?? []), ...(b.results ?? [])].map((r) => naarKandidaat(r, s, 'zoals')).filter(Boolean);
+}

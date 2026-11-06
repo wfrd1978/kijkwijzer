@@ -1,7 +1,7 @@
 import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
-import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur, haalAfleveringen, haalGenres, haalNieuwOpDiensten, haalTopOpDiensten } from './tmdb.js';
+import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur, haalAfleveringen, haalGenres, haalNieuwOpDiensten, haalTopOpDiensten, zoekOnderwerp, haalOpMaat, haalLijktOp, dienstenParams } from './tmdb.js';
 import { kiesFavorieten, combineerTips } from './tips.js';
 import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, ZENDER_GIDS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
 import { WIELRENNEN, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
@@ -17,6 +17,7 @@ import { vanVandaag, ruimOudeDagenOp, dagSleutel } from './dagcache.js';
 import { nieuwsVoorJou } from './nieuws.js';
 import { SERIES, leesMotorKeuzes, zetMotorKeuzes, komendeMotorraces, isTraining, f1Volgen, zetF1Volgen } from './motorsport.js';
 import { bronVoor, inLiveVenster, vanVandaagNog, uitOpenLigaDB, uitEspn, vindStand, standTekst } from './live.js';
+import { SFEREN, SOORT_KEUZES, VOOR_WIE, PERIODES, maakVraag, genresVoor, periodeGrenzen, smaakUitOordeel, weegUitkomsten, begrepen } from './opmaat.js';
 import { nieuwVoorJou, kijktipsVanDag, GENRE_NAMEN, bekendeGenres, vulGenresAan } from './nieuw.js';
 import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
@@ -1349,7 +1350,8 @@ async function toonFilms() {
     ${schermKop('Mijn lijst', aantalTekst(titels.length) + ' · films en series')}
     <form class="films-zoek" id="films-zoek-form" role="search">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-      <input id="films-zoek" type="search" placeholder="Zoek of voeg een film of serie toe" autocomplete="off" enterkeyhint="search" value="${veilig(filmsZoek)}" aria-label="Zoek een film, serie of acteur" />
+      <input id="films-zoek" type="search" placeholder="Zoek een film of serie" autocomplete="off" enterkeyhint="search" value="${veilig(filmsZoek)}" aria-label="Zoek een film, serie of acteur" />
+      <a class="opmaat-knop" href="#/opmaat" aria-label="Zoek op maat: beschrijf wat je zoekt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg></a>
     </form>
     <a class="ontdek-link" id="ontdek-link" href="#/ontdekken">
       <span class="ontdek-icoon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></svg></span>
@@ -1445,6 +1447,167 @@ async function toonFilms() {
     segment.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === filmsTab)));
     tekenVak();
   });
+}
+
+// --- Zoek op maat: kiezen en beschrijven wat je zoekt ---
+
+// Wat je koos en vond blijft staan zolang de app open is, zodat 'terug' je bij je uitkomsten brengt.
+const opMaat = { keuzes: { soort: 'beide', voorWie: 'iedereen', sferen: [], periode: 'altijd', diensten: false }, tekst: '', zoals: null, uitkomst: null };
+
+function keuzeRij(naam, opties, gekozen, meer = false) {
+  return `<div class="keuzes klein" data-opmaat="${naam}"${meer ? ' data-meer' : ''}>${Object.entries(opties)
+    .map(([k, v]) => `<button type="button" class="keuze${(meer ? gekozen.includes(k) : k === gekozen) ? ' actief' : ''}" data-k="${k}">${veilig(v)}</button>`)
+    .join('')}</div>`;
+}
+
+function toonOpMaat() {
+  const nr = schermNr;
+  const k = opMaat.keuzes;
+  const heeftDiensten = eigenDiensten().length > 0;
+  app.innerHTML = `
+    <header class="kop">${terugKnop('#/films', 'Mijn lijst')}</header>
+    ${schermKop('Zoek op maat', 'Films en series')}
+    ${leesSleutel() ? '' : '<p class="leeg">Hiervoor heeft de app je TMDB-sleutel nodig. <a href="#/instellingen">Sleutel instellen</a></p>'}
+    <form class="opmaat" id="opmaat">
+      <p class="label opmaat-label">Wat</p>${keuzeRij('soort', SOORT_KEUZES, k.soort)}
+      <p class="label opmaat-label">Voor wie</p>${keuzeRij('voorWie', VOOR_WIE, k.voorWie)}
+      <p class="label opmaat-label">Sfeer</p>${keuzeRij('sferen', Object.fromEntries(Object.entries(SFEREN).map(([x, v]) => [x, v.naam])), k.sferen, true)}
+      <p class="label opmaat-label">Hoe nieuw</p>${keuzeRij('periode', PERIODES, k.periode)}
+      <p class="label opmaat-label">Zoals</p>
+      <div id="zoals-vak"></div>
+      <p class="label opmaat-label">Omschrijving</p>
+      <input class="opmaat-tekst" id="opmaat-tekst" type="text" autocomplete="off" enterkeyhint="search" value="${veilig(opMaat.tekst)}" placeholder="Bijv. kinderfilm, leuk om mee te kijken als ouders" />
+      ${heeftDiensten ? `<label class="opmaat-diensten"><input type="checkbox" id="opmaat-diensten"${k.diensten ? ' checked' : ''} /> Alleen bij mijn diensten</label>` : ''}
+      <button class="hoofdknop" type="submit">Zoek</button>
+    </form>
+    <div id="opmaat-uit"></div>`;
+
+  const tekenZoals = () => {
+    const vak = document.getElementById('zoals-vak');
+    vak.innerHTML = opMaat.zoals
+      ? `<button type="button" class="keuze actief zoals-gekozen" id="zoals-weg">${veilig(opMaat.zoals.titel)}${opMaat.zoals.jaar ? ` (${veilig(opMaat.zoals.jaar)})` : ''} ✕</button>`
+      : `<input class="opmaat-tekst" id="zoals-zoek" type="text" autocomplete="off" placeholder="Een titel die je goed vond, bijv. Toy Story" /><div class="keuzes klein" id="zoals-voorstel"></div>`;
+    document.getElementById('zoals-weg')?.addEventListener('click', () => {
+      opMaat.zoals = null;
+      tekenZoals();
+    });
+    const veld = document.getElementById('zoals-zoek');
+    if (!veld) return;
+    let wacht;
+    let voorstel = [];
+    veld.addEventListener('input', () => {
+      clearTimeout(wacht);
+      const term = veld.value.trim();
+      if (term.length < 2 || !leesSleutel()) return (document.getElementById('zoals-voorstel').innerHTML = '');
+      wacht = setTimeout(async () => {
+        voorstel = (await zoekTitels(term).catch(() => ({ titels: [] }))).titels.slice(0, 4);
+        const plek = document.getElementById('zoals-voorstel');
+        if (plek) plek.innerHTML = voorstel.map((t, i) => `<button type="button" class="keuze" data-zoals="${i}">${veilig(t.titel)}${t.jaar ? ` (${veilig(t.jaar)})` : ''}</button>`).join('');
+      }, 350);
+    });
+    document.getElementById('zoals-voorstel').addEventListener('click', (e) => {
+      const knop = e.target.closest('[data-zoals]');
+      if (!knop) return;
+      opMaat.zoals = voorstel[Number(knop.dataset.zoals)];
+      tekenZoals();
+    });
+  };
+  tekenZoals();
+
+  document.getElementById('opmaat').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-opmaat] [data-k]');
+    if (!knop) return;
+    const rij = knop.closest('[data-opmaat]');
+    const naam = rij.dataset.opmaat;
+    if ('meer' in rij.dataset) {
+      const lijst = k[naam];
+      k[naam] = lijst.includes(knop.dataset.k) ? lijst.filter((x) => x !== knop.dataset.k) : [...lijst, knop.dataset.k];
+      knop.classList.toggle('actief');
+    } else {
+      k[naam] = knop.dataset.k;
+      rij.querySelectorAll('.keuze').forEach((b) => b.classList.toggle('actief', b === knop));
+    }
+  });
+  document.getElementById('opmaat').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    document.activeElement?.blur();
+    opMaat.tekst = document.getElementById('opmaat-tekst').value;
+    k.diensten = Boolean(document.getElementById('opmaat-diensten')?.checked);
+    await zoekOpMaat(nr);
+  });
+  if (opMaat.uitkomst) tekenOpMaatUit();
+}
+
+// Zoeken bij TMDB en wegen met je eigen oordeel.
+async function zoekOpMaat(nr) {
+  const uitVak = document.getElementById('opmaat-uit');
+  if (!leesSleutel()) return;
+  uitVak.innerHTML = '<p class="bezig">Zoeken…</p>';
+  const vraag = maakVraag(opMaat.keuzes, opMaat.tekst);
+  try {
+    // 'zoals …' in de omschrijving: de eerste titel die TMDB daarbij vindt.
+    const zoals = opMaat.zoals ?? (vraag.zoalsTekst ? (await zoekTitels(vraag.zoalsTekst)).titels[0] ?? null : null);
+    const diensten = opMaat.keuzes.diensten ? eigenDiensten() : [];
+    const onderwerpen = (await Promise.all(vraag.woorden.map((w) => zoekOnderwerp(w).catch(() => null)))).filter(Boolean);
+    const grenzen = periodeGrenzen(vraag.periode);
+    const vragen = [];
+    for (const soort of vraag.soorten) {
+      const film = soort === 'film';
+      const genres = genresVoor(vraag, soort);
+      const basis = {
+        ...(diensten.length ? { ...dienstenParams(diensten), sort_by: 'popularity.desc' } : {}),
+        ...(grenzen.vanaf ? { [film ? 'primary_release_date.gte' : 'first_air_date.gte']: grenzen.vanaf } : {}),
+        ...(grenzen.tot ? { [film ? 'primary_release_date.lte' : 'first_air_date.lte']: grenzen.tot } : {}),
+        ...(vraag.voorWie === 'kinderen'
+          ? film
+            ? { without_genres: '27,80,10752' }
+            : { without_genres: '80,27,10768' }
+          : vraag.voorWie === 'volwassenen' && !vraag.sferen.includes('animatie')
+            ? { without_genres: '16,10751,10762' }
+            : {}),
+      };
+      const kinderGenres = vraag.voorWie === 'kinderen' ? (film ? '16|10751' : '16|10751|10762') : '';
+      const metGenres = genres.length ? genres.join('|') : kinderGenres;
+      vragen.push(haalOpMaat(soort, { ...basis, ...(metGenres ? { with_genres: metGenres } : {}) }, 'genre'));
+      if (onderwerpen.length) vragen.push(haalOpMaat(soort, { ...basis, with_keywords: onderwerpen.join('|'), 'vote_count.gte': 10 }, 'woord'));
+    }
+    if (zoals) vragen.push(haalLijktOp(zoals.soort, zoals.tmdbId));
+    const kandidaten = (await Promise.all(vragen.map((v) => v.catch(() => [])))).flat();
+    const titels = await alleTitels();
+    const genres = bekendeGenres();
+    const smaak = smaakUitOordeel(titels, (t) => genres[titelSleutel(t)]);
+    const uit = weegUitkomsten(kandidaten, vraag, { opLijst: new Set(titels.map(titelSleutel)), smaak, zoals });
+    if (nr !== schermNr) return;
+    opMaat.uitkomst = { titels: uit.slice(0, 24), uitleg: begrepen(vraag, zoals) };
+    tekenOpMaatUit();
+    document.getElementById('opmaat-uit')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (fout) {
+    if (nr !== schermNr) return;
+    uitVak.innerHTML =
+      fout instanceof SleutelFout
+        ? '<p class="leeg">TMDB accepteert je sleutel niet. <a href="#/instellingen">Plak hem opnieuw</a>.</p>'
+        : '<p class="leeg">Zoeken lukt nu niet. Heb je internet?</p>';
+  }
+}
+
+async function tekenOpMaatUit() {
+  const vak = document.getElementById('opmaat-uit');
+  const { titels, uitleg } = opMaat.uitkomst;
+  const opLijst = new Map((await alleTitels()).map((t) => [titelSleutel(t), t]));
+  if (!vak) return;
+  vak.innerHTML = `
+    <p class="opmaat-begrepen"><b>Gezocht op</b> ${veilig(uitleg || 'alles')}</p>
+    ${
+      titels.length
+        ? `${rasterHtml(titels, opLijst, (t) => veilig(t.reden || t.jaar || '') || '&nbsp;')}${BRON}`
+        : '<p class="leeg">Niets gevonden. Kies wat minder, of probeer andere woorden.</p>'
+    }`;
+  vak.querySelectorAll('.raster-titel').forEach((knop) =>
+    knop.addEventListener('click', () => {
+      const t = titels[Number(knop.dataset.i)];
+      toonBevestigen(t, opLijst.get(titelSleutel(t)), { naam: 'Zoek op maat', toon: () => toonOpMaat() });
+    })
+  );
 }
 
 // --- Ontdekken: eigen scherm, bereikbaar vanuit Mijn lijst ---
@@ -3514,11 +3677,11 @@ async function route() {
   document.querySelector('.balk a[data-plek="sport"]')?.toggleAttribute('hidden', !sportOpVandaag());
   if (location.hash === '#/sport' && !sportOpVandaag()) history.replaceState(null, '', '#/');
   const plek =
-    { '#/films': 'films', '#/ontdekken': 'ontdekken', '#/week': 'week', '#/sport': 'sport', '#/instellingen': 'instellingen', '#/instellingen/backup': 'instellingen' }[location.hash] || (titelId || acteurId ? 'films' : 'vandaag');
-  document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === (plek === 'ontdekken' ? 'films' : plek)));
+    { '#/films': 'films', '#/ontdekken': 'ontdekken', '#/opmaat': 'opmaat', '#/week': 'week', '#/sport': 'sport', '#/instellingen': 'instellingen', '#/instellingen/backup': 'instellingen' }[location.hash] || (titelId || acteurId ? 'films' : 'vandaag');
+  document.querySelectorAll('.balk a').forEach((a) => a.classList.toggle('actief', a.dataset.plek === (['ontdekken', 'opmaat'].includes(plek) ? 'films' : plek)));
   // Naar een ander tabblad onderin: een openstaande zoekterm vergeten, zodat je bij terugkomen je lijst ziet.
   // (Een titel of acteur openen vanuit het zoeken hoort bij Mijn lijst; dan blijft hij staan.)
-  if (!['films', 'ontdekken'].includes(plek)) {
+  if (!['films', 'ontdekken', 'opmaat'].includes(plek)) {
     filmsZoek = '';
     laatsteZoekterm = '';
   }
@@ -3530,6 +3693,7 @@ async function route() {
   else if (acteurId) toonActeur(Number(acteurId[1]));
   else if (plek === 'films') toonFilms();
   else if (plek === 'ontdekken') toonOntdekScherm();
+  else if (plek === 'opmaat') toonOpMaat();
   else toonVandaag();
 }
 
