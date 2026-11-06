@@ -925,21 +925,21 @@ async function toonWeek() {
 // --- Vandaag ---
 
 // Nieuw voor jou: één recent verschenen film of serie bij jouw diensten, in jouw smaak.
-// Drie tips in dezelfde opmaak als het sportnieuws: genummerd, de titel in de koppenletter.
+// Drie tips als posters naast elkaar: je ziet meteen iets van de film of serie, en het blok
+// heeft een eigen vorm naast de brede kaarten van sport en NPO.
 function nieuwVoorJouHtml(tips) {
-  return `<ol class="sportnieuws tiplijst">${tips
+  return `<ul class="tip-posters">${tips
     .map((t, i) => {
-      const genres = (t.genreIds ?? []).map((g) => GENRE_NAMEN[g]).filter(Boolean).slice(0, 2);
+      const genre = (t.genreIds ?? []).map((g) => GENRE_NAMEN[g]).find(Boolean);
+      const beeld = veiligeUrl(posterUrl(t.poster, 'w342'));
       return `
-      <li><button class="nieuws-regel" data-tip="${i}">
-        <span class="nieuws-nr" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span>
-        <span class="nieuws-wat">
-          <span class="nieuws-meta"><b class="nieuws-bron">${t.soort === 'serie' ? 'Serie' : 'Film'}</b>${t.jaar ? ` · ${veilig(t.jaar)}` : ''}${genres.length ? ` · ${veilig(genres.join(', '))}` : ''}</span>
-          <strong>${veilig(t.titel)}</strong>
-        </span>
+      <li><button class="tip-poster" data-tip="${i}">
+        <span class="tip-beeld">${beeld ? `<img src="${beeld}" alt="" loading="lazy" />` : ''}<span class="tip-soort">${t.soort === 'serie' ? 'Serie' : 'Film'}</span></span>
+        <strong>${veilig(t.titel)}</strong>
+        <span class="tip-meta">${[genre, t.jaar].filter(Boolean).map(veilig).join(' · ')}</span>
       </button></li>`;
     })
-    .join('')}</ol>`;
+    .join('')}</ul>`;
 }
 
 // Sport volgen aan of uit (in Instellingen, bij Sport). Uit: nergens sport in de app (geen Sport-knop,
