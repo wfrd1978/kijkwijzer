@@ -14,6 +14,7 @@ import { weekDagen, weekTekst } from './vandaag.js';
 import { kanaalVoor } from './espn.js';
 import { haalExtraWedstrijden, alBekend, EXTRA_ZENDERS } from './beker.js';
 import { vanVandaag, ruimOudeDagenOp, dagSleutel } from './dagcache.js';
+import { nieuwsVoorJou } from './nieuws.js';
 import { bronVoor, inLiveVenster, vanVandaagNog, uitOpenLigaDB, uitEspn, vindStand, standTekst } from './live.js';
 import { nieuwVoorJou, kijktipsVanDag, GENRE_NAMEN } from './nieuw.js';
 import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
@@ -950,6 +951,10 @@ async function toonVandaag() {
         ? `<section class="vandaag-blok">
              <h2 class="vak-kop">Sport vandaag</h2>
              <div id="sport-vandaag"><p class="bezig">Ophalen…</p></div>
+           </section>
+           <section class="vandaag-blok" id="sportnieuws-blok" hidden>
+             <h2 class="vak-kop">Sportnieuws</h2>
+             <div id="sportnieuws"></div>
            </section>`
         : leesSleutel() && eigen.length
           ? `<section class="vandaag-blok" id="kijktips-blok" hidden>
@@ -1045,7 +1050,13 @@ async function toonVandaag() {
     document.getElementById('afleveringen').innerHTML = html;
     document.getElementById('afleveringen-blok').hidden = !html;
   };
-  await Promise.allSettled([sportOpVandaag() ? sportBlok() : null, tipsBlokken(), npoBlok(), afleveringenBlok()]);
+  const nieuwsBlok = async () => {
+    const html = await sportnieuwsHtml();
+    if (nr !== schermNr || !html) return;
+    document.getElementById('sportnieuws').innerHTML = html;
+    document.getElementById('sportnieuws-blok').hidden = false;
+  };
+  await Promise.allSettled([sportOpVandaag() ? sportBlok() : null, sportOpVandaag() ? nieuwsBlok() : null, tipsBlokken(), npoBlok(), afleveringenBlok()]);
 }
 
 // Vanavond op de NPO: één grote tip (iets van je lijst gaat voor), en nog twee kleinere.
@@ -1659,6 +1670,63 @@ function embleem(p, klasse = 'embleem') {
 }
 
 // Grote kaart voor één wedstrijd, in de stijl van Vanavond op de NPO: beide emblemen groot in beeld.
+// --- Sportnieuws: koppen van NOS Sport (elk uur klaargezet door GitHub, scripts/nieuws.mjs) ---
+// Volgens de voorwaarden van de NOS alleen de kop, letterlijk, met duidelijke bronvermelding en een
+// link naar het hele bericht bij de NOS.
+let nieuwsGeladen = null; // { op, data }: hooguit 10 minuten bewaard, nieuws moet vers zijn
+async function haalNieuws() {
+  if (nieuwsGeladen && Date.now() - nieuwsGeladen.op < 10 * 60000) return nieuwsGeladen.data;
+  const antwoord = await fetch(`${import.meta.env.BASE_URL}nieuws.json`, { cache: 'no-cache' });
+  if (!antwoord.ok) throw new Error(`status ${antwoord.status}`);
+  const data = await antwoord.json();
+  nieuwsGeladen = { op: Date.now(), data };
+  return data;
+}
+
+function nieuwsTijd(iso) {
+  const d = new Date(iso);
+  const dag = nlDagVan({ start: iso });
+  const tijd = d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
+  if (dag === vandaag()) return tijd;
+  const gisteren = new Date(`${vandaag()}T12:00:00Z`);
+  gisteren.setUTCDate(gisteren.getUTCDate() - 1);
+  if (dag === gisteren.toISOString().slice(0, 10)) return `gisteren ${tijd}`;
+  return `${d.toLocaleDateString('nl-NL', { weekday: 'long', timeZone: 'Europe/Amsterdam' })} ${tijd}`;
+}
+
+async function sportnieuwsHtml() {
+  let data;
+  try {
+    data = await haalNieuws();
+  } catch {
+    return '';
+  }
+  // Je clubs als namen: uit het voetbalschema (clubs staan daar met korte en volledige naam).
+  const keuzes = leesVoetbalKeuzes();
+  const schema = keuzes.clubs.length ? await haalVoetbalSchema() : null;
+  const ploegen = new Map((schema?.wedstrijden ?? []).flatMap((w) => [w.thuis, w.uit]).map((p) => [p.id, p]));
+  const clubs = keuzes.clubs.map((id) => ploegen.get(id)).filter(Boolean);
+  const items = nieuwsVoorJou(data.items ?? [], { clubs, alles: keuzes.alles });
+  if (!items.length) return '';
+  const ICOON = { voetbal: '⚽', f1: '🏁', wielrennen: '🚴', sport: '🏅' };
+  return `<ul class="sportnieuws">${items
+    .map((x) => {
+      const link = veiligeUrl(x.link);
+      if (!link || !/^https:\/\/nos\.nl\//.test(link)) return '';
+      return `
+      <li><a class="nieuws-regel" href="${link}" target="_blank" rel="noopener noreferrer">
+        <span class="nieuws-icoon" aria-hidden="true">${ICOON[x.soort] ?? '🏅'}</span>
+        <span class="nieuws-wat">
+          <strong>${veilig(x.titel)}</strong>
+          <span class="zacht"><b class="nieuws-bron">NOS</b> · ${veilig(nieuwsTijd(x.tijd))}${x.waarom ? ` · ${veilig(x.waarom)}` : ''}</span>
+        </span>
+        <span class="nieuws-pijl" aria-hidden="true">›</span>
+      </a></li>`;
+    })
+    .join('')}</ul>
+    <p class="bron">Koppen van NOS Sport, afgestemd op wat jij volgt. Tik om het hele bericht bij de NOS te lezen.</p>`;
+}
+
 // --- Live standen (aan/uit in Instellingen bij Sport) ---
 const liveAan = () => onthoud('liveStanden', 'aan', ['aan', 'uit']) === 'aan';
 const liveWedstrijden = new Map(); // id → wedstrijd, voor de plekken die nu op het scherm staan

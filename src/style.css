@@ -786,3 +786,14 @@ p.rij { display: block; }
 @keyframes live-puls { 50% { opacity: 0.6; } }
 .live-stand:not(.is-live) { color: var(--zacht); font-size: 0.95rem; }
 .kijktip-tekst .live-stand { color: #fff; }
+
+/* Sportnieuws (koppen van NOS Sport) */
+.sportnieuws { list-style: none; margin: 0; padding: 0; background: var(--vlak); border-radius: 16px; overflow: hidden; }
+.sportnieuws li + li { border-top: 1px solid var(--lijn); }
+.nieuws-regel { display: flex; align-items: center; gap: 12px; padding: 12px 14px; color: var(--tekst); text-decoration: none; }
+.nieuws-icoon { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: var(--bg); font-size: 1.15rem; }
+.nieuws-wat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.nieuws-wat strong { font-weight: 600; line-height: 1.3; }
+.nieuws-wat .zacht { font-size: 0.82rem; }
+.nieuws-bron { color: var(--accent); font-weight: 700; letter-spacing: 0.03em; }
+.nieuws-pijl { flex: none; color: var(--zacht); font-size: 1.3rem; }
