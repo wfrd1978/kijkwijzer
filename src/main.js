@@ -6,7 +6,7 @@ import { kiesFavorieten, combineerTips } from './tips.js';
 import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, ZENDER_GIDS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
 import { WIELRENNEN, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
 import {
-  COMPETITIES, COMPETITIE_PER_NAAM, VOETBAL_GECONTROLEERD, leesVoetbalKeuzes, zetVoetbalKeuzes, mijnWedstrijden, ploegenPerCompetitie,
+  COMPETITIES, COMPETITIE_PER_NAAM, leesVoetbalKeuzes, zetVoetbalKeuzes, mijnWedstrijden, ploegenPerCompetitie,
   perDag, weekStart, aftrap, dagNaam, haalInterland, VOLG_LANDEN,
 } from './voetbal.js';
 import { uitnodigingTekst, deel } from './delen.js';
@@ -889,13 +889,8 @@ async function weekHtml(titels, stand) {
     });
   return `
     ${telling.length ? `<div class="week-telling">${telling.map(([n, een, meer]) => `<span><strong>${n}</strong> ${n === 1 ? een : meer}</span>`).join('')}</div>` : ''}
-    ${voorbij.length ? `<p class="week-voorbij zacht">${voorbij.length === 1 ? 'Maandag is' : `Maandag tot en met ${new Date(`${voorbij.at(-1)}T12:00:00Z`).toLocaleDateString('nl-NL', { weekday: 'long', timeZone: 'UTC' })} zijn`} voorbij.</p>` : ''}
     ${kaarten.join('')}
-    <p class="bron">${
-      metSport
-        ? 'Alleen wat jij volgt: nieuwe afleveringen en NPO-uitzendingen van titels op je lijst, en in Sport je clubs en competities, Oranje, Formule 1 (kwalificatie en race) en wielrennen.'
-        : 'Nieuwe afleveringen en NPO-uitzendingen van titels op je lijst. Sport staat uit; aanzetten kan in Instellingen.'
-    } Tijden in Nederlandse tijd; afleveringen volgens TMDB.</p>`;
+    ${metSport ? '' : '<p class="bron">Sport staat uit; aanzetten kan in Instellingen.</p>'}`;
 }
 
 // --- Deze week: eigen scherm, maandag tot en met zondag ---
@@ -1239,19 +1234,13 @@ let filmsZoek = '';
 
 function toonLijstTab(vak, welke, titels, naWijziging) {
   vak.innerHTML = `
-    <p class="lijst-uitleg">${
-      welke === 'wil'
-        ? 'Wat je nog wilt zien. Gezien? Tik op <b>✓ Gezien</b> en geef meteen sterren.'
-        : 'Wat je hebt gezien. Tik op de sterren om je oordeel te geven of te veranderen.'
-    }</p>
     <div class="lijst-regel">
-      <label class="sorteer">Toon
+      <label class="sorteer"><span class="verborgen">Toon</span>
         <select id="soort">${Object.entries(SOORTEN).map(([k, v]) => `<option value="${k}"${k === soort ? ' selected' : ''}>${v}</option>`).join('')}</select>
       </label>
-      <label class="sorteer">Sorteer
+      <label class="sorteer"><span class="verborgen">Sorteer</span>
         <select id="sorteer">${Object.entries(SORTERINGEN).map(([k, v]) => `<option value="${k}"${k === sortering ? ' selected' : ''}>${v}</option>`).join('')}</select>
       </label>
-      <span class="aantal" id="aantal"></span>
     </div>
     <div class="categorieen" id="categorieen" role="group" aria-label="Categorie"></div>
     <ul class="lijst" id="lijst"></ul>
@@ -1281,7 +1270,6 @@ function toonLijstTab(vak, welke, titels, naWijziging) {
               ? 'Nog niets op Wil ik zien. Zoek hierboven een film of serie, of kijk bij Ontdek iets nieuws.'
               : 'Nog niets gezien. Tik bij Wil ik zien op ✓ Gezien, of kies Al gezien als je iets toevoegt.'
         }</li>`;
-    document.getElementById('aantal').textContent = aantalTekst(zichtbaar.length);
   };
   teken();
   lijstOpnieuw = () => vak.isConnected && document.getElementById('categorieen') && teken();
@@ -1360,7 +1348,7 @@ async function toonFilms() {
     </form>
     <a class="ontdek-link" id="ontdek-link" href="#/ontdekken">
       <span class="ontdek-icoon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></svg></span>
-      <span class="ontdek-tekst"><strong>Ontdek iets nieuws</strong><span>Trending, bij jouw diensten en tips voor jou</span></span>
+      <span class="ontdek-tekst"><strong>Ontdek iets nieuws</strong><span>Trending en tips voor jou</span></span>
       <span class="ontdek-posters" id="ontdek-posters" aria-hidden="true"></span>
       <span class="ontdek-pijl" aria-hidden="true">›</span>
     </a>
@@ -2000,7 +1988,7 @@ function wielrennenHtml(mijn) {
       </div>
     </div>
     <ul class="koersen">${komend.slice(1).map(regel).join('')}</ul>
-    <p class="bron">Data: UCI WorldTour-kalender ${WIELRENNEN.seizoen}. Zenders gecontroleerd in ${veilig(WIELRENNEN.gecontroleerd)}; uitzendrechten kunnen nog veranderen.</p>`;
+    <p class="bron">Bron: UCI WorldTour-kalender ${WIELRENNEN.seizoen}</p>`;
 }
 
 // Een bestand dat GitHub elke ochtend klaarzet; één keer per dag opgehaald en daarna bewaard.
@@ -2088,16 +2076,6 @@ async function extraOphalen(keuzes, sleutel) {
   }
   // Staat er net een sportscherm open, dan bijwerken.
   if ((document.getElementById('sport-vandaag') || document.getElementById('voetbal') || document.getElementById('week'))) route();
-}
-
-// Hoe het aanvullen met beker en Europa League ervoor staat, zodat je ziet of het is gelukt.
-function extraTekst() {
-  const x = leesExtra();
-  if (extraBezig) return 'Beker en Europa League van je clubs: wordt nu opgehaald…';
-  if (!x?.op) return 'Beker en Europa League van je clubs: nog niet opgehaald.';
-  const tijd = new Date(x.op).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
-  const deels = x.clubs && x.gelukt < x.clubs ? ` (${x.gelukt} van ${x.clubs} clubs; de rest volgt bij de volgende keer openen)` : '';
-  return `Beker en Europa League van je clubs via TheSportsDB, bijgewerkt ${tijd}${deels}.`;
 }
 
 // Naam en zenders van de competitie van een wedstrijd (ook voor de aanvullende wedstrijden).
@@ -2232,8 +2210,7 @@ async function toonVoetbal(nr, mijn) {
         : `<p class="leeg">Geen wedstrijden ${voetbalWeek === 'deze' ? 'meer deze week' : 'volgende week'} bij jouw keuzes.</p>`
     }
     <div class="oranje-onder">${oranjeHtml}</div>
-    <p class="bron">${extraTekst()}</p>
-    <p class="bron">Tijden in Nederlandse tijd. Schema van football-data.org (Europa League, Conference League, Nations League, EK en WK via TheSportsDB, zo nodig OpenLigaDB), bijgewerkt ${veilig(new Date(schema.op).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }))}. Interlands via TheSportsDB. Zenders gecontroleerd in ${veilig(VOETBAL_GECONTROLEERD)}; Premier League en Bundesliga gaan mogelijk naar Videoland.</p>`;
+    <p class="bron">Bron: football-data.org en TheSportsDB · bijgewerkt ${veilig(new Date(schema.op).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }))}</p>`;
   document.getElementById('voetbal-week').addEventListener('click', (e) => {
     const knop = e.target.closest('[data-week]');
     if (!knop || knop.dataset.week === voetbalWeek) return;
@@ -2321,7 +2298,7 @@ async function toonSport() {
                .join('')}</ul>`
           : ''
       }
-      <p class="bron">Alle tijden in Nederlandse tijd. Schema van Jolpica F1; zenders gecontroleerd in ${veilig(F1_ZENDERS.gecontroleerd)}.</p>`
+      <p class="bron">Bron: Jolpica F1</p>`
     : '<p class="leeg">Het seizoen zit erop. Het schema voor volgend jaar verschijnt hier zodra het bekend is.</p>';
 }
 
@@ -2371,7 +2348,7 @@ async function toonMotorsport(nr) {
         </section>`;
     })
     .join('')}
-    <p class="bron">Alle tijden in Nederlandse tijd. Kalenders van TheSportsDB, elke nacht bijgewerkt. Zenders onder voorbehoud.</p>`;
+    <p class="bron">Bron: TheSportsDB</p>`;
 }
 
 // --- Eén acteur ---
@@ -2851,7 +2828,7 @@ async function toonInstellingen({ welkom = null } = {}) {
           <input id="naam-veld" value="${veilig(leesNaam())}" maxlength="40" placeholder="Je voornaam" autocomplete="given-name" />
         </label>
       </div>
-      <p class="zacht onder-kaart">Alleen op deze telefoon en in je backup. De app gebruikt hem om je te begroeten.</p>
+      <p class="zacht onder-kaart uitleg">Alleen op deze telefoon en in je backup. De app gebruikt hem om je te begroeten.</p>
     </section>
 
     <section class="blok">
@@ -2862,7 +2839,7 @@ async function toonInstellingen({ welkom = null } = {}) {
         sleutel
           ? `<details class="uitklap" id="diensten-uitklap">
                <summary><span class="uitklap-kop">Streamingdiensten</span><span class="zacht uitklap-stand" id="diensten-stand">${veilig(dienstenStand())}</span></summary>
-               <p class="zacht uitklap-uitleg"><b>Abonnement</b> als je hem hebt, <b>Tonen</b> om hem bij een titel te zien, <b>Verbergen</b> als hij je niet interesseert.</p>
+               <p class="zacht uitklap-uitleg uitleg"><b>Abonnement</b> als je hem hebt, <b>Tonen</b> om hem bij een titel te zien, <b>Verbergen</b> als hij je niet interesseert.</p>
                <div id="diensten-keuze"><p class="zacht">Diensten ophalen…</p></div>
                <p class="zacht klein nieuw-uitleg">Eén keer per dag kijkt de app of titels op Wil ik zien nieuw bij je abonnementen te zien zijn. Je ziet dat op Vandaag.</p>
                <button class="tweede-knop" id="nieuw-nu">Nu controleren</button>
@@ -2874,7 +2851,7 @@ async function toonInstellingen({ welkom = null } = {}) {
       <div data-groep="tv">
       <details class="uitklap" id="tv-genres-uitklap">
         <summary><span class="uitklap-kop">Tv-tips: genres</span><span class="zacht uitklap-stand" id="tv-genres-stand">${veilig(tvStand('genres'))}</span></summary>
-        <p class="zacht uitklap-uitleg">Daar stemt Vanavond op de NPO de tips op af. Nieuws en jeugd worden nooit een tip.</p>
+        <p class="zacht uitklap-uitleg uitleg">Daar stemt Vanavond op de NPO de tips op af. Nieuws en jeugd worden nooit een tip.</p>
         <div class="keuzes" id="tv-genres">${Object.entries(TV_GENRES)
           .map(([k, g]) => `<button class="keuze${leesTvVoorkeuren().genres.includes(k) ? ' actief' : ''}" data-genre="${k}">${veilig(g.naam)}</button>`)
           .join('')}</div>
@@ -2891,21 +2868,21 @@ async function toonInstellingen({ welkom = null } = {}) {
       <h2>Sport</h2>
       <div class="kaart">
       <div data-groep="sportvandaag" class="rij">
-        <span><span class="rij-kop">Sport volgen</span><span class="zacht rij-stand" id="sport-stand">${sportStand()}</span></span>
+        <span><span class="rij-kop">Sport volgen</span><span class="zacht rij-stand uitleg" id="sport-stand">${sportStand()}</span></span>
         <div class="keuzes schakelaar" id="vandaag-sport">
           <button class="keuze${sportOpVandaag() ? ' actief' : ''}" data-sport="aan">Aan</button>
           <button class="keuze${sportOpVandaag() ? '' : ' actief'}" data-sport="uit">Uit</button>
         </div>
       </div>
       <div data-groep="sportnieuws" class="rij">
-        <span><span class="rij-kop">Sportnieuws</span><span class="zacht rij-stand">Drie koppen van NOS Sport op Vandaag</span></span>
+        <span><span class="rij-kop">Sportnieuws</span></span>
         <div class="keuzes schakelaar" id="sportnieuws-keuze">
           <button class="keuze${sportnieuwsAan() ? ' actief' : ''}" data-nieuws-keuze="aan">Aan</button>
           <button class="keuze${sportnieuwsAan() ? '' : ' actief'}" data-nieuws-keuze="uit">Uit</button>
         </div>
       </div>
       <div data-groep="live" class="rij">
-        <span><span class="rij-kop">Live standen</span><span class="zacht rij-stand">Tijdens een wedstrijd elke minuut de stand</span></span>
+        <span><span class="rij-kop">Live standen</span></span>
         <div class="keuzes schakelaar" id="live-standen">
           <button class="keuze${liveAan() ? ' actief' : ''}" data-live-keuze="aan">Aan</button>
           <button class="keuze${liveAan() ? '' : ' actief'}" data-live-keuze="uit">Uit</button>
@@ -2914,7 +2891,7 @@ async function toonInstellingen({ welkom = null } = {}) {
       <div data-groep="sportzenders">
       <details class="uitklap" id="sportzenders-uitklap">
         <summary><span class="uitklap-kop">Sportzenders</span><span class="zacht uitklap-stand" id="sportzenders-stand">${veilig(leesSportzenders().join(', ') || 'Nog niets gekozen')}</span></summary>
-        <p class="zacht uitklap-uitleg">Dan laat Sport zien wat jij live kunt volgen. NOS valt onder de gewone NPO-zenders.</p>
+        <p class="zacht uitklap-uitleg uitleg">Dan laat Sport zien wat jij live kunt volgen. NOS valt onder de gewone NPO-zenders.</p>
         <div class="keuzes" id="sportzenders">${SPORTZENDERS.map(
           (z) => `<button class="keuze${leesSportzenders().includes(z) ? ' actief' : ''}" data-zender="${z}" aria-pressed="${leesSportzenders().includes(z)}">${z}</button>`
         ).join('')}</div>
@@ -2923,7 +2900,7 @@ async function toonInstellingen({ welkom = null } = {}) {
       <div data-groep="motorsport">
       <details class="uitklap" id="motorsport-uitklap">
         <summary><span class="uitklap-kop">Motorsport</span><span class="zacht uitklap-stand" id="motorsport-stand">${veilig(motorStand())}</span></summary>
-        <p class="zacht uitklap-uitleg">Welke raceklassen volg je? Die staan dan in Sport, op Vandaag en in Deze week.</p>
+        <p class="zacht uitklap-uitleg uitleg">Welke raceklassen volg je? Die staan dan in Sport, op Vandaag en in Deze week.</p>
         <div class="keuzes" id="motorsport-keuze">${[['f1', { naam: 'Formule 1' }], ...Object.entries(SERIES)]
           .map(([k, x]) => {
             const aan = k === 'f1' ? f1Volgen() : leesMotorKeuzes().includes(k);
@@ -2939,12 +2916,12 @@ async function toonInstellingen({ welkom = null } = {}) {
       <div data-groep="voetbal">
       <details class="uitklap" id="clubs-uitklap">
         <summary><span class="uitklap-kop">Voetbalclubs</span><span class="zacht uitklap-stand" id="clubs-stand">${leesVoetbalKeuzes().clubs.length ? `${leesVoetbalKeuzes().clubs.length} gekozen` : 'Nog geen clubs gekozen'}</span></summary>
-        <p class="zacht uitklap-uitleg">Van je clubs zie je in Sport alle wedstrijden, in elke competitie.</p>
+        <p class="zacht uitklap-uitleg uitleg">Van je clubs zie je in Sport alle wedstrijden, in elke competitie.</p>
         <div id="clubs-keuze"><p class="zacht">Clubs ophalen…</p></div>
       </details>
       <details class="uitklap" id="competities-uitklap">
         <summary><span class="uitklap-kop">Hele competities</span><span class="zacht uitklap-stand" id="competities-stand">${veilig(competitiesStand())}</span></summary>
-        <p class="zacht uitklap-uitleg">Zet een competitie aan om er álle wedstrijden van te zien.</p>
+        <p class="zacht uitklap-uitleg uitleg">Zet een competitie aan om er álle wedstrijden van te zien.</p>
         <div class="keuzes" id="voetbal-alles">${Object.entries(COMPETITIES)
           .filter(([, x]) => !x.landen)
           .map(([c, x]) => `<button class="keuze${leesVoetbalKeuzes().alles.includes(c) ? ' actief' : ''}" data-competitie="${c}">Alles ${veilig(x.naam)}</button>`)
@@ -2952,7 +2929,7 @@ async function toonInstellingen({ welkom = null } = {}) {
       </details>
       <details class="uitklap" id="landen-uitklap">
         <summary><span class="uitklap-kop">Landen en toernooien</span><span class="zacht uitklap-stand" id="landen-stand">${veilig(landenStand())}</span></summary>
-        <p class="zacht uitklap-uitleg">Van je landen zie je de eerstvolgende interland, ook oefen- en kwalificatieduels.</p>
+        <p class="zacht uitklap-uitleg uitleg">Van je landen zie je de eerstvolgende interland, ook oefen- en kwalificatieduels.</p>
         <div class="keuzes klein" id="voetbal-landen">${Object.entries(VOLG_LANDEN)
           .map(([c, x]) => `<button class="keuze${leesVoetbalKeuzes().landen.includes(c) ? ' actief' : ''}" data-land="${c}">${veilig(x.naam)}</button>`)
           .join('')}</div>
@@ -2990,7 +2967,7 @@ async function toonInstellingen({ welkom = null } = {}) {
             .map(([k, naam]) => `<button class="keuze${k === weergave() ? ' actief' : ''}" data-weergave="${k}">${naam}</button>`)
             .join('')}
         </div>
-        <p class="zacht klein">Donker 's avonds: van 20:00 tot 7:00 donker, en altijd als je iPhone op donker staat.</p>
+        <p class="zacht klein uitleg">Donker 's avonds: van 20:00 tot 7:00 donker, en altijd als je iPhone op donker staat.</p>
       </div>
     </section>
 
