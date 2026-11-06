@@ -924,18 +924,21 @@ async function toonWeek() {
 // --- Vandaag ---
 
 // Nieuw voor jou: één recent verschenen film of serie bij jouw diensten, in jouw smaak.
-function nieuwVoorJouHtml(t) {
-  const beeld = veiligeUrl(posterUrl(t.achtergrond || t.poster, t.achtergrond ? 'w780' : 'w342'));
-  const genres = (t.genreIds ?? []).map((g) => GENRE_NAMEN[g]).filter(Boolean).slice(0, 2);
-  return `
-    <button class="kijktip" id="nieuw-voor-jou-tip">
-      ${beeld ? `<img src="${beeld}" alt="" loading="lazy" />` : ''}
-      <div class="kijktip-tekst">
-        <span class="kijktip-label">Nieuw bij jouw diensten${genres.length ? ` · ${veilig(genres.join(', '))}` : ''}</span>
-        <strong>${veilig(t.titel)}</strong>
-        <span>${soortJaar(t)}</span>
-      </div>
-    </button>`;
+// Drie tips in dezelfde opmaak als het sportnieuws: genummerd, de titel in de koppenletter.
+function nieuwVoorJouHtml(tips) {
+  return `<ol class="sportnieuws tiplijst">${tips
+    .map((t, i) => {
+      const genres = (t.genreIds ?? []).map((g) => GENRE_NAMEN[g]).filter(Boolean).slice(0, 2);
+      return `
+      <li><button class="nieuws-regel" data-tip="${i}">
+        <span class="nieuws-nr" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span>
+        <span class="nieuws-wat">
+          <span class="nieuws-meta"><b class="nieuws-bron">${t.soort === 'serie' ? 'Serie' : 'Film'}</b>${t.jaar ? ` · ${veilig(t.jaar)}` : ''}${genres.length ? ` · ${veilig(genres.join(', '))}` : ''}</span>
+          <strong>${veilig(t.titel)}</strong>
+        </span>
+      </button></li>`;
+    })
+    .join('')}</ol>`;
 }
 
 // Sport volgen aan of uit (in Instellingen, bij Sport). Uit: nergens sport in de app (geen Sport-knop,
@@ -1078,13 +1081,15 @@ async function toonVandaag() {
         });
       }
     }
-    const tip = await nieuwVoorJou({ titels, diensten: eigen, dag: vandaag(), haalGenres, haalNieuw: haalNieuwOpDiensten }).catch(() => null);
-    if (nr === schermNr && tip) {
-      document.getElementById('nieuw-voor-jou').innerHTML = nieuwVoorJouHtml(tip);
+    const nieuweTips = await nieuwVoorJou({ titels, diensten: eigen, dag: vandaag(), haalGenres, haalNieuw: haalNieuwOpDiensten }).catch(() => []);
+    if (nr === schermNr && nieuweTips?.length) {
+      const vak = document.getElementById('nieuw-voor-jou');
+      vak.innerHTML = nieuwVoorJouHtml(nieuweTips);
       document.getElementById('nieuw-voor-jou-blok').hidden = false;
-      document.getElementById('nieuw-voor-jou-tip').addEventListener('click', () =>
-        toonBevestigen(tip, null, { naam: 'Vandaag', toon: () => toonVandaag() })
-      );
+      vak.addEventListener('click', (e) => {
+        const knop = e.target.closest('[data-tip]');
+        if (knop) toonBevestigen(nieuweTips[Number(knop.dataset.tip)], null, { naam: 'Vandaag', toon: () => toonVandaag() });
+      });
     }
   };
   const npoBlok = async () => {

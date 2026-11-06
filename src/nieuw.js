@@ -47,6 +47,14 @@ export function kiesVanDag(kandidaten, opLijst, dag, stand = { dag: '', keuze: n
   return { dag, keuze, getoond: keuze ? [titelSleutel(keuze), ...(stand.getoond ?? [])].slice(0, 60) : stand.getoond ?? [] };
 }
 
+// Zoals kiesVanDag, maar een paar tips tegelijk. Wat je intussen op je lijst zette, valt weg.
+export function kiesMeerVanDag(kandidaten, opLijst, dag, stand = { dag: '', keuzes: [], getoond: [] }, aantal = 3) {
+  if (stand.dag === dag && stand.keuzes?.length) return { ...stand, keuzes: stand.keuzes.filter((t) => !opLijst.has(titelSleutel(t))) };
+  const getoond = new Set(stand.getoond ?? []);
+  const keuzes = kandidaten.filter((t) => !opLijst.has(titelSleutel(t)) && !getoond.has(titelSleutel(t))).slice(0, aantal);
+  return { dag, keuzes, getoond: [...keuzes.map(titelSleutel), ...(stand.getoond ?? [])].slice(0, 90) };
+}
+
 // Alles samen, met wat er bewaard wordt: de genres per titel (blijvend) en de keuze van vandaag.
 // De genres die jij het vaakst hoog waardeert of wilt zien, per soort. De genres per titel
 // worden één keer opgehaald en bewaard.
@@ -130,10 +138,11 @@ export async function kijktipsVanDag({ titels, diensten, dag, haalGenres, haalTo
   return tips;
 }
 
+// Drie tips per dag (om en om film en serie), de hele dag dezelfde.
 export async function nieuwVoorJou({ titels, diensten, dag, haalGenres, haalNieuw }) {
-  const stand = lees('nieuwVoorJou', { dag: '', keuze: null, getoond: [] });
+  const stand = lees('nieuwVoorJou', { dag: '', keuzes: [], getoond: [] });
   const opLijst = new Set(titels.map(titelSleutel));
-  if (stand.dag === dag && stand.keuze && !opLijst.has(titelSleutel(stand.keuze))) return stand.keuze;
+  if (stand.dag === dag && stand.keuzes?.length) return kiesMeerVanDag([], opLijst, dag, stand).keuzes;
 
   const genres = await smaakGenres(titels, haalGenres);
   const vanaf = new Date(`${dag}T12:00:00Z`);
@@ -145,7 +154,7 @@ export async function nieuwVoorJou({ titels, diensten, dag, haalGenres, haalNieu
   const kandidaten = omEnOm(films, series);
   // De dagen wisselen: op even dagen begint het met een serie.
   if (Math.floor(Date.parse(`${dag}T12:00:00Z`) / 86400000) % 2) kandidaten.reverse();
-  const nieuw = kiesVanDag(kandidaten, opLijst, dag, stand);
+  const nieuw = kiesMeerVanDag(kandidaten, opLijst, dag, stand);
   zet('nieuwVoorJou', nieuw);
-  return nieuw.keuze;
+  return nieuw.keuzes;
 }

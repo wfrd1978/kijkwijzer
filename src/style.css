@@ -885,3 +885,6 @@ p.rij { display: block; }
 body:not(.welkom-modus) .uitleg { display: none; }
 .verborgen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .lijst-regel { margin-top: 10px; }
+
+/* Nieuw voor jou: dezelfde lijst als het sportnieuws, maar met knoppen */
+.tiplijst .nieuws-regel { width: 100%; background: none; border: 0; text-align: left; font: inherit; cursor: pointer; }
