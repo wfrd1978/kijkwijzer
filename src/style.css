@@ -919,3 +919,6 @@ body:not(.welkom-modus) .uitleg { display: none; }
 .opmaat .hoofdknop { margin-top: 16px; }
 .opmaat-begrepen { margin: 28px 0 12px; font-size: 0.85rem; color: var(--zacht); }
 .opmaat-begrepen b { color: var(--tekst); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; margin-right: 4px; }
+
+/* Gestopt: een klein label in Mijn lijst */
+.status-gestopt { color: var(--zacht) !important; margin-right: 6px; }

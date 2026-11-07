@@ -48,3 +48,15 @@ describe('vraag en wegen', () => {
     expect(periodeGrenzen('klassiek', new Date('2026-11-06T12:00:00Z'))).toEqual({ tot: '2006-11-06' });
   });
 });
+
+describe('Gestopt als oordeel', () => {
+  it('telt tegen, behalve als je hem toch 4 of 5 sterren gaf', () => {
+    const genres = { 1: [27], 2: [99] };
+    const s = smaakUitOordeel(
+      [{ tmdbId: 1, soort: 'film', status: 'Gestopt', sterren: 0 }, { tmdbId: 2, soort: 'film', status: 'Gestopt', sterren: 4 }],
+      (t) => genres[t.tmdbId]
+    );
+    expect([...s.slecht.keys()]).toEqual([27]);
+    expect([...s.goed.keys()]).toEqual([99]);
+  });
+});

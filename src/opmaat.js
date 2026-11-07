@@ -117,14 +117,15 @@ export function periodeGrenzen(periode, nu = new Date()) {
   return {};
 }
 
-// Wat je goed en slecht vond, als genres: 4 of 5 sterren telt voor, 1 of 2 sterren tegen.
+// Wat je goed en slecht vond, als genres: 4 of 5 sterren telt voor, 1 of 2 sterren of Gestopt tegen.
 export function smaakUitOordeel(titels, genresVan) {
   const goed = new Map();
   const slecht = new Map();
   for (const t of titels) {
     const g = genresVan(t) ?? [];
     if (t.sterren >= 4) for (const x of g) goed.set(x, (goed.get(x) ?? 0) + 1);
-    else if (t.status === 'Gezien' && t.sterren >= 1 && t.sterren <= 2) for (const x of g) slecht.set(x, (slecht.get(x) ?? 0) + 1);
+    // Gestopt zegt ook iets: dat telt als 'slecht', tenzij je hem toch 4 of 5 sterren gaf (hierboven).
+    else if (t.status === 'Gestopt' || (t.status === 'Gezien' && t.sterren >= 1 && t.sterren <= 2)) for (const x of g) slecht.set(x, (slecht.get(x) ?? 0) + 1);
   }
   // Een genre dat je vaker goed dan slecht vond, telt niet als slecht.
   for (const [x, n] of slecht) if ((goed.get(x) ?? 0) >= n) slecht.delete(x);
