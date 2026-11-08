@@ -1429,16 +1429,16 @@ async function toonFilms() {
       <input id="films-zoek" type="search" placeholder="Zoek een film of serie" autocomplete="off" enterkeyhint="search" value="${veilig(filmsZoek)}" aria-label="Zoek een film, serie of acteur" />
       <a class="opmaat-knop" href="#/opmaat" aria-label="Zoek op maat: beschrijf wat je zoekt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg></a>
     </form>
-    <div class="segment tabs-lijn" id="films-tabs" role="tablist">${Object.entries(FILMS_TABS)
-      .map(([k, naam]) => `<button role="tab" aria-selected="${k === filmsTab}" data-tab="${k}">${naam} <span class="tab-aantal" data-aantal="${k}">${titels.filter((t) => LIJST_STATUSSEN[k].includes(t.status)).length}</span></button>`)
-      .join('')}</div>
-    <div id="films-vak"></div>
     <a class="ontdek-link" id="ontdek-link" href="#/ontdekken">
       <span class="ontdek-icoon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></svg></span>
       <span class="ontdek-tekst"><strong>Ontdek iets nieuws</strong><span>Trending en tips voor jou</span></span>
       <span class="ontdek-posters" id="ontdek-posters" aria-hidden="true"></span>
       <span class="ontdek-pijl" aria-hidden="true">›</span>
     </a>
+    <div class="segment tabs-lijn" id="films-tabs" role="tablist">${Object.entries(FILMS_TABS)
+      .map(([k, naam]) => `<button role="tab" aria-selected="${k === filmsTab}" data-tab="${k}">${naam} <span class="tab-aantal" data-aantal="${k}">${titels.filter((t) => LIJST_STATUSSEN[k].includes(t.status)).length}</span></button>`)
+      .join('')}</div>
+    <div id="films-vak"></div>
   `;
   const veld = document.getElementById('films-zoek');
   const segment = document.getElementById('films-tabs');
