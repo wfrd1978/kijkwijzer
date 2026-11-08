@@ -67,6 +67,11 @@ export function kaal(tekst) {
 }
 
 export const SOORTEN = { alle: 'Films en series', film: 'Films', serie: 'Series' };
+// Sorteren per tabblad van Mijn lijst, in gewone woorden.
+export const SORTEREN_PER_TAB = {
+  wil: { toegevoegd: 'Nieuwste', titel: 'Titel', diensten: 'Bij mijn diensten' },
+  gezien: { gezien: 'Laatst gezien', sterren: 'Sterren', titel: 'Titel' },
+};
 export const SORTERINGEN = {
   toegevoegd: 'Laatst toegevoegd',
   gezien: 'Laatst gezien',
@@ -100,8 +105,15 @@ export function gevondenActeur(t, zoek) {
 
 const opTitel = (a, b) => a.titel.localeCompare(b.titel, 'nl', { sensitivity: 'base' });
 
-export function sorteerTitels(titels, sortering = 'toegevoegd') {
+// Kun je hem nu kijken bij een van je eigen abonnementen (of gratis)? Volgens de laatst opgehaalde diensten.
+export function kijkbaarBijJou(t, eigen = new Set()) {
+  return (t.diensten?.gratis ?? []).length > 0 || (t.diensten?.abonnement ?? []).some((d) => eigen.has(d.id));
+}
+
+export function sorteerTitels(titels, sortering = 'toegevoegd', { eigen = new Set() } = {}) {
   const kopie = [...titels];
+  // Eerst wat je nu bij je eigen diensten kunt kijken, daarna de rest; binnen elk deel de nieuwste eerst.
+  if (sortering === 'diensten') return kopie.sort((a, b) => kijkbaarBijJou(b, eigen) - kijkbaarBijJou(a, eigen) || b.toegevoegdOp.localeCompare(a.toegevoegdOp));
   if (sortering === 'titel') return kopie.sort(opTitel);
   // Bij gelijke sterren of zonder kijkdatum: op titel, zodat de volgorde vast blijft.
   if (sortering === 'sterren') return kopie.sort((a, b) => (b.sterren || 0) - (a.sterren || 0) || opTitel(a, b));

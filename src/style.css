@@ -922,3 +922,39 @@ body:not(.welkom-modus) .uitleg { display: none; }
 
 /* Gestopt: een klein label in Mijn lijst */
 .status-gestopt { color: var(--zacht) !important; margin-right: 6px; }
+
+/* --- Mijn lijst, rustiger (november 2026) --- */
+/* Tabbladen als onderstreepte koppen in plaats van een rood blok */
+.segment.tabs-lijn { display: flex; gap: 22px; padding: 0; margin: 18px 0 0; background: none; border-radius: 0; border-bottom: 1px solid var(--lijn); }
+.segment.tabs-lijn button {
+  flex: none; padding: 0 0 10px; border-radius: 0; background: none; color: var(--zacht);
+  font-family: var(--kop); font-weight: 800; font-size: 1.25rem; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.segment.tabs-lijn button[aria-selected="true"] { background: none; color: var(--tekst); box-shadow: inset 0 -3px var(--accent); }
+.segment.tabs-lijn .tab-aantal { background: none; color: var(--zacht); font-family: inherit; font-weight: 600; font-size: 0.75rem; letter-spacing: 0; padding: 0; margin-left: 2px; }
+/* Sorteren in gewone woorden */
+.sorteer-regel { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; margin: 14px 0 10px; font-size: 0.85rem; color: var(--zacht); }
+.sorteer-keuze { padding: 0 0 2px; border: 0; background: none; color: var(--zacht); font: inherit; cursor: pointer; }
+.sorteer-keuze.actief { color: var(--tekst); font-weight: 600; box-shadow: inset 0 -2px var(--accent); }
+/* Filterrij: Alles · Films · Series | categorieën */
+.categorieen .categorie.actief { background: var(--tekst); border-color: var(--tekst); color: var(--bg); }
+.categorieen .categorie.actief span { color: inherit; opacity: 0.6; }
+.categorie-scheiding { flex: none; width: 1px; align-self: stretch; margin: 4px 2px; background: var(--lijn); }
+/* De regels: grotere posters met afgeronde hoeken, meer lucht, rustige vinkjes en kleinere sterren */
+.mijn-lijst .titel { gap: 14px; padding: 11px 0; border-bottom-color: color-mix(in srgb, var(--lijn) 60%, transparent); }
+.mijn-lijst .poster-klein { width: 58px; height: 87px; border-radius: 7px; box-shadow: 0 4px 12px rgb(0 0 0 / 0.4); }
+.mijn-lijst .titel-tekst strong { font-family: var(--kop); font-weight: 700; font-size: 1.3rem; line-height: 1.05; }
+.mijn-lijst .titel-tekst > span { font-size: 0.8rem; }
+.mijn-lijst .lijst-sterren { margin-top: 3px; gap: 0; }
+.mijn-lijst .lijst-ster { font-size: 1.05rem; padding: 3px 2px; }
+.regel-vink {
+  flex: none; display: grid; place-items: center; width: 38px; height: 38px; margin-left: auto; border-radius: 50%;
+  border: 2px solid var(--lijn); color: var(--zacht); font-size: 1rem; font-weight: 700; cursor: pointer;
+}
+.regel-vink:active { background: var(--accent); border-color: var(--accent); color: var(--accent-tekst); }
+.label-gestopt {
+  display: inline-block; margin-left: 8px; padding: 1px 5px; border: 1px solid var(--lijn); border-radius: 4px; vertical-align: 3px;
+  font-family: var(--schreefloos); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--zacht);
+}
+/* Ontdek-kaart onder de lijst */
+#films-vak + .ontdek-link { margin-top: 18px; }

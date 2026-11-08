@@ -188,3 +188,16 @@ describe('Gestopt in een backup', () => {
     expect(schoneTitel({ tmdbId: 1, soort: 'film', titel: 'X', status: 'Gestopt' }).status).toBe('Gestopt');
   });
 });
+
+import { kijkbaarBijJou } from '../src/titels.js';
+describe('sorteren op bij mijn diensten', () => {
+  it('eerst wat je bij je eigen abonnement of gratis kunt kijken, daarna de nieuwste', () => {
+    const t = (id, dag, diensten) => ({ id, titel: `T${id}`, toegevoegdOp: `2026-11-0${dag}T10:00:00Z`, diensten });
+    const netflix = { abonnement: [{ id: 8 }], gratis: [] };
+    const npo = { abonnement: [], gratis: [{ id: 999 }] };
+    const disney = { abonnement: [{ id: 337 }], gratis: [] };
+    const lijst = [t(1, 5, disney), t(2, 3, netflix), t(3, 4), t(4, 2, npo)];
+    expect(kijkbaarBijJou(lijst[3], new Set())).toBe(true);
+    expect(sorteerTitels(lijst, 'diensten', { eigen: new Set([8]) }).map((x) => x.id)).toEqual([2, 4, 1, 3]);
+  });
+});

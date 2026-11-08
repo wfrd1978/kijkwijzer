@@ -26,7 +26,7 @@ import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwe
 import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
 import {
   titelSleutel, STATUSSEN, isAfgerond, statusWijziging, vandaag, datumTekst,
-  SOORTEN, SORTERINGEN, filterTitels, sorteerTitels, dubbelTekst, gevondenActeur,
+  SOORTEN, SORTERINGEN, SORTEREN_PER_TAB, filterTitels, sorteerTitels, dubbelTekst, gevondenActeur,
   beginVoortgang, volgendeAflevering, voortgangKort, categorieTelling, categorieenVan,
 } from './titels.js';
 
@@ -202,6 +202,12 @@ function groet() {
 }
 let soort = onthoud('soort', 'alle', Object.keys(SOORTEN));
 let sortering = onthoud('sortering', 'toegevoegd', Object.keys(SORTERINGEN));
+// Mijn lijst: per tabblad een eigen volgorde.
+const leesSorteerPerTab = () => ({
+  wil: onthoud('sorteerWil', 'toegevoegd', Object.keys(SORTEREN_PER_TAB.wil)),
+  gezien: onthoud('sorteerGezien', 'gezien', Object.keys(SORTEREN_PER_TAB.gezien)),
+});
+let sorteerPerTab = leesSorteerPerTab();
 
 // --- Vegen om te verwijderen (zoals in de boekenapp) ---
 // Een regel naar links vegen toont een rode knop Verwijder; snel vegen telt ook.
@@ -309,7 +315,7 @@ function maakVeegbaar(lijst, onVerwijder) {
   });
 }
 
-function titelRegel(t, zoek = '', { status = true, acties = false } = {}) {
+function titelRegel(t, zoek = '', { status = true, acties = false, onder = '' } = {}) {
   const acteur = gevondenActeur(t, zoek);
   // In de eigen lijst: bij Wil ik zien een knop 'Gezien', bij Gezien de sterren om aan te tikken.
   const actie = !acties
@@ -318,7 +324,9 @@ function titelRegel(t, zoek = '', { status = true, acties = false } = {}) {
       ? `<span class="lijst-sterren" role="group" aria-label="Sterren">${[1, 2, 3, 4, 5]
           .map((n) => `<span class="lijst-ster${t.sterren >= n ? ' aan' : ''}" data-actie="ster" data-n="${n}" role="button" aria-label="${n} ${n === 1 ? 'ster' : 'sterren'}">★</span>`)
           .join('')}</span>`
-      : '<span class="regel-knop" data-actie="gezien" role="button">✓ Gezien</span>';
+      : '';
+  // Bij Wil ik zien: een rustig rond vinkje rechts (tikken = gezien, daarna sterren).
+  const vink = acties && !isAfgerond(t) ? '<span class="regel-vink" data-actie="gezien" role="button" aria-label="Gezien">✓</span>' : '';
   return `
       <li class="veeg" data-id="${t.id}">
         <button class="veeg-actie" tabindex="-1" aria-label="Verwijder">${PRULLENBAK}<span>Verwijder</span></button>
@@ -326,16 +334,17 @@ function titelRegel(t, zoek = '', { status = true, acties = false } = {}) {
         ${posterHtml(t)}
         <div class="titel-tekst">
           <span class="regel">
-            ${status ? `<span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>` : t.status === 'Gestopt' ? '<span class="status status-gestopt">× Gestopt</span>' : ''}
+            ${status ? `<span class="status${t.status === 'Wil ik zien' ? '' : ' status-actief'}">${veilig(t.status)}</span>` : ''}
             ${t.sterren && !acties ? `<span class="sterren-klein" aria-label="${t.sterren} sterren">${sterrenTekst(t.sterren)}</span>` : ''}
             ${t.soort === 'serie' && !isAfgerond(t) && voortgangKort(t.voortgang) ? `<span class="voortgang-kort">${voortgangKort(t.voortgang)}</span>` : ''}
             ${t.nieuwBij?.length ? `<span class="nieuw-label">Nieuw bij ${veilig(t.nieuwBij.map((d) => d.naam).join(' en '))}</span>` : ''}
           </span>
-          <strong>${veilig(t.titel)}</strong>
-          <span>${soortJaar(t)}</span>
+          <strong>${veilig(t.titel)}${!status && t.status === 'Gestopt' ? '<span class="label-gestopt">Gestopt</span>' : ''}</strong>
+          <span>${soortJaar(t)}${onder ? ` · ${onder}` : ''}</span>
           ${acteur ? `<span class="met-acteur">Met ${veilig(acteur)}</span>` : ''}
           ${actie}
         </div>
+        ${vink}
       </a></li>`;
 }
 
@@ -1287,52 +1296,81 @@ let filmsTab = onthoud('filmsTab', 'wil', Object.keys(FILMS_TABS));
 let filmsZoek = '';
 
 function toonLijstTab(vak, welke, titels, naWijziging) {
+  const opties = SORTEREN_PER_TAB[welke];
   vak.innerHTML = `
-    <div class="lijst-regel">
-      <label class="sorteer"><span class="verborgen">Toon</span>
-        <select id="soort">${Object.entries(SOORTEN).map(([k, v]) => `<option value="${k}"${k === soort ? ' selected' : ''}>${v}</option>`).join('')}</select>
-      </label>
-      <label class="sorteer"><span class="verborgen">Sorteer</span>
-        <select id="sorteer">${Object.entries(SORTERINGEN).map(([k, v]) => `<option value="${k}"${k === sortering ? ' selected' : ''}>${v}</option>`).join('')}</select>
-      </label>
-    </div>
-    <div class="categorieen" id="categorieen" role="group" aria-label="Categorie"></div>
-    <ul class="lijst" id="lijst"></ul>
+    <div class="sorteer-regel" id="sorteer-regel" role="group" aria-label="Sorteer"><span>Sorteer</span>${Object.entries(opties)
+      .map(([k, v]) => `<button class="sorteer-keuze${k === sorteerPerTab[welke] ? ' actief' : ''}" data-sorteer="${k}" aria-pressed="${k === sorteerPerTab[welke]}">${v}</button>`)
+      .join('')}</div>
+    <div class="categorieen" id="categorieen" role="group" aria-label="Filter"></div>
+    <ul class="lijst mijn-lijst" id="lijst"></ul>
   `;
+  const kort = (iso) => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }).replace('.', '') : '');
   const teken = () => {
     const genres = bekendeGenres();
     const genresVan = (t) => genres[titelSleutel(t)];
-    const opTab = filterTitels(titels, { soort }).filter((t) => LIJST_STATUSSEN[welke].includes(t.status));
-    // Alleen categorieën die op dit tabblad voorkomen; staat de gekozen er niet (meer) bij, dan weer alles.
+    const opTabAlles = titels.filter((t) => LIJST_STATUSSEN[welke].includes(t.status));
+    const opTab = filterTitels(opTabAlles, { soort });
+    // Alleen categorieën die hier voorkomen; staat de gekozen er niet (meer) bij, dan weer alles.
     const telling = categorieTelling(opTab, genresVan);
     if (categorie !== 'alle' && !telling.some(([c]) => c === categorie)) categorie = 'alle';
-    const balk = document.getElementById('categorieen');
-    balk.hidden = telling.length < 2;
-    balk.innerHTML = [['alle', 'Alles', opTab.length], ...telling.map(([c, n]) => [c, c, n])]
-      .map(([k, naam, n]) => `<button class="categorie${k === categorie ? ' actief' : ''}" data-categorie="${veilig(k)}" aria-pressed="${k === categorie}">${veilig(naam)} <span>${n}</span></button>`)
-      .join('');
+    // Eén rij: Alles · Films · Series, en daarna de categorieën (te combineren met Films of Series).
+    const chip = (attr, naam, actief, n = '') => `<button class="categorie${actief ? ' actief' : ''}" ${attr} aria-pressed="${actief}">${veilig(naam)}${n !== '' ? ` <span>${n}</span>` : ''}</button>`;
+    document.getElementById('categorieen').innerHTML = [
+      chip('data-alles', 'Alles', soort === 'alle' && categorie === 'alle'),
+      chip('data-soort="film"', 'Films', soort === 'film'),
+      chip('data-soort="serie"', 'Series', soort === 'serie'),
+      ...(telling.length ? ['<span class="categorie-scheiding" aria-hidden="true"></span>'] : []),
+      ...telling.map(([c, n]) => chip(`data-categorie="${veilig(c)}"`, c, c === categorie, n)),
+    ].join('');
     const gekozen = categorie === 'alle' ? opTab : opTab.filter((t) => categorieenVan(genresVan(t) ?? []).includes(categorie));
-    const zichtbaar = sorteerTitels(gekozen, sortering);
+    const zichtbaar = sorteerTitels(gekozen, sorteerPerTab[welke], { eigen: new Set(eigenDiensten()) });
+    const onder = (t) => {
+      // Het hoofdgenre: het eerste dat TMDB noemt (bij Slow Horses Misdaad, niet Drama).
+      const ids = genresVan(t) ?? [];
+      const genre = ids.map((g) => categorieenVan([g])[0]).find(Boolean);
+      if (isAfgerond(t)) return [t.kijkdatum ? `${t.status === 'Gestopt' ? 'gestopt' : 'gezien'} ${kort(t.kijkdatum)}` : '', !t.kijkdatum && genre ? genre : ''].filter(Boolean).map(veilig).join(' · ');
+      return genre ? veilig(genre) : '';
+    };
     document.getElementById('lijst').innerHTML = zichtbaar.length
-      ? zichtbaar.map((t) => titelRegel(t, '', { status: false, acties: true })).join('')
+      ? zichtbaar.map((t) => titelRegel(t, '', { status: false, acties: true, onder: onder(t) })).join('')
       : `<li class="leeg">${
           categorie !== 'alle'
-            ? `Geen ${veilig(categorie.toLowerCase())} bij ${FILMS_TABS[welke]}.`
+            ? `Geen ${veilig(categorie.toLowerCase())}${soort !== 'alle' ? ` (${SOORTEN[soort].toLowerCase()})` : ''} bij ${FILMS_TABS[welke]}.`
             : soort !== 'alle'
             ? `Geen ${SOORTEN[soort].toLowerCase()} bij ${FILMS_TABS[welke]}.`
             : welke === 'wil'
               ? 'Nog niets op Wil ik zien. Zoek hierboven een film of serie, of kijk bij Ontdek iets nieuws.'
-              : 'Nog niets gezien. Tik bij Wil ik zien op ✓ Gezien, of kies Al gezien als je iets toevoegt.'
+              : 'Nog niets gezien. Tik bij Wil ik zien op het vinkje, of kies Al gezien als je iets toevoegt.'
         }</li>`;
   };
   teken();
   lijstOpnieuw = () => vak.isConnected && document.getElementById('categorieen') && teken();
 
   document.getElementById('categorieen').addEventListener('click', (e) => {
-    const knop = e.target.closest('[data-categorie]');
+    const knop = e.target.closest('button');
     if (!knop) return;
-    // Nog een keer op de gekozen categorie tikken: weer alles.
-    categorie = knop.dataset.categorie === categorie ? 'alle' : knop.dataset.categorie;
+    if ('alles' in knop.dataset) {
+      soort = 'alle';
+      categorie = 'alle';
+    } else if (knop.dataset.soort) {
+      // Nog een keer op Films of Series: weer allebei.
+      soort = soort === knop.dataset.soort ? 'alle' : knop.dataset.soort;
+    } else {
+      // Nog een keer op de gekozen categorie: weer alle categorieën.
+      categorie = knop.dataset.categorie === categorie ? 'alle' : knop.dataset.categorie;
+    }
+    bewaarKeuze('soort', soort);
+    teken();
+  });
+  document.getElementById('sorteer-regel').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-sorteer]');
+    if (!knop || knop.dataset.sorteer === sorteerPerTab[welke]) return;
+    sorteerPerTab[welke] = knop.dataset.sorteer;
+    bewaarKeuze(welke === 'wil' ? 'sorteerWil' : 'sorteerGezien', knop.dataset.sorteer);
+    document.querySelectorAll('#sorteer-regel [data-sorteer]').forEach((b) => {
+      b.classList.toggle('actief', b === knop);
+      b.setAttribute('aria-pressed', String(b === knop));
+    });
     teken();
   });
 
@@ -1378,16 +1416,6 @@ function toonLijstTab(vak, welke, titels, naWijziging) {
       },
     });
   });
-  document.getElementById('soort').addEventListener('change', (e) => {
-    soort = e.target.value;
-    bewaarKeuze('soort', soort);
-    teken();
-  });
-  document.getElementById('sorteer').addEventListener('change', (e) => {
-    sortering = e.target.value;
-    bewaarKeuze('sortering', sortering);
-    teken();
-  });
 }
 
 async function toonFilms() {
@@ -1401,16 +1429,16 @@ async function toonFilms() {
       <input id="films-zoek" type="search" placeholder="Zoek een film of serie" autocomplete="off" enterkeyhint="search" value="${veilig(filmsZoek)}" aria-label="Zoek een film, serie of acteur" />
       <a class="opmaat-knop" href="#/opmaat" aria-label="Zoek op maat: beschrijf wat je zoekt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg></a>
     </form>
+    <div class="segment tabs-lijn" id="films-tabs" role="tablist">${Object.entries(FILMS_TABS)
+      .map(([k, naam]) => `<button role="tab" aria-selected="${k === filmsTab}" data-tab="${k}">${naam} <span class="tab-aantal" data-aantal="${k}">${titels.filter((t) => LIJST_STATUSSEN[k].includes(t.status)).length}</span></button>`)
+      .join('')}</div>
+    <div id="films-vak"></div>
     <a class="ontdek-link" id="ontdek-link" href="#/ontdekken">
       <span class="ontdek-icoon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></svg></span>
       <span class="ontdek-tekst"><strong>Ontdek iets nieuws</strong><span>Trending en tips voor jou</span></span>
       <span class="ontdek-posters" id="ontdek-posters" aria-hidden="true"></span>
       <span class="ontdek-pijl" aria-hidden="true">›</span>
     </a>
-    <div class="segment" id="films-tabs" role="tablist">${Object.entries(FILMS_TABS)
-      .map(([k, naam]) => `<button role="tab" aria-selected="${k === filmsTab}" data-tab="${k}">${naam} <span class="tab-aantal" data-aantal="${k}">${titels.filter((t) => LIJST_STATUSSEN[k].includes(t.status)).length}</span></button>`)
-      .join('')}</div>
-    <div id="films-vak"></div>
   `;
   const veld = document.getElementById('films-zoek');
   const segment = document.getElementById('films-tabs');
@@ -3473,6 +3501,7 @@ async function toonInstellingen({ welkom = null } = {}) {
         sportTab = leesSportTab();
         soort = onthoud('soort', 'alle', Object.keys(SOORTEN));
         sortering = onthoud('sortering', 'toegevoegd', Object.keys(SORTERINGEN));
+        sorteerPerTab = leesSorteerPerTab();
         window.kijkThema?.toepassen();
         location.hash = '#/';
         melding(`${aantalTekst(n)} teruggezet`);
