@@ -47,6 +47,12 @@ export function haalTitel(id) {
   return db.titels.get(id);
 }
 
+// Eenmalig, op verzoek (Instellingen): bij alle titels 'Gezien op' leegmaken. Verder blijft alles
+// zoals het was. Geeft het aantal titels waarbij een datum is gewist.
+export async function wisKijkdata() {
+  return db.titels.filter((t) => Boolean(t.kijkdatum)).modify({ kijkdatum: '' });
+}
+
 export function titelBijwerken(id, wijzigingen) {
   return db.titels.update(id, wijzigingen);
 }

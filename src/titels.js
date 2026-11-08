@@ -44,12 +44,10 @@ export function vandaag(nu = new Date()) {
   return `${nu.getFullYear()}-${twee(nu.getMonth() + 1)}-${twee(nu.getDate())}`;
 }
 
-// Wat er verandert als je een andere status kiest. Zet je iets op 'Gezien' zonder kijkdatum,
-// dan wordt dat vandaag (je kunt hem daarna gewoon aanpassen).
-export function statusWijziging(titel, status, nu = new Date()) {
-  const wijziging = { status };
-  if ((status === 'Gezien' || status === 'Gestopt') && !titel.kijkdatum) wijziging.kijkdatum = vandaag(nu);
-  return wijziging;
+// Wat er verandert als je een andere status kiest. Sinds november 2026 vult de app geen datum
+// meer in: 'Gezien op' vul je zelf in (de automatische datum klopte niet bij titels die je eerder zag).
+export function statusWijziging(titel, status) {
+  return { status };
 }
 
 // '2026-10-26' wordt '26 oktober 2026'.
@@ -117,7 +115,8 @@ export function sorteerTitels(titels, sortering = 'toegevoegd', { eigen = new Se
   if (sortering === 'titel') return kopie.sort(opTitel);
   // Bij gelijke sterren of zonder kijkdatum: op titel, zodat de volgorde vast blijft.
   if (sortering === 'sterren') return kopie.sort((a, b) => (b.sterren || 0) - (a.sterren || 0) || opTitel(a, b));
-  if (sortering === 'gezien') return kopie.sort((a, b) => (b.kijkdatum || '').localeCompare(a.kijkdatum || '') || opTitel(a, b));
+  // Laatst gezien: eerst wat een datum heeft (nieuwste eerst), daarna de rest in de volgorde van toevoegen.
+  if (sortering === 'gezien') return kopie.sort((a, b) => (b.kijkdatum || '').localeCompare(a.kijkdatum || '') || b.toegevoegdOp.localeCompare(a.toegevoegdOp));
   return kopie.sort((a, b) => b.toegevoegdOp.localeCompare(a.toegevoegdOp));
 }
 

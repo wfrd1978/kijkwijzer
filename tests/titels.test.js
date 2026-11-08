@@ -29,8 +29,8 @@ describe('titelSleutel', () => {
 
 describe('statusWijziging', () => {
   const nu = new Date(2026, 9, 26);
-  it('zet de kijkdatum op vandaag bij Gezien zonder datum', () => {
-    expect(statusWijziging({ kijkdatum: '' }, 'Gezien', nu)).toEqual({ status: 'Gezien', kijkdatum: '2026-10-26' });
+  it('vult geen datum meer in: die vul je zelf in (november 2026)', () => {
+    expect(statusWijziging({ kijkdatum: '' }, 'Gezien', nu)).toEqual({ status: 'Gezien' });
   });
   it('laat een bestaande kijkdatum staan', () => {
     expect(statusWijziging({ kijkdatum: '2025-01-02' }, 'Gezien', nu)).toEqual({ status: 'Gezien' });
@@ -82,8 +82,8 @@ describe('sorteerTitels', () => {
   it('sorteert op sterren en bij gelijkspel op titel', () => {
     expect(namen(sorteerTitels(lijst, 'sterren'))).toEqual(['Amélie', 'Borgen', 'Dune', 'Thuis']);
   });
-  it('sorteert op laatst gezien, titels zonder datum achteraan', () => {
-    expect(namen(sorteerTitels(lijst, 'gezien'))).toEqual(['Borgen', 'Amélie', 'Dune', 'Thuis']);
+  it('sorteert op laatst gezien, titels zonder datum achteraan (laatst toegevoegd eerst)', () => {
+    expect(namen(sorteerTitels(lijst, 'gezien'))).toEqual(['Borgen', 'Amélie', 'Thuis', 'Dune']);
   });
   it('laat de originele lijst ongemoeid', () => {
     sorteerTitels(lijst, 'titel');
@@ -173,9 +173,9 @@ describe('categorieën', () => {
 
 import { isAfgerond } from '../src/titels.js';
 describe('Gestopt', () => {
-  it('is een status, krijgt de datum van vandaag en telt als afgerond', () => {
+  it('is een status en telt als afgerond', () => {
     expect(STATUSSEN).toContain('Gestopt');
-    expect(statusWijziging({ kijkdatum: '' }, 'Gestopt', new Date(2026, 10, 7))).toEqual({ status: 'Gestopt', kijkdatum: '2026-11-07' });
+    expect(statusWijziging({ kijkdatum: '' }, 'Gestopt', new Date(2026, 10, 7))).toEqual({ status: 'Gestopt' });
     expect(isAfgerond({ status: 'Gestopt' })).toBe(true);
     expect(isAfgerond({ status: 'Gezien' })).toBe(true);
     expect(isAfgerond({ status: 'Wil ik zien' })).toBe(false);
@@ -199,5 +199,13 @@ describe('sorteren op bij mijn diensten', () => {
     const lijst = [t(1, 5, disney), t(2, 3, netflix), t(3, 4), t(4, 2, npo)];
     expect(kijkbaarBijJou(lijst[3], new Set())).toBe(true);
     expect(sorteerTitels(lijst, 'diensten', { eigen: new Set([8]) }).map((x) => x.id)).toEqual([2, 4, 1, 3]);
+  });
+});
+
+describe('laatst gezien, ook zonder datum', () => {
+  it('eerst met datum (nieuwste eerst), daarna zonder datum in de volgorde van toevoegen', () => {
+    const t = (id, kijkdatum, dag) => ({ id, titel: `T${id}`, kijkdatum, toegevoegdOp: `2026-11-0${dag}T10:00:00Z` });
+    const lijst = [t(1, '', 2), t(2, '2026-01-05', 1), t(3, '', 5), t(4, '2026-03-01', 3)];
+    expect(sorteerTitels(lijst, 'gezien').map((x) => x.id)).toEqual([4, 2, 3, 1]);
   });
 });

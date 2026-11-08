@@ -22,7 +22,7 @@ import { nieuwVoorJou, kijktipsVanDag, GENRE_NAMEN, bekendeGenres, vulGenresAan 
 import { vanavond, lijstOpNpo, npoLink, TV_GENRES, leesTvVoorkeuren, zetTvVoorkeuren, omroepenIn, metKorteNamen } from './tv.js';
 import { leesAfleveringen, werkAfleveringenBij, afleveringenOp, afleveringKort } from './afleveringen.js';
 import { KEUZES, leesKeuzes, zetKeuze, zetAlleKeuzes, keuzeVan, nieuwBijJou, verdeelDiensten, doorklikLink, beperkDiensten } from './diensten.js';
-import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten } from './db.js';
+import { alleTitels, titelToevoegen, vraagBlijvendeOpslag, haalTitel, titelBijwerken, titelVerwijderen, titelTerugzetten, wisKijkdata } from './db.js';
 import { maakBackupBestand, bewaarBackup, laatsteBackup, dagenSinds, moetHerinneren, herinnerLater, leesBackup, zetBackupTerug } from './backup.js';
 import {
   titelSleutel, STATUSSEN, isAfgerond, statusWijziging, vandaag, datumTekst,
@@ -386,7 +386,7 @@ function vraagSterren(titel) {
   });
 }
 
-// Een titel op Gezien zetten (met de datum van vandaag) en meteen om sterren vragen.
+// Een titel op Gezien zetten en meteen om sterren vragen. De datum vul je zelf in op de titelpagina.
 async function zetOpGezien(titel) {
   const wijziging = statusWijziging(titel, 'Gezien');
   await titelBijwerken(titel.id, wijziging);
@@ -627,7 +627,7 @@ function toonBevestigen(t, alOpLijst, terug = { naam: 'Mijn lijst', toon: () => 
         if (vak) vak.innerHTML = '<p class="zacht">Ophalen lukt nu niet.</p>';
       });
   }
-  // Meteen kiezen: nog kijken, of al gezien (dan met de datum van vandaag, en sterren geven kan meteen).
+  // Meteen kiezen: nog kijken, of al gezien (dan kun je meteen sterren geven).
   document.querySelector('.toevoeg-knoppen')?.addEventListener('click', async (e) => {
     const knop = e.target.closest('[data-toevoegen]');
     if (!knop) return;
@@ -3208,6 +3208,7 @@ async function toonInstellingen({ welkom = null } = {}) {
           <input type="file" id="backup-bestand" accept="application/json,.json" hidden />
         </label>
         <div id="terugzet-vak"></div>
+        <button class="link-knop wis-knop" id="kijkdata-wissen">Alle kijkdata wissen</button>
         <details class="uitklap uitklap-klein">
           <summary><span class="uitklap-kop">Hoe werkt het?</span></summary>
           <p class="zacht">Je lijst staat alleen op deze telefoon. Tik op Backup maken en kies in het deelmenu <b>Bewaar in Bestanden</b> en dan iCloud Drive of Google Drive, of kies de <b>Drive</b>-app. De telefoon onthoudt de map. Je TMDB-sleutel zit niet in de backup; op een nieuwe telefoon plak je hem opnieuw.</p>
@@ -3456,6 +3457,15 @@ async function toonInstellingen({ welkom = null } = {}) {
     } catch {
       melding('Bewaren lukte niet. Probeer het nog eens.');
     }
+  });
+
+  // Eenmalig: alle datums 'Gezien op' leegmaken (status, sterren en notities blijven).
+  document.getElementById('kijkdata-wissen').addEventListener('click', async () => {
+    const met = (await alleTitels()).filter((t) => t.kijkdatum).length;
+    if (!met) return melding('Er staan geen kijkdata in je lijst');
+    if (!confirm(`Bij ${met === 1 ? '1 titel' : `${met} titels`} de datum 'Gezien op' wissen? Status, sterren en notities blijven. Terugdraaien kan alleen met een backup.`)) return;
+    const gewist = await wisKijkdata();
+    melding(`Kijkdata gewist bij ${gewist === 1 ? '1 titel' : `${gewist} titels`}`);
   });
 
   document.getElementById('backup-bestand').addEventListener('change', async (e) => {
