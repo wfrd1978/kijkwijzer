@@ -4,7 +4,8 @@ import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.
 import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur, haalAfleveringen, haalGenres, haalNieuwOpDiensten, haalTopOpDiensten, zoekOnderwerp, haalOpMaat, haalLijktOp, dienstenParams } from './tmdb.js';
 import { kiesFavorieten, combineerTips } from './tips.js';
 import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, ZENDER_GIDS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
-import { WIELRENNEN, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
+import { WIELRENNEN, VELDRIJDEN, MOUNTAINBIKE, FIETS_DELEN, leesFietsKeuzes, zetFietsKeuzes, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
+import { SCHAATSEN, schaatsenVolgen } from './schaatsen.js';
 import {
   COMPETITIES, COMPETITIE_PER_NAAM, leesVoetbalKeuzes, zetVoetbalKeuzes, mijnWedstrijden, ploegenPerCompetitie,
   perDag, weekStart, aftrap, dagNaam, haalInterland, VOLG_LANDEN,
@@ -708,7 +709,9 @@ function verderKaart(t, stand = leesAfleveringen()) {
     </div>`;
 }
 
-// Alles aan voetbal, Formule 1 en wielrennen dat jij volgt, op de gevraagde dagen ('jjjj-mm-dd').
+const FIETS_KALENDERS = { weg: WIELRENNEN, veld: VELDRIJDEN, mtb: MOUNTAINBIKE };
+
+// Alles aan voetbal, motorsport, fietsen en schaatsen dat jij volgt, op de gevraagde dagen ('jjjj-mm-dd').
 async function sportItems(dagen) {
   const op = new Set(dagen);
   const [schema, f1, interlands, kanalen, motor] = await Promise.all([
@@ -748,9 +751,16 @@ async function sportItems(dagen) {
       }
     }
   }
+  // Fietsen (weg, veld, MTB) en schaatsen: wat je volgt, per dag (zonder starttijd).
+  const kalenders = [
+    ...leesFietsKeuzes().map((d) => ({ kal: FIETS_KALENDERS[d], sub: (k) => (d === 'weg' ? `Wielrennen · ${k.soort}` : k.soort), soort: 'wiel' })),
+    ...(schaatsenVolgen() ? [{ kal: SCHAATSEN, sub: (k) => `Schaatsen · ${k.soort}`, soort: 'schaats' }] : []),
+  ];
   for (const dag of dagen) {
-    for (const k of WIELRENNEN.koersen.filter((x) => x.van <= dag && (x.tot ?? x.van) >= dag)) {
-      items.push({ dag, start: `${dag}T00:00`, tijd: '', naam: k.naam, sub: `Wielrennen · ${k.soort}`, zenders: k.zenders, soort: 'wiel' });
+    for (const { kal, sub, soort } of kalenders) {
+      for (const k of kal.koersen.filter((x) => x.van <= dag && (x.tot ?? x.van) >= dag)) {
+        items.push({ dag, start: `${dag}T00:00`, tijd: '', naam: k.naam, sub: sub(k), zenders: k.zenders, soort });
+      }
     }
   }
   return items.sort((a, b) => a.start.localeCompare(b.start));
@@ -800,6 +810,7 @@ function sportKaart(x, mijn) {
     const nl = x.land === 'NL';
     return `<a class="kijktip sportkaart landkaart-groot${nl ? ' is-oranje' : ''}" href="#/sport"><span class="livery-merk" aria-hidden="true">${veilig(x.land ?? 'NL')}</span>${tekst(`${nl ? 'Oranje' : VOLG_LANDEN[x.land]?.naam ?? ''} · ${x.sub}`, x.naam)}</a>`;
   }
+  if (x.soort === 'schaats') return `<a class="kijktip sportkaart ijskaart" href="#/sport">${IJSBAAN}${tekst(x.sub, x.naam)}</a>`;
   return `<a class="kijktip sportkaart koerskaart" href="#/sport">${BERGEN}${tekst(x.sub, x.naam)}</a>`;
 }
 
@@ -838,6 +849,7 @@ function agendaBeeld(x) {
   if (x.soort === 'f1') return raceTegel('f1', 'agenda-beeld');
   if (x.soort === 'motor') return raceTegel(x.serie, 'agenda-beeld');
   if (x.soort === 'wiel') return '<span class="agenda-beeld icoon wiel">🚴</span>';
+  if (x.soort === 'schaats') return '<span class="agenda-beeld icoon wiel">⛸️</span>';
   if (x.soort === 'oranje') return `<span class="agenda-beeld icoon oranje${x.land && x.land !== 'NL' ? ' land' : ''}">${veilig(x.land ?? 'NL')}</span>`;
   return '<span class="agenda-beeld icoon"></span>';
 }
@@ -2200,10 +2212,20 @@ const BERGEN = `<svg class="sportkaart-tekening" viewBox="0 0 400 190" preserveA
   <path d="M0 186 C80 170 140 182 210 172 S330 160 400 176" stroke="#ff4d3d" stroke-width="3" fill="none" stroke-dasharray="10 8" />
 </svg>`;
 
-function wielrennenHtml(mijn) {
-  const komend = komendeKoersen(WIELRENNEN.koersen, vandaag());
+// Getekende ijsbaan (eigen tekening) als achtergrond voor de schaatskaart.
+const IJSBAAN = `<svg class="sportkaart-tekening" viewBox="0 0 400 190" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  <rect x="30" y="70" width="340" height="150" rx="75" fill="none" stroke="#3a4a5c" stroke-width="22" />
+  <rect x="30" y="70" width="340" height="150" rx="75" fill="none" stroke="#dfe9f3" stroke-width="2" opacity="0.5" />
+  <rect x="52" y="92" width="296" height="106" rx="53" fill="none" stroke="#dfe9f3" stroke-width="2" opacity="0.35" />
+  <path d="M150 70 L150 92 M250 198 L250 220" stroke="#ff4d3d" stroke-width="4" />
+</svg>`;
+
+// Een kalender (fietsen of schaatsen): de eerstvolgende als grote kaart, daaronder de rest.
+function kalenderHtml(kal, mijn, { tekening = BERGEN, kaartKlasse = 'koerskaart', label = 'Eerstvolgende', pauze = '' } = {}) {
+  const komend = komendeKoersen(kal.koersen, vandaag());
   if (!komend.length) return '<p class="leeg">De kalender voor het volgende seizoen volgt.</p>';
-  const tussenseizoen = komend[0].van.slice(0, 4) > vandaag().slice(0, 4);
+  // Begint het pas over meer dan een maand: zeggen dat het seizoen nog moet beginnen.
+  const dagenTot = (Date.parse(`${komend[0].van}T12:00:00Z`) - Date.parse(`${vandaag()}T12:00:00Z`)) / 86400000;
   const regel = (k) => {
     const kijk = mijn.length ? kanIkKijken(k, mijn) : '';
     return `
@@ -2222,17 +2244,40 @@ function wielrennenHtml(mijn) {
   };
   const [eerst] = komend;
   return `
-    ${tussenseizoen ? `<p class="zacht sport-uitleg">Het wegseizoen zit erop. Dit is de kalender voor ${WIELRENNEN.seizoen}.</p>` : ''}
-    <div class="sportkaart koerskaart">
-      ${BERGEN}
+    ${dagenTot > 31 && pauze ? `<p class="zacht sport-uitleg">${veilig(pauze)}</p>` : ''}
+    <div class="sportkaart ${kaartKlasse}">
+      ${tekening}
       <div class="kijktip-tekst">
-        <span class="kijktip-label">Eerstvolgende koers · ${veilig(eerst.soort)}</span>
+        <span class="kijktip-label">${veilig(label)} · ${veilig(eerst.soort)}</span>
         <strong>${veilig(eerst.naam)}</strong>
-        <span>${veilig(koersDatum(eerst))} · ${veilig(eerst.zenders.map((z) => z.naam).join(', '))}</span>
+        <span>${veilig(koersDatum(eerst))} · ${veilig(eerst.zenders.map((z) => z.naam + (z.zeker ? '' : '?')).join(', '))}</span>
       </div>
     </div>
     <ul class="koersen">${komend.slice(1).map(regel).join('')}</ul>
-    <p class="bron">Bron: UCI WorldTour-kalender ${WIELRENNEN.seizoen}</p>`;
+    <p class="bron">Bron: ${veilig(kal.bron ?? `UCI WorldTour-kalender ${kal.seizoen}`)}</p>`;
+}
+
+const FIETS_PAUZE = {
+  weg: `Het wegseizoen zit erop. Dit is de kalender voor ${WIELRENNEN.seizoen}.`,
+  veld: 'Het veldritseizoen moet nog beginnen.',
+  mtb: `Het MTB-seizoen begint in het voorjaar. Dit is de kalender voor ${MOUNTAINBIKE.seizoen}.`,
+};
+
+// Welk fietsonderdeel open staat: je laatste keuze, anders het onderdeel met de eerstvolgende wedstrijd.
+function kiesFietsDeel(gevolgd) {
+  const bewaard = onthoud('fietsDeel', '', gevolgd);
+  if (bewaard) return bewaard;
+  const eerst = (d) => komendeKoersen(FIETS_KALENDERS[d].koersen, vandaag())[0]?.van ?? '9999';
+  return [...gevolgd].sort((a, b) => eerst(a).localeCompare(eerst(b)))[0];
+}
+
+function fietsenHtml(mijn) {
+  const gevolgd = leesFietsKeuzes();
+  if (!gevolgd.length) return '<p class="leeg">Je volgt geen fietssport. Kies in <a href="#/instellingen">Instellingen</a> Weg, Veld of MTB.</p>';
+  const open = kiesFietsDeel(gevolgd);
+  return `
+    ${gevolgd.length > 1 ? `<div class="keuzes klein fiets-delen" id="fiets-delen">${gevolgd.map((d) => `<button class="keuze${d === open ? ' actief' : ''}" data-deel="${d}">${FIETS_DELEN[d]}</button>`).join('')}</div>` : ''}
+    ${gevolgd.map((d) => `<div class="fiets-deel" data-deel-vak="${d}"${d === open ? '' : ' hidden'}>${kalenderHtml(FIETS_KALENDERS[d], mijn, { label: 'Eerstvolgende', pauze: FIETS_PAUZE[d] })}</div>`).join('')}`;
 }
 
 // Een bestand dat GitHub elke ochtend klaarzet; één keer per dag opgehaald en daarna bewaard.
@@ -2479,7 +2524,10 @@ function nlDagVan(w) {
 }
 
 // Formule 1 en de andere raceklassen staan samen onder Motorsport (vroeger een eigen tabblad 'f1').
-const SPORT_TABS = { voetbal: 'Voetbal', motor: 'Motorsport', wielrennen: 'Wielrennen' };
+// 'wielrennen' heet sinds november 2026 Fietsen (weg, veld, MTB); de sleutel blijft, voor oude keuzes en backups.
+const SPORT_TABS = { voetbal: 'Voetbal', motor: 'Motorsport', wielrennen: 'Fietsen', schaatsen: 'Schaatsen' };
+// Tabbladen van sporten die je niet volgt, staan er niet.
+const zichtbareSportTabs = () => Object.keys(SPORT_TABS).filter((k) => (k === 'wielrennen' ? leesFietsKeuzes().length : k === 'schaatsen' ? schaatsenVolgen() : true));
 const leesSportTab = () => (onthoud('sportTab', 'voetbal', [...Object.keys(SPORT_TABS), 'f1']) === 'f1' ? 'motor' : onthoud('sportTab', 'voetbal', Object.keys(SPORT_TABS)));
 let sportTab = leesSportTab();
 
@@ -2487,11 +2535,13 @@ async function toonSport() {
   const nr = schermNr;
   const mijn = leesSportzenders();
   // Alle drie worden geladen; de schakelaar laat er één zien, zodat wisselen meteen gaat.
+  const tabs = zichtbareSportTabs();
+  if (!tabs.includes(sportTab)) sportTab = 'voetbal';
   const blok = (k, inhoud) => `<section class="sport-blok" data-sport="${k}"${k === sportTab ? '' : ' hidden'}>${inhoud}</section>`;
   app.innerHTML = `
     ${schermKop('Sport')}
-    <div class="segment" id="sport-tabs" role="tablist">${Object.entries(SPORT_TABS)
-      .map(([k, naam]) => `<button role="tab" aria-selected="${k === sportTab}" data-tab="${k}">${naam}</button>`)
+    <div class="segment sport-tabs-${tabs.length}" id="sport-tabs" role="tablist">${tabs
+      .map((k) => `<button role="tab" aria-selected="${k === sportTab}" data-tab="${k}">${SPORT_TABS[k]}</button>`)
       .join('')}</div>
     ${mijn.length ? '' : '<p class="zacht sport-tip">Tip: kies in <a href="#/instellingen">Instellingen</a> je sportzenders, dan zie je wat jij live kunt volgen.</p>'}
     ${blok('voetbal', '<div id="voetbal"><p class="bezig">Schema ophalen…</p></div>')}
@@ -2510,8 +2560,16 @@ async function toonSport() {
       }
       <div id="motor"></div>`
     )}
-    ${blok('wielrennen', wielrennenHtml(mijn))}
+    ${tabs.includes('wielrennen') ? blok('wielrennen', fietsenHtml(mijn)) : ''}
+    ${tabs.includes('schaatsen') ? blok('schaatsen', kalenderHtml(SCHAATSEN, mijn, { tekening: IJSBAAN, kaartKlasse: 'ijskaart', pauze: 'Het schaatsseizoen moet nog beginnen.' })) : ''}
   `;
+  document.getElementById('fiets-delen')?.addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-deel]');
+    if (!knop) return;
+    bewaarKeuze('fietsDeel', knop.dataset.deel);
+    document.querySelectorAll('#fiets-delen [data-deel]').forEach((b) => b.classList.toggle('actief', b === knop));
+    document.querySelectorAll('[data-deel-vak]').forEach((v) => (v.hidden = v.dataset.deelVak !== knop.dataset.deel));
+  });
   document.getElementById('sport-tabs').addEventListener('click', (e) => {
     const knop = e.target.closest('[data-tab]');
     if (!knop || knop.dataset.tab === sportTab) return;
@@ -3050,6 +3108,12 @@ function sportStand() {
   return sportOpVandaag() ? 'Op Vandaag, in Deze week en onderin' : 'Uit: nergens sport, wel extra kijktips';
 }
 
+function fietsenStand() {
+  const namen = { weg: 'Wielrennen', veld: 'Veldrijden', mtb: 'Mountainbiken' };
+  const k = [...leesFietsKeuzes().map((d) => namen[d]), ...(schaatsenVolgen() ? ['Schaatsen'] : [])];
+  return k.length ? k.join(', ') : 'Niets gekozen';
+}
+
 function motorStand() {
   const k = [...(f1Volgen() ? ['Formule 1'] : []), ...leesMotorKeuzes().map((x) => SERIES[x].naam)];
   return k.length ? k.join(', ') : 'Nog niets gekozen';
@@ -3151,6 +3215,18 @@ async function toonInstellingen({ welkom = null } = {}) {
         <div class="keuzes" id="sportzenders">${SPORTZENDERS.map(
           (z) => `<button class="keuze${leesSportzenders().includes(z) ? ' actief' : ''}" data-zender="${z}" aria-pressed="${leesSportzenders().includes(z)}">${z}</button>`
         ).join('')}</div>
+      </details>
+      </div>
+      <div data-groep="fietsen">
+      <details class="uitklap" id="fietsen-uitklap">
+        <summary><span class="uitklap-kop">Fietsen en schaatsen</span><span class="zacht uitklap-stand" id="fietsen-stand">${veilig(fietsenStand())}</span></summary>
+        <p class="zacht uitklap-uitleg uitleg">Wat je volgt, staat in Sport, op Vandaag en in Deze week.</p>
+        <div class="keuzes" id="fietsen-keuze">${[...Object.entries(FIETS_DELEN).map(([k, naam]) => [k, k === 'weg' ? 'Wielrennen (weg)' : k === 'veld' ? 'Veldrijden' : 'Mountainbiken']), ['schaatsen', 'Schaatsen']]
+          .map(([k, naam]) => {
+            const aan = k === 'schaatsen' ? schaatsenVolgen() : leesFietsKeuzes().includes(k);
+            return `<button class="keuze${aan ? ' actief' : ''}" data-volg="${k}" aria-pressed="${aan}">${veilig(naam)}</button>`;
+          })
+          .join('')}</div>
       </details>
       </div>
       <div data-groep="motorsport">
@@ -3291,6 +3367,17 @@ async function toonInstellingen({ welkom = null } = {}) {
           : n
           ? `${n === 1 ? '1 titel is' : `${n} titels zijn`} nieuw bij je diensten. Kijk op Vandaag.`
           : 'Niets nieuws: je titels op Wil ik zien staan nog bij dezelfde diensten.';
+  });
+
+  document.getElementById('fietsen-keuze').addEventListener('click', (e) => {
+    const knop = e.target.closest('[data-volg]');
+    if (!knop) return;
+    const aan = !knop.classList.contains('actief');
+    knop.classList.toggle('actief', aan);
+    knop.setAttribute('aria-pressed', String(aan));
+    if (knop.dataset.volg === 'schaatsen') bewaarKeuze('schaatsen', aan ? 'aan' : 'uit');
+    else zetFietsKeuzes([...document.querySelectorAll('#fietsen-keuze .actief')].map((k) => k.dataset.volg).filter((k) => k !== 'schaatsen'));
+    document.getElementById('fietsen-stand').textContent = fietsenStand();
   });
 
   document.getElementById('motorsport-keuze').addEventListener('click', (e) => {

@@ -959,3 +959,10 @@ body:not(.welkom-modus) .uitleg { display: none; }
 
 /* Instellingen: alle kijkdata wissen (rustig, onder de backupknoppen) */
 .wis-knop { display: block; padding: 14px 0 4px; color: var(--zacht); font-size: 0.9rem; }
+
+/* Schaatsen: kaart met getekende ijsbaan */
+.ijskaart { background: linear-gradient(180deg, #1d2a3a 0%, #14171c 80%); }
+/* Fietsen: Weg · Veld · MTB */
+.fiets-delen { margin: 4px 0 14px; }
+/* Sport met vier tabbladen: iets kleinere letters */
+.segment.sport-tabs-4 button { font-size: 0.9rem; letter-spacing: 0.02em; padding-left: 2px; padding-right: 2px; }
