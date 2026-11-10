@@ -105,6 +105,8 @@ Je kunt op je telefoon (vanaf het beginscherm) een film of serie zoeken en toevo
 
 - **Posters echt bewaard (opgelost, november 2026).** De service worker bewaarde posters al, maar haalde ze 'gesloten' op; browsers rekenen zo'n plaatje voor vele megabytes, dus de opslag leek na enkele tientallen posters vol en de posters laadden steeds opnieuw. Nu worden ze 'open' opgehaald (TMDB staat dat toe) en met hun echte grootte bewaard (posters-v2, tot 1500 stuks; bij vol gaan de oudste eruit). De oude posteropslag wordt bij het bijwerken opgeruimd. Ook zonder internet staan de posters er.
 
+- **Geen sport, geen melding (gebouwd, november 2026).** Is er vandaag niets bij jouw sportkeuzes, dan staat er op Vandaag geen melding meer ('Geen sport vandaag…'): het blok Sport vandaag verdwijnt en Vanavond op de NPO schuift naar die plek.
+
 - **YouTube (werklijst, november 2026; uitgezocht, nog niet gebouwd).** Wens: elke dag drie video's die bij je passen. Uitkomst: goed te doen vanuit kanalen die je zelf kiest (bijvoorbeeld over tech en AI); dat zijn er hooguit enkele tientallen per week, dus drie per dag is een prettige filter (alleen de afgelopen week, geen Shorts, hooguit één per kanaal per dag). Voorkeur: een eigen YouTube-sleutel in de app (zoals de TMDB-sleutel; gratis tegoed ruim genoeg), kanalen kiezen in Instellingen; alternatief zonder sleutel via GitHub, maar dan staan je kanalen in de openbare repository. Echte aanraders van onbekende kanalen kan niet (geen gratis 'aanbevolen'); zoeken op onderwerp kan wel, maar geeft veel clickbait. Open keuzes voor de eigenaar: sleutel of GitHub; alleen eigen kanalen of ook onderwerpen; drie per dag of per week. Podcasts later op dezelfde manier.
 
 ## Fase 2 — Verdieping

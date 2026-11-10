@@ -789,7 +789,8 @@ function eenZender(zenders, mijn) {
 async function sportVandaagHtml() {
   const mijn = leesSportzenders();
   const items = await sportItems([vandaag()]);
-  if (!items.length) return '<p class="leeg-klein">Geen sport vandaag bij jouw keuzes. <a href="#/sport">Bekijk het schema</a></p>';
+  // Geen sport bij jouw keuzes: dan geen melding, het blok verdwijnt (zie toonVandaag).
+  if (!items.length) return '';
   // Eén grote kaart, zoals bij Vanavond op de NPO: wat nog moet komen en het meest van jou is
   // (je club, Oranje, een race), daaronder kort de rest.
   const nu = Date.now();
@@ -1073,7 +1074,7 @@ async function toonVandaag({ plek = null } = {}) {
     </section>
     ${
       sportOpVandaag()
-        ? `<section class="vandaag-blok">
+        ? `<section class="vandaag-blok" id="sport-blok">
              ${blokKop('Sport vandaag', { href: '#/sport', tekst: 'Schema' })}
              <div id="sport-vandaag"><p class="bezig">Ophalen…</p></div>
            </section>
@@ -1144,7 +1145,15 @@ async function toonVandaag({ plek = null } = {}) {
   // De blokken laden los van elkaar: een trage of haperende bron houdt de rest niet op.
   const sportBlok = async () => {
     const sport = await sportVandaagHtml();
-    if (nr === schermNr) document.getElementById('sport-vandaag').innerHTML = sport;
+    if (nr !== schermNr) return;
+    if (sport) {
+      document.getElementById('sport-vandaag').innerHTML = sport;
+      return;
+    }
+    // Vandaag geen sport bij jouw keuzes: blok weg, en Vanavond op de NPO schuift omhoog naar die plek.
+    const blok = document.getElementById('sport-blok');
+    blok.hidden = true;
+    blok.before(document.getElementById('npo-blok'));
   };
   // Kijktips en Nieuw voor jou na elkaar: ze delen de genres van je smaak.
   const tipsBlokken = async () => {
