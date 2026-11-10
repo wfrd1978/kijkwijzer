@@ -362,3 +362,24 @@ export async function haalLijktOp(soort, tmdbId) {
   const [a, b] = await Promise.all(['recommendations', 'similar'].map((w) => vraag(`/${s}/${tmdbId}/${w}`).catch(() => ({ results: [] }))));
   return leesbaar([...(a.results ?? []), ...(b.results ?? [])].map((r) => naarKandidaat(r, s, 'zoals')).filter(Boolean));
 }
+
+// --- Nieuw op NPO Plus ---
+// Films en series van het afgelopen halfjaar die bij NPO Plus of NPO Start te zien zijn (volgens
+// JustWatch via TMDB). TMDB weet niet wanneer iets bij de NPO is bijgekomen; de verschijningsdatum
+// is de beste benadering. Nieuws, praatprogramma's, soaps en kinderseries vallen weg.
+export const NPO_DIENSTEN = [1986, 360]; // NPO Plus, NPO Start
+export async function haalNieuwOpNpo(soort, vanaf) {
+  const s = TMDB_SOORT[soort];
+  const data = await vraag(`/discover/${s}`, {
+    ...dienstenParams(NPO_DIENSTEN),
+    ...(s === 'movie' ? { 'primary_release_date.gte': vanaf } : { 'first_air_date.gte': vanaf, without_genres: '10762,10763,10766,10767' }),
+  });
+  return leesbaar(
+    (data.results ?? [])
+      .map((r) => {
+        const t = naarTitel(r, s);
+        return t && { ...t, genreIds: (r.genre_ids ?? []).filter(Number.isInteger) };
+      })
+      .filter((t) => t && t.poster)
+  );
+}

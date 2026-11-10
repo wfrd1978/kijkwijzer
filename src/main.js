@@ -1,7 +1,7 @@
 import './style.css';
 import { veilig, veiligeUrl } from './veilig.js';
 import { soortSleutel, leesSleutel, bewaarSleutel, wisSleutel } from './sleutel.js';
-import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur, haalAfleveringen, haalGenres, haalNieuwOpDiensten, haalTopOpDiensten, zoekOnderwerp, haalOpMaat, haalLijktOp, dienstenParams } from './tmdb.js';
+import { zoekTitels, testSleutel, posterUrl, SleutelFout, haalDiensten, haalAlleDiensten, haalTrending, haalOpDiensten, haalAanbevelingen, haalTrailerEnActeurs, haalActeur, haalAfleveringen, haalGenres, haalNieuwOpDiensten, haalTopOpDiensten, zoekOnderwerp, haalOpMaat, haalLijktOp, dienstenParams, haalNieuwOpNpo } from './tmdb.js';
 import { kiesFavorieten, combineerTips } from './tips.js';
 import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, ZENDER_GIDS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
 import { WIELRENNEN, VELDRIJDEN, MOUNTAINBIKE, FIETS_DELEN, leesFietsKeuzes, zetFietsKeuzes, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
@@ -1092,6 +1092,7 @@ async function toonVandaag({ plek = null } = {}) {
     <section class="vandaag-blok" id="npo-blok" hidden>
       ${blokKop('Vanavond op de NPO', { href: '#/instellingen', tekst: 'Afstemmen' })}
       <div id="npo"></div>
+      <div id="npo-plus" class="npo-plus" hidden></div>
     </section>
     ${
       leesSleutel()
@@ -1192,6 +1193,28 @@ async function toonVandaag({ plek = null } = {}) {
       });
     }
   };
+  // Nieuw op NPO Plus: drie posters onder Vanavond op de NPO.
+  const npoPlusBlok = async () => {
+    if (!leesSleutel()) return;
+    const vanaf = new Date(Date.now() - 183 * 86400000).toISOString().slice(0, 10);
+    const lijst = await vanVandaag('npo-plus', async () => {
+      const [films, series] = await Promise.all(['film', 'serie'].map((soort) => haalNieuwOpNpo(soort, vanaf).catch(() => [])));
+      const om = [];
+      for (let i = 0; i < Math.max(films.length, series.length); i++) om.push(...[series[i], films[i]].filter(Boolean));
+      return om.length ? om : null;
+    });
+    const opLijst = new Set(titels.map(titelSleutel));
+    const tips = (lijst ?? []).filter((t) => !opLijst.has(titelSleutel(t))).slice(0, 3);
+    if (nr !== schermNr || !tips.length) return;
+    const vak = document.getElementById('npo-plus');
+    vak.innerHTML = `<p class="label npo-plus-kop">Nieuw op NPO Plus</p>${nieuwVoorJouHtml(tips)}`;
+    vak.hidden = false;
+    document.getElementById('npo-blok').hidden = false;
+    vak.addEventListener('click', (e) => {
+      const knop = e.target.closest('[data-tip]');
+      if (knop) toonBevestigen(tips[Number(knop.dataset.tip)], null, { naam: 'Vandaag', toon: terugNaarVandaag() });
+    });
+  };
   const afleveringenBlok = async () => {
     if (!leesSleutel()) return;
     const stand = await werkAfleveringenBij(titels, vandaag(), haalAfleveringen);
@@ -1208,7 +1231,7 @@ async function toonVandaag({ plek = null } = {}) {
     document.getElementById('sportnieuws').innerHTML = html;
     document.getElementById('sportnieuws-blok').hidden = false;
   };
-  await Promise.allSettled([sportOpVandaag() ? sportBlok() : null, sportOpVandaag() && sportnieuwsAan() ? nieuwsBlok() : null, tipsBlokken(), npoBlok(), afleveringenBlok()].map((b) => b?.finally(() => zetPlek())));
+  await Promise.allSettled([sportOpVandaag() ? sportBlok() : null, sportOpVandaag() && sportnieuwsAan() ? nieuwsBlok() : null, tipsBlokken(), npoBlok(), npoPlusBlok(), afleveringenBlok()].map((b) => b?.finally(() => zetPlek())));
   zetPlek(true);
 }
 
