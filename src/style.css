@@ -982,3 +982,16 @@ body:not(.welkom-modus) .uitleg { display: none; }
 /* Nieuw op NPO Plus: drie posters onder Vanavond op de NPO */
 .npo-plus { margin-top: 18px; }
 .label.npo-plus-kop { margin: 0 0 10px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--zacht); }
+
+/* Deze week: een dag zonder iets is alleen een smalle regel met dag en datum (geen melding) */
+.weekdag.rustig { padding: 8px 14px; }
+.weekdag.rustig .weekdag-kop { margin: 0; }
+/* Mijn lijst: meer lucht tussen zoekveld en Ontdek-kaart, en een grotere kaart */
+.ontdek-link { margin-top: 18px; padding: 16px 16px; min-height: 96px; gap: 14px; }
+.ontdek-icoon { width: 48px; height: 48px; }
+.ontdek-icoon svg { width: 26px; height: 26px; }
+.ontdek-tekst { gap: 4px; }
+.ontdek-tekst strong { font-family: var(--kop); font-weight: 800; font-size: 1.45rem; line-height: 1; letter-spacing: 0.01em; text-transform: uppercase; }
+.ontdek-tekst span { font-size: 0.85rem; }
+.ontdek-posters img { width: 42px; height: 63px; border-radius: 5px; }
+.ontdek-posters img + img { margin-left: -16px; }

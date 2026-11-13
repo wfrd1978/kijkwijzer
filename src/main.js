@@ -928,7 +928,7 @@ async function weekHtml(titels, stand) {
       return `
         <section class="weekdag${dag === vandaag() ? ' is-vandaag' : ''}${wat.length ? '' : ' rustig'}">
           ${dagKop(dag)}
-          ${wat.length ? `<ul class="agenda">${wat.map((x) => agendaRegel(x, mijn)).join('')}</ul>` : '<p class="zacht weekdag-leeg">Rustige dag: niets bij jouw keuzes.</p>'}
+          ${wat.length ? `<ul class="agenda">${wat.map((x) => agendaRegel(x, mijn)).join('')}</ul>` : ''}
         </section>`;
     });
   return `
