@@ -56,3 +56,22 @@ describe("foto's van coureurs", () => {
     delete globalThis.localStorage;
   });
 });
+
+describe('oude bewaarde uitslag', () => {
+  it('een uitslag van vóór de foto\'s wordt opnieuw opgehaald, een nieuwe niet', async () => {
+    const races = [{ ronde: 21, sessies: [{ naam: 'Kwalificatie', start: '2026-11-21T04:00:00Z' }] }];
+    const nu = new Date('2026-11-21T10:00:00Z');
+    const opslag = new Map([['f1Uitslag:2026:21:Kwalificatie', JSON.stringify({ soort: 'Kwalificatie', coureurs: [{ positie: 1, naam: 'K. Antonelli' }] })]]);
+    globalThis.localStorage = { getItem: (k) => opslag.get(k) ?? null, setItem: (k, v) => opslag.set(k, v) };
+    let vragen = 0;
+    const fetcher = async () => {
+      vragen += 1;
+      return { ok: true, json: async () => ({ MRData: { RaceTable: { Races: [{ round: '21', QualifyingResults: [{ position: '1', Driver: { givenName: 'Kimi', familyName: 'Antonelli', url: 'https://en.wikipedia.org/wiki/Andrea_Kimi_Antonelli' }, Constructor: {}, Q3: '1:33.893' }] }] } } }) };
+    };
+    const u = await haalF1Uitslag(races, { fetcher, nu });
+    expect(u.coureurs[0].wiki).toBe('Andrea Kimi Antonelli');
+    await haalF1Uitslag(races, { fetcher, nu });
+    expect(vragen).toBe(1);
+    delete globalThis.localStorage;
+  });
+});

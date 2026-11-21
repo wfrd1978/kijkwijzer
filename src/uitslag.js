@@ -68,7 +68,8 @@ export async function haalF1Uitslag(races, { fetcher = fetch, nu = new Date() } 
     const sleutel = `f1Uitslag:${s.jaar}:${s.ronde}:${s.soort}`;
     try {
       const bewaard = JSON.parse(localStorage.getItem(sleutel) || 'null');
-      if (bewaard) return bewaard;
+      // Een uitslag van vóór de foto's (november 2026) mist de wikipagina's: dan één keer opnieuw ophalen.
+      if (bewaard && bewaard.coureurs?.every((c) => 'wiki' in c)) return bewaard;
     } catch {
       // geen opslag: gewoon ophalen
     }
