@@ -2751,7 +2751,7 @@ function uitslagHtml(u, fotos = {}) {
               .join('')}</ol></details>`
           : ''
       }
-      <p class="bron">Bron: Jolpica F1${credits.length ? ` · Foto's (Wikimedia Commons): ${credits.join(' · ')}` : ''}</p>
+      <details class="uitslag-bronnen"><summary>Bronnen ›</summary><p>Uitslag: Jolpica F1${credits.length ? `<br />Foto's (Wikimedia Commons): ${credits.join(' · ')}` : ''}</p></details>
     </section>`;
 }
 
