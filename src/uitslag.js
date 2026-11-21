@@ -44,6 +44,7 @@ export function naarUitslag(data, soort) {
       positie: Number(r.position),
       naam: `${(r.Driver?.givenName ?? '').slice(0, 1)}. ${r.Driver?.familyName ?? ''}`,
       code: r.Driver?.code ?? (r.Driver?.familyName ?? '').slice(0, 3).toUpperCase(),
+      wiki: wikiTitel(r.Driver?.url),
       vlag: VLAG[r.Driver?.nationality] ?? '',
       team: r.Constructor?.name ?? '',
       kleur: TEAMKLEUR[r.Constructor?.constructorId] ?? '#888888',
@@ -87,4 +88,68 @@ export async function haalF1Uitslag(races, { fetcher = fetch, nu = new Date() } 
     }
   }
   return null;
+}
+
+// --- Foto's van coureurs: alleen vrije foto's van Wikipedia/Wikimedia Commons, met maker en licentie ---
+// Officiële F1-foto's mogen niet gebruikt worden. Per coureur één keer per maand opgezocht en bewaard.
+const WIKI = 'https://en.wikipedia.org/w/api.php?format=json&origin=*&action=query';
+const FOTOS = 'f1Fotos';
+const MAAND = 30 * 86400000;
+
+// 'https://en.wikipedia.org/wiki/Max_Verstappen' → 'Max Verstappen'
+export function wikiTitel(url) {
+  const m = String(url ?? '').match(/wikipedia\.org\/wiki\/(.+)$/);
+  return m ? decodeURIComponent(m[1]).replace(/_/g, ' ') : '';
+}
+
+const zonderHtml = (t) => String(t ?? '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+export async function haalCoureurFotos(titels, { fetcher = fetch, nu = Date.now() } = {}) {
+  let bewaard = {};
+  try {
+    bewaard = JSON.parse(localStorage.getItem(FOTOS) || '{}') || {};
+  } catch {
+    bewaard = {};
+  }
+  const nodig = [...new Set(titels.filter(Boolean))].filter((t) => !bewaard[t] || nu - bewaard[t].op > MAAND);
+  if (nodig.length) {
+    try {
+      // 1. De vrije hoofdfoto van elke wikipagina (pilicense=free: geen niet-vrije beelden).
+      const a = await (await fetcher(`${WIKI}&redirects=1&prop=pageimages&piprop=thumbnail%7Cname&pithumbsize=240&pilicense=free&titles=${encodeURIComponent(nodig.join('|'))}`)).json();
+      const naarGevraagd = new Map(nodig.map((t) => [t, t]));
+      for (const x of [...(a.query?.normalized ?? []), ...(a.query?.redirects ?? [])]) naarGevraagd.set(x.to, naarGevraagd.get(x.from) ?? x.from);
+      const perTitel = {};
+      for (const p of Object.values(a.query?.pages ?? {})) {
+        const t = naarGevraagd.get(p.title) ?? p.title;
+        if (p.pageimage && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(p.thumbnail?.source ?? '')) perTitel[t] = { foto: p.thumbnail.source, bestand: p.pageimage };
+      }
+      // 2. Maker en licentie van die foto's.
+      const bestanden = Object.values(perTitel).map((x) => `File:${x.bestand}`);
+      const meta = {};
+      if (bestanden.length) {
+        const b = await (await fetcher(`${WIKI}&prop=imageinfo&iiprop=extmetadata&iiextmetadatafilter=Artist%7CLicenseShortName&titles=${encodeURIComponent(bestanden.join('|'))}`)).json();
+        const terug = new Map((b.query?.normalized ?? []).map((x) => [x.to, x.from]));
+        for (const p of Object.values(b.query?.pages ?? {})) {
+          const m = p.imageinfo?.[0]?.extmetadata ?? {};
+          meta[(terug.get(p.title) ?? p.title).replace(/^File:/, '').replace(/ /g, '_')] = { maker: zonderHtml(m.Artist?.value), licentie: zonderHtml(m.LicenseShortName?.value) };
+        }
+      }
+      for (const t of nodig) {
+        const x = perTitel[t];
+        const m = x && (meta[x.bestand] ?? meta[x.bestand.replace(/ /g, '_')]);
+        // Alleen met een bekende licentie; anders het rondje met de afkorting.
+        bewaard[t] = x && m?.licentie
+          ? { op: nu, foto: x.foto, maker: m.maker || 'onbekend', licentie: m.licentie, pagina: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(x.bestand)}` }
+          : { op: nu };
+      }
+      try {
+        localStorage.setItem(FOTOS, JSON.stringify(bewaard));
+      } catch {
+        // geen opslag: dan volgende keer opnieuw
+      }
+    } catch {
+      // geen internet of Wikipedia antwoordt niet: dan de rondjes met afkorting
+    }
+  }
+  return Object.fromEntries(titels.filter((t) => bewaard[t]?.foto).map((t) => [t, bewaard[t]]));
 }

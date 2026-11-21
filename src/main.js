@@ -6,7 +6,7 @@ import { kiesFavorieten, combineerTips } from './tips.js';
 import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, ZENDER_GIDS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
 import { WIELRENNEN, VELDRIJDEN, MOUNTAINBIKE, FIETS_DELEN, leesFietsKeuzes, zetFietsKeuzes, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
 import { SCHAATSEN, schaatsenVolgen } from './schaatsen.js';
-import { haalF1Uitslag } from './uitslag.js';
+import { haalF1Uitslag, haalCoureurFotos } from './uitslag.js';
 import { TENNIS, DARTEN, GLORY, naarUfc, ANDERE_SPORTEN, volgSport } from './sporten.js';
 import {
   COMPETITIES, COMPETITIE_PER_NAAM, leesVoetbalKeuzes, zetVoetbalKeuzes, mijnWedstrijden, ploegenPerCompetitie,
@@ -2627,9 +2627,6 @@ async function toonSport() {
         f1Volgen()
           ? `<section class="motor-serie">
                <h3 class="label sport-label">Formule 1</h3>
-               <p class="zender${mijn.includes(F1_ZENDERS.live) ? ' bij-jou-zender' : ''}"><strong>${
-                 mijn.includes(F1_ZENDERS.live) ? `Jij kijkt live via ${veilig(F1_ZENDERS.live)}` : `Live bij ${veilig(F1_ZENDERS.live)}`
-               }</strong><br />${veilig(F1_ZENDERS.extra)}</p>
                <div id="f1"><p class="bezig">Schema ophalen…</p></div>
              </section>`
           : ''
@@ -2681,9 +2678,13 @@ async function toonSport() {
   }
   if (nr !== schermNr) return;
   // Onderaan Motorsport: de nieuwste uitslag (race, sprint of kwalificatie).
-  haalF1Uitslag(schema.races).then((u) => {
+  haalF1Uitslag(schema.races).then(async (u) => {
     const vak = document.getElementById('f1-uitslag');
-    if (u && vak && nr === schermNr) vak.innerHTML = uitslagHtml(u);
+    if (!u || !vak || nr !== schermNr) return;
+    vak.innerHTML = uitslagHtml(u);
+    // Daarna de vrije foto's van Wikipedia voor de top drie (lukt dat niet, dan blijven de rondjes).
+    const fotos = await haalCoureurFotos(u.coureurs.slice(0, 3).map((c) => c.wiki));
+    if (Object.keys(fotos).length && nr === schermNr && vak.isConnected) vak.innerHTML = uitslagHtml(u, fotos);
   });
   const komend = komendeRaces(schema.races);
   const [volgende, ...rest] = komend;
@@ -2711,9 +2712,22 @@ async function toonSport() {
 }
 
 // De laatste uitslag van de Formule 1: de top drie naast elkaar, de rest van de top tien in te klappen.
-function uitslagHtml(u) {
-  const rondje = (c) => `<span class="podium-rondje" style="--team:${veilig(c.kleur)}"><b>${veilig(c.code)}</b>${c.vlag ? `<span class="podium-vlag" aria-hidden="true">${c.vlag}</span>` : ''}</span>`;
+function uitslagHtml(u, fotos = {}) {
+  const rondje = (c) => {
+    const f = fotos[c.wiki];
+    const foto = f && veiligeUrl(f.foto);
+    return `<span class="podium-rondje${foto ? ' met-foto' : ''}" style="--team:${veilig(c.kleur)}">${foto ? `<img src="${foto}" alt="" loading="lazy" />` : `<b>${veilig(c.code)}</b>`}${c.vlag ? `<span class="podium-vlag" aria-hidden="true">${c.vlag}</span>` : ''}</span>`;
+  };
   const [een, twee, drie, ...rest] = u.coureurs;
+  // Foto's van Wikimedia Commons: maker en licentie erbij, zoals de licentie vraagt.
+  const credits = [een, twee, drie]
+    .filter((c) => c && fotos[c.wiki])
+    .map((c) => {
+      const f = fotos[c.wiki];
+      const pagina = veiligeUrl(f.pagina);
+      const tekst = `${veilig(c.naam)}: ${veilig(f.maker)}, ${veilig(f.licentie)}`;
+      return pagina && /^https:\/\/commons\.wikimedia\.org\//.test(pagina) ? `<a href="${pagina}" target="_blank" rel="noopener noreferrer">${tekst}</a>` : tekst;
+    });
   return `
     <section class="uitslag-kaart">
       <p class="label sport-label uitslag-kop">Formule 1 · Laatste uitslag</p>
@@ -2737,7 +2751,7 @@ function uitslagHtml(u) {
               .join('')}</ol></details>`
           : ''
       }
-      <p class="bron">Bron: Jolpica F1</p>
+      <p class="bron">Bron: Jolpica F1${credits.length ? ` · Foto's (Wikimedia Commons): ${credits.join(' · ')}` : ''}</p>
     </section>`;
 }
 
@@ -2746,9 +2760,8 @@ async function toonMotorsport(nr) {
   const vak = () => (nr === schermNr ? document.getElementById('motor') : null);
   const keuzes = leesMotorKeuzes();
   if (!keuzes.length) {
-    if (vak()) vak().innerHTML = `<p class="leeg${f1Volgen() ? ' motor-meer' : ''}">${f1Volgen() ? 'Meer racen volgen?' : 'Je volgt nog geen motorsport.'} Kies in <a href="#/instellingen">Instellingen</a> bij Sport → Motorsport wat je volgt: ${['Formule 1', ...Object.values(SERIES).map((x) => x.naam)]
-      .map((x) => veilig(x))
-      .join(', ')}.</p>`;
+    // Alleen als je niets volgt een uitleg; volg je de Formule 1, dan geen extra tekst.
+    if (vak()) vak().innerHTML = f1Volgen() ? '' : `<p class="leeg">Je volgt nog geen motorsport. Kies in <a href="#/instellingen">Instellingen</a> bij Sport → Motorsport wat je volgt.</p>`;
     return;
   }
   const schema = await haalKlaargezet('motorsport');

@@ -1019,3 +1019,12 @@ body:not(.welkom-modus) .uitleg { display: none; }
 .uitslag-stip { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--team); }
 .uitslag-naam { flex: 1; min-width: 0; }
 .uitslag-tijd { color: var(--zacht); font-variant-numeric: tabular-nums; }
+
+/* Uitslagkaart lichter en beter te zien (november 2026), met foto's in de rondjes */
+.uitslag-kaart { background: linear-gradient(180deg, #2f6b45 0%, #224f33 100%); border: 1px solid rgb(255 255 255 / 0.14); color: #ffffff; }
+.uitslag-kaart .label.uitslag-kop, .uitslag-kaart .uitslag-sessie, .uitslag-kaart .podium-nr, .uitslag-kaart .podium li strong { color: #ffffff; }
+.uitslag-kaart .uitslag-plaats, .uitslag-kaart .podium-tijd, .uitslag-kaart .uitslag-tijd, .uitslag-kaart .bron, .uitslag-kaart .stil-link { color: rgb(255 255 255 / 0.75); }
+.uitslag-kaart .bron a { color: inherit; }
+.uitslag-kaart .uitslag-lijst li { border-top-color: rgb(255 255 255 / 0.15); }
+.podium-rondje.met-foto { overflow: visible; }
+.podium-rondje img { position: absolute; inset: 0; width: 100%; height: 100%; box-sizing: border-box; border-radius: 50%; object-fit: cover; object-position: 50% 15%; border: 3px solid var(--team); background: var(--team); }

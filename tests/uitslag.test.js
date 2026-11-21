@@ -37,3 +37,22 @@ describe('F1-uitslag', () => {
     delete globalThis.localStorage;
   });
 });
+
+import { wikiTitel, haalCoureurFotos } from '../src/uitslag.js';
+describe("foto's van coureurs", () => {
+  it('alleen vrije foto met maker en licentie; zonder licentie geen foto', async () => {
+    expect(wikiTitel('http://en.wikipedia.org/wiki/Max_Verstappen')).toBe('Max Verstappen');
+    const opslag = new Map();
+    globalThis.localStorage = { getItem: (k) => opslag.get(k) ?? null, setItem: (k, v) => opslag.set(k, v) };
+    const fetcher = async (url) => ({
+      json: async () =>
+        url.includes('pageimages')
+          ? { query: { pages: { 1: { title: 'Max Verstappen', pageimage: 'Max.jpg', thumbnail: { source: 'https://upload.wikimedia.org/max.jpg' } }, 2: { title: 'Lando Norris', pageimage: 'Lando.jpg', thumbnail: { source: 'https://upload.wikimedia.org/lando.jpg' } }, 3: { title: 'Isack Hadjar' } } } }
+          : { query: { pages: { 1: { title: 'File:Max.jpg', imageinfo: [{ extmetadata: { Artist: { value: '<a href="x">Stepro</a>' }, LicenseShortName: { value: 'CC BY-SA 4.0' } } }] }, 2: { title: 'File:Lando.jpg', imageinfo: [{ extmetadata: {} }] } } } },
+    });
+    const f = await haalCoureurFotos(['Max Verstappen', 'Lando Norris', 'Isack Hadjar'], { fetcher });
+    expect(Object.keys(f)).toEqual(['Max Verstappen']);
+    expect(f['Max Verstappen']).toMatchObject({ foto: 'https://upload.wikimedia.org/max.jpg', maker: 'Stepro', licentie: 'CC BY-SA 4.0' });
+    delete globalThis.localStorage;
+  });
+});
