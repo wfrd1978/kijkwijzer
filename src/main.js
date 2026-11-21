@@ -6,6 +6,7 @@ import { kiesFavorieten, combineerTips } from './tips.js';
 import { haalF1, komendeRaces, nlTijd, F1_ZENDERS, ZENDER_GIDS, SPORTZENDERS, leesSportzenders, zetSportzenders } from './sport.js';
 import { WIELRENNEN, VELDRIJDEN, MOUNTAINBIKE, FIETS_DELEN, leesFietsKeuzes, zetFietsKeuzes, komendeKoersen, kanIkKijken, koersDatum } from './wielrennen.js';
 import { SCHAATSEN, schaatsenVolgen } from './schaatsen.js';
+import { haalF1Uitslag } from './uitslag.js';
 import { TENNIS, DARTEN, GLORY, naarUfc, ANDERE_SPORTEN, volgSport } from './sporten.js';
 import {
   COMPETITIES, COMPETITIE_PER_NAAM, leesVoetbalKeuzes, zetVoetbalKeuzes, mijnWedstrijden, ploegenPerCompetitie,
@@ -2633,7 +2634,8 @@ async function toonSport() {
              </section>`
           : ''
       }
-      <div id="motor"></div>`
+      <div id="motor"></div>
+      ${f1Volgen() ? '<div id="f1-uitslag"></div>' : ''}`
     )}
     ${tabs.includes('wielrennen') ? blok('wielrennen', fietsenHtml(mijn)) : ''}
     ${tabs.includes('schaatsen') ? blok('schaatsen', kalenderHtml(SCHAATSEN, mijn, { tekening: IJSBAAN, kaartKlasse: 'ijskaart', pauze: 'Het schaatsseizoen moet nog beginnen.' })) : ''}
@@ -2678,6 +2680,11 @@ async function toonSport() {
     return;
   }
   if (nr !== schermNr) return;
+  // Onderaan Motorsport: de nieuwste uitslag (race, sprint of kwalificatie).
+  haalF1Uitslag(schema.races).then((u) => {
+    const vak = document.getElementById('f1-uitslag');
+    if (u && vak && nr === schermNr) vak.innerHTML = uitslagHtml(u);
+  });
   const komend = komendeRaces(schema.races);
   const [volgende, ...rest] = komend;
   document.getElementById('f1').innerHTML = volgende
@@ -2701,6 +2708,37 @@ async function toonSport() {
       }
       <p class="bron">Bron: Jolpica F1</p>`
     : '<p class="leeg">Het seizoen zit erop. Het schema voor volgend jaar verschijnt hier zodra het bekend is.</p>';
+}
+
+// De laatste uitslag van de Formule 1: de top drie naast elkaar, de rest van de top tien in te klappen.
+function uitslagHtml(u) {
+  const rondje = (c) => `<span class="podium-rondje" style="--team:${veilig(c.kleur)}"><b>${veilig(c.code)}</b>${c.vlag ? `<span class="podium-vlag" aria-hidden="true">${c.vlag}</span>` : ''}</span>`;
+  const [een, twee, drie, ...rest] = u.coureurs;
+  return `
+    <section class="uitslag-kaart">
+      <p class="label sport-label uitslag-kop">Formule 1 · Laatste uitslag</p>
+      <p class="uitslag-plaats">${veilig(u.plaats || u.race)}</p>
+      <p class="uitslag-sessie">${veilig(u.soort)} · Eindstand</p>
+      <ol class="podium">${[een, twee, drie]
+        .filter(Boolean)
+        .map(
+          (c) => `
+        <li>
+          <div class="podium-boven"><span class="podium-nr">${c.positie}</span>${rondje(c)}</div>
+          <strong>${veilig(c.naam)}</strong>
+          <span class="podium-tijd">${veilig(c.tijd)}</span>
+        </li>`
+        )
+        .join('')}</ol>
+      ${
+        rest.length
+          ? `<details class="uitslag-meer"><summary class="stil-link">Top tien ›</summary><ol class="uitslag-lijst">${rest
+              .map((c) => `<li><span class="uitslag-nr">${c.positie}</span><span class="uitslag-stip" style="--team:${veilig(c.kleur)}"></span><span class="uitslag-naam">${c.vlag} ${veilig(c.naam)}</span><span class="uitslag-tijd">${veilig(c.tijd)}</span></li>`)
+              .join('')}</ol></details>`
+          : ''
+      }
+      <p class="bron">Bron: Jolpica F1</p>
+    </section>`;
 }
 
 // Motorsport: per gekozen raceklasse het eerstvolgende weekend met alle onderdelen, en wat daarna komt.
